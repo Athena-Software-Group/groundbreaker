@@ -1,0 +1,6 @@
+{# The case tab bar (case_detail.html and the tabs that are their own page, app/web/tabs.py). Context: case, tabs
+   (the visible ones), tab (the active key), access (the To do tab's badge: the open P1 tasks, Jinja global todo_badge
+   from app/web/routes_todo.py). #}
+<nav class="case-tabs" aria-label="Case sections">
+  {% for t in tabs %}<a href="/cases/{{ case.id }}{{ t.href if t.href else '?tab=' ~ t.key }}" class="case-tab {{ 'active' if t.key == tab else '' }}" {% if t.key == tab %}aria-current="page"{% endif %} data-tab="{{ t.key }}">{{ t.label }}{% if t.key == 'todo' and todo_badge is defined %}{% set n_p1 = todo_badge(case, access, tab, board if board is defined else none) %}{% if n_p1 %} <span class="todo-badge" title="open P1 tasks">{{ n_p1 }}</span>{% endif %}{% endif %}</a>{% endfor %}
+</nav>

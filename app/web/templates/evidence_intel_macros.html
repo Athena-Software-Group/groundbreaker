@@ -1,0 +1,195 @@
+{# Evidence intel macros — owner: app/web/routes_evidence_intel.py (logic app/evidence_intel). Import WITH context
+   (csrf_field, ev_text, ev_folder_label). item_panel: the item page's "What Aegis read"; queue_panel: the Evidence
+   tab's "Unclassified / suggested" list; ai_panel: the per-case "AI reads evidence" setting. Everything here is a
+   suggestion: nothing moves, is tagged or is added until a person clicks. #}
+
+{% macro conf_tag(c) -%}
+<span class="tag {{ 'green' if c == 'H' else 'amber' if c == 'M' else 'neutral' }}" title="how clearly the cues point to this type">{{ {'H': 'clear', 'M': 'likely', 'L': 'weak'}[c] if c in ('H', 'M', 'L') else c }}</span>
+{%- endmacro %}
+
+{% macro confirm_button(case, item, doc_type, label, back='', primary=true) -%}
+<form method="post" action="/cases/{{ case.id }}/evidence/{{ item.id }}/intel/confirm" class="inline">{{ csrf_field() }}
+  <input type="hidden" name="doc_type" value="{{ doc_type }}"><input type="hidden" name="move" value="1">
+  {% if back %}<input type="hidden" name="back" value="{{ back }}">{% endif %}
+  <button class="btn small {{ 'primary' if primary else '' }}" type="submit" title="tag it, count it for its evidence requirements and file it in that folder">{{ label }}</button>
+</form>
+{%- endmacro %}
+
+{% macro item_panel(case, item, v) -%}
+<div class="panel ev-intel" id="ev-intel">
+  <h2>What Aegis read <small>{{ v.status_label }} · advisory: a person confirms the type</small>
+    {% if v.can_confirm %}<span class="ev-head-actions"><form method="post" action="/cases/{{ case.id }}/evidence/{{ item.id }}/intel/read" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" title="read the text again (the AI too when this case consents)">{{ 'Read again' if v.read else 'Read it now' }}</button></form></span>{% endif %}
+  </h2>
+  {% if not v.read %}
+    <p class="muted">Not read yet{% if v.can_confirm %}: “Read it now” extracts its text and suggests a type{% endif %}.</p>
+  {% else %}
+    {% set t = v.text %}
+    <div class="ev-intel-text muted">
+      {% if t.status == 'ok' %}Text read from the {{ t.kind }}{% if t.pages %} ({{ t.pages }} page{{ 's' if t.pages != 1 }}){% endif %}: {{ t.chars }} characters{% if t.truncated %} (capped){% endif %}{% if t.stored == 'vault' %}, kept in the evidence vault{% endif %}.{% if t.attachments %} {{ t.attachments }} attachment(s) listed, not opened.{% endif %}
+      {% else %}<span class="tag amber">{{ t.status | replace('_', ' ') }}</span> {{ t.note or 'no text read' }}.{% endif %}
+      {% if t.note and t.status == 'ok' %} {{ t.note }}.{% endif %}
+    </div>
+    {% if t.excerpt %}<blockquote class="ev-intel-excerpt">{{ t.excerpt }}{% if t.chars > t.excerpt | length %}…{% endif %}</blockquote>{% endif %}
+    {% set r = v.rules %}
+    {% if r %}<div class="ev-intel-reading">
+      {% if r.type != 'other' %}Aegis read this as: <b>{{ r.label }}</b> → {{ v.rules_folder_label }} {{ conf_tag(r.confidence) }}
+        {% if r['keys'] %}<span class="muted">· once you confirm it, counts for: {{ r['keys'] | map('replace', '_', ' ') | join(', ') }}</span>{% endif %}
+      {% else %}Aegis could not tell what this document is{% if r.folder != 'other' %} (filed as a screenshot: {{ v.rules_folder_label }}){% endif %}.{% endif %}
+      <div class="muted ev-desc">Why: {{ r.reasons | join(' · ') }}{% if r.alternatives %} · also possible: {% for a in r.alternatives %}{{ a.label }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}</div>
+      {% if r.note %}<div class="ev-desc"><span class="tag amber">{{ r.note }}</span></div>{% endif %}
+    </div>{% endif %}
+    {% set a = v.ai %}
+    {% if a %}<div class="ev-intel-ai">
+      <span class="tag neutral">AI</span> reads it as <b>{{ a.label }}</b>
+      {% if a.verified %}<span class="tag green" title="its supporting quote occurs in the text">quote found</span>{% else %}<span class="tag amber" title="its quote is not in the text: the reading is not used as a suggestion">unverified</span>{% endif %}
+      {% if r and a.type != r.type %}<span class="tag amber">differs from the rules: check the document</span>{% endif %}
+      {% if v.deep %}
+        {% if a.quote %}<div><q>{{ a.quote }}</q></div>{% endif %}
+        {% if a.summary %}<div class="muted ev-desc">AI summary (its own words): {{ a.summary }}</div>{% endif %}
+        {% if a.parties %}<div class="ev-desc">Parties: {% for p in a.parties %}{{ p.name }}{% if p.role %} ({{ p.role }}){% endif %}{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}
+        {% if a.dates %}<div class="ev-desc">Dates: {% for d in a.dates %}{{ d.stated }}{% if d.what %} ({{ d.what }}){% endif %}{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}
+        {% if a.amounts %}<div class="ev-desc">Amounts: {% for m in a.amounts %}{{ m.amount }} {{ m.asset or '' }}{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}
+      {% endif %}
+    </div>{% elif v.ai_reason and v.ai_skipped not in ('setting_off',) %}<div class="muted ev-desc">AI reading: {{ v.ai_reason }}</div>{% endif %}
+    {% if v.confirmed %}<div class="ev-intel-confirmed"><span class="tag green">confirmed</span> {{ v.confirmed.label }} <span class="muted">({{ (v.confirmed.at or '')[:16] | replace('T', ' ') }} UTC{% if v.confirmed.source == 'ai' %}, the AI's reading{% elif v.confirmed.source == 'person' %}, picked by a person{% elif v.confirmed.source == 'link' %}, filed as the reply to a request{% endif %})</span>
+      {% if r and r.type != 'other' and r.type != v.confirmed.type %}<span class="tag amber">the rules now read {{ r.label }}</span>{% endif %}</div>{% endif %}
+
+    {% if v.can_confirm %}
+    <div class="ev-intel-actions">
+      {% if r and r.type != 'other' and not v.confirmed and r.type not in v.order_types %}{{ confirm_button(case, item, r.type, 'Confirm: ' ~ r.label, primary=not (r.type == 'provider_reply' and v.orders and v.can_link)) }}{% endif %}
+      {% if a and a.verified and (not r or a.type != r.type) and not v.confirmed and a.type not in v.order_types %}{{ confirm_button(case, item, a.type, "Use the AI's reading: " ~ a.label, primary=false) }}{% endif %}
+      <details class="ev-details" {% if r and r.type in v.order_types and not v.confirmed %}open{% endif %}>
+        <summary class="btn small">{{ 'Change the type' if v.confirmed or (r and r.type != 'other') else 'Pick the type' }}</summary>
+        <form method="post" action="/cases/{{ case.id }}/evidence/{{ item.id }}/intel/confirm" class="ev-form">{{ csrf_field() }}
+          <div class="ev-fields">
+            {% set cur = (v.confirmed or {}).get('type') or (r.type if r else 'other') %}
+            <label>Type <select name="doc_type" required>{% for k, label in v.types %}<option value="{{ k }}" {% if k == cur %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label class="ev-check"><input type="checkbox" name="move" value="1" checked> file it in that type's folder</label>
+            {% if v.deep %}
+            <label title="orders only: the court's country (US / FR opens Circle's court-order path)">Order: court's country <input name="jurisdiction" value="{{ v.jurisdiction_guess or '' }}" maxlength="32" placeholder="US, FR, IT …"></label>
+            <label class="ev-wide" title="orders only: the provider(s) the order is addressed to; check it: it decides which provider's binding path opens">Order: addressed to <input name="addressed_to" value="{{ v.to_guess or '' }}" maxlength="255" placeholder="the provider the order names"></label>
+            {% if v.doc_date_guess %}<label>Document date <input type="date" name="doc_date" value="{{ v.doc_date_guess }}"></label>{% endif %}
+            {% endif %}
+          </div>
+          {% if r and r.type in v.order_types %}<div class="muted ev-desc">An order on file opens the binding path of the provider it is addressed to: check the court's country and the addressee before recording it.</div>{% endif %}
+          <button class="btn small primary" type="submit">Record the type</button>
+        </form>
+      </details>
+    </div>
+    {% endif %}
+
+    {% if v.deep %}
+    {% set f = v.findings or {} %}
+    {% if v.ids %}<h3 class="ev-h3">Wallets and transactions it names</h3>
+      <div class="muted ev-desc">Aegis never decides whose wallet it is: pick its role first (the words next to it are only a hint), then watch it or seed the trace with it.</div>
+      {% for i in v.ids %}<div class="ev-intel-item">{{ i.kind | replace('_', ' ') }}{% if i.chain %} ({{ i.chain }}){% endif %} <span class="mono ev-path">{{ i.value }}</span>
+        {% if i.kind == 'address' and i.chain %}
+          {% if i.hint %}<span class="muted" title="the words next to the address in the document: a hint, never its role">({{ i.hint }})</span>{% endif %}
+          {% if i.role %}<span class="tag neutral" title="picked by a person">{{ i.role_label }}</span>{% else %}<span class="tag amber">role: you choose</span>{% endif %}
+          {% if i.can_pick %}<form method="post" action="/cases/{{ case.id }}/evidence/{{ item.id }}/intel/wallet-role" class="inline">{{ csrf_field() }}
+            <input type="hidden" name="value" value="{{ i.value }}">
+            <select name="role" aria-label="whose wallet" required><option value="" {% if not i.role %}selected{% endif %} disabled>whose wallet?</option>{% for k, label in v.wallet_roles %}<option value="{{ k }}" {% if k == i.role %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+            <button class="btn small" type="submit">{{ 'Change the role' if i.role else 'Record the role' }}</button></form>{% endif %}
+        {% endif %}
+        {% if i.watched %}<span class="tag green">watched</span>{% elif i.watchable %}<form method="post" action="/cases/{{ case.id }}/freeze/watch" class="inline">{{ csrf_field() }}
+          <input type="hidden" name="address" value="{{ i.value }}"><input type="hidden" name="source_note" value="read from evidence #{{ item.id }}"><input type="hidden" name="next" value="/cases/{{ case.id }}/evidence/{{ item.id }}#ev-intel">
+          {% if i.chain == 'tron' %}<input type="hidden" name="chain" value="tron">{% else %}<select name="chain" aria-label="chain" {% if not i.watch %}disabled{% endif %}>{% for ch in ('ethereum', 'base', 'arbitrum', 'polygon', 'optimism') %}<option value="{{ ch }}">{{ ch }}</option>{% endfor %}</select>{% endif %}
+          <button class="btn small" type="submit" {% if not i.watch %}disabled title="{{ 'pick its role first' if not i.role else "never the victim's own wallet" }}"{% else %}title="check this wallet for an issuer freeze"{% endif %}>Watch for a freeze</button></form>{% endif %}
+        {% if v.can_trace and (i.seed_role or i.seedable) %}<form method="post" action="/cases/{{ case.id }}/seeds" class="inline">{{ csrf_field() }}
+          <input type="hidden" name="role" value="{{ i.seed_role or '' }}"><input type="hidden" name="value" value="{{ i.value }}"><input type="hidden" name="only_empty" value="1">
+          {% if i.chain == 'evm' %}<select name="chain" aria-label="chain" {% if not i.seed_role %}disabled{% endif %}>{% for ch in ('ethereum', 'bsc', 'base', 'arbitrum', 'polygon') %}<option value="{{ ch }}">{{ ch }}</option>{% endfor %}</select>{% elif i.chain %}<input type="hidden" name="chain" value="{{ i.chain }}">{% else %}<select name="chain" aria-label="chain">{% for ch in ('ethereum', 'tron', 'bsc', 'bitcoin', 'solana') %}<option value="{{ ch }}">{{ ch }}</option>{% endfor %}</select>{% endif %}
+          {% if i.seed_role %}<button class="btn small" type="submit" title="set it as the trace's {{ i.seed_role | replace('_', ' ') }} (then run the trace)">Seed the trace ({{ i.seed_role | replace('_', ' ') }})</button>
+          {% else %}<button class="btn small" type="submit" disabled title="{{ 'pick its role first' if not i.role else 'that seed is already set' }}">Seed the trace</button>{% endif %}</form>{% endif %}
+      </div>{% endfor %}
+    {% endif %}
+    {% if v.contacts %}<h3 class="ev-h3">Law enforcement and complaint references</h3>
+      {% for c in v.contacts %}<div class="ev-intel-item">{{ c.agency or c.authority or 'Reference' }}{% if c.role or c.name %} · {{ c.role or '' }} {{ c.name or '' }}{% endif %}{% if c.reference %} · ref <span class="mono">{{ c.reference }}</span>{% if c.system %} <span class="muted">({{ c.system }})</span>{% endif %}{% endif %}{% if c.email %} · <span class="mono">{{ c.email }}</span>{% endif %}
+        {% if v.can_contact %}
+          <form method="post" action="/cases/{{ case.id }}/evidence/le-contacts" class="inline">{{ csrf_field() }}
+            <input type="hidden" name="agency" value="{{ c.agency or c.authority or 'Law enforcement' }}"><input type="hidden" name="name" value="{{ c.name or '' }}">
+            <input type="hidden" name="role" value="{{ c.role or '' }}"><input type="hidden" name="email" value="{{ c.email or '' }}">
+            <input type="hidden" name="phone" value="{{ c.phone or '' }}"><input type="hidden" name="reference" value="{{ c.reference or '' }}">
+            <input type="hidden" name="notes" value="{{ c.note }}">
+            <button class="btn small" type="submit" title="add it to the case's LE contacts (check the details first)">Add as LE contact</button></form>
+          {% if c.reference %}<form method="post" action="/cases/{{ case.id }}/evidence/{{ item.id }}/intel/complaint" class="inline">{{ csrf_field() }}
+            <input type="hidden" name="authority" value="{{ c.authority or c.agency or 'Law enforcement' }}"><input type="hidden" name="reference" value="{{ c.reference }}">
+            <button class="btn small" type="submit" title="record it as the case's complaint reference (letters and checklists use it)">Record the complaint reference</button></form>{% endif %}
+        {% endif %}</div>{% endfor %}
+    {% endif %}
+    {% if v.providers %}<div class="ev-desc">Names: {% for p in v.providers %}<span class="tag">{{ p.name }}</span> {% endfor %}</div>{% endif %}
+    {% if v.known_ids %}<div class="ev-desc muted">Already on this case: {% for i in v.known_ids %}<span class="mono ev-path" title="{{ i.value }}">{{ i.value[:6] ~ '…' ~ i.value[-4:] if i.value | length > 14 else i.value }}</span>{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}
+    {% set rp = v.reply %}
+    {% if v.orders and v.can_link %}
+    <div class="ev-intel-reply" id="ev-intel-reply">
+      <h3 class="ev-h3">A reply to your request?{% if rp and rp.label %} <small>it states: <b>{{ rp.label }}</b>{% if rp.amount %} ({{ rp.amount }} {{ rp.asset or '' }}){% endif %}</small>{% endif %}</h3>
+      {% if rp and rp.label %}<div class="muted ev-desc">{% if rp.positive %}A suggestion, not a result: once filed, Block status shows “{{ rp.label }}{% if rp.amount %} {{ rp.amount }} {{ rp.asset or '' }}{% endif %}” for a person to confirm against the reply.{% else %}Once filed, Block status reads the reply and suggests its status for a person to confirm.{% endif %}</div>{% endif %}
+      <form method="post" action="/cases/{{ case.id }}/evidence/{{ item.id }}/intel/link" class="ev-form">{{ csrf_field() }}
+        <div class="ev-fields">
+          {% for o in v.orders %}<label class="ev-check ev-wide"><input type="radio" name="stop_order_id" value="{{ o.id }}" {% if o.suggested %}checked{% endif %} required>
+            Stop order #{{ o.id }}{% if o.entity %} ({{ o.entity }}){% endif %}{% if o.suggested and v.orders | length > 1 %} <span class="tag green">suggested</span>{% endif %}
+            <span class="muted">· {{ o.why | join(' · ') }}</span></label>{% endfor %}
+          {% if rp and rp.ticket %}<label class="ev-check"><input type="checkbox" name="record_ticket" value="1" checked> record their ticket</label>
+            <label>Their ticket <input name="ticket" value="{{ rp.ticket }}" maxlength="64" class="mono"></label>{% endif %}
+          {% set rd = item.doc_date.strftime('%Y-%m-%d') if item.doc_date else v.doc_date_guess %}
+          <label title="the date the reply is dated (read from the document: check it)">Reply dated <input type="date" name="reply_date" value="{{ rd or '' }}"></label>
+        </div>
+        {% set first = v.orders[0] %}
+        <button class="btn small primary" type="submit" title="log it as their reply (its text becomes the reply's body, read by Block status); records its type as a provider's reply">{% if v.orders | length == 1 %}File as the reply to stop order #{{ first.id }}{% if first.entity %} ({{ first.entity }}){% endif %}{% else %}File as the reply to the selected stop order{% endif %}</button>
+      </form>
+    </div>
+    {% elif v.linked_corr %}<div class="muted ev-desc">Filed as the reply (<a href="/cases/{{ case.id }}/authorities/correspondence/{{ v.linked_corr }}">correspondence #{{ v.linked_corr }}</a>){% if rp and rp.label %}: it states {{ rp.label }}{% if rp.amount %} ({{ rp.amount }} {{ rp.asset or '' }}){% endif %}, a suggestion to confirm on <a href="/cases/{{ case.id }}/blocks">Block status</a>{% endif %}.</div>
+    {% elif rp and (rp.label or rp.ticket) %}<div class="muted ev-desc">Reads as a provider's reply{% if rp.label %} stating {{ rp.label }}{% if rp.amount %} ({{ rp.amount }} {{ rp.asset or '' }}){% endif %}{% endif %}{% if rp.ticket %} · their ticket <span class="mono">{{ rp.ticket }}</span>{% endif %}. No stop order on this case goes to a provider it names: log it on the Authorities desk.</div>{% endif %}
+    {% if f.dates %}<div class="ev-desc muted">Dates: {% for d in f.dates[:6] %}{{ d.date or (d.candidates | join(' or ')) }}{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}
+    {% if f.amounts %}<div class="ev-desc muted">Amounts: {% for m in f.amounts[:6] %}{{ m.amount }} {{ m.asset or '' }}{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}
+    {% endif %}
+  {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro queue_panel(case, t) -%}
+<div class="panel" id="ev-intel">
+  <h2>Unclassified / suggested <small>{{ t.queue_count }} item(s){% if t.unread %} · {{ t.unread }} not read yet{% endif %} · Aegis reads each upload and suggests its type; a person confirms it</small>
+    {% if t.can_reread %}<span class="ev-head-actions"><form method="post" action="/cases/{{ case.id }}/evidence/intel/reread" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" title="read every item again ({{ 'rules and the AI' if t.ai_enabled else 'rules only' }}); nothing is moved without a confirmation">Re-read all evidence</button></form></span>{% endif %}
+  </h2>
+  {% if t.queue %}
+  <div class="ev-table-wrap"><table class="ev-table">
+    <thead><tr><th>Item</th><th>Filed under</th><th>Aegis reads it as</th><th></th></tr></thead>
+    <tbody>
+    {% for q in t.queue %}{% set e = q.item %}{% set r = q.rules %}
+      <tr>
+        <td><a href="/cases/{{ case.id }}/evidence/{{ e.id }}#ev-intel"><b>{{ ev_text(e.title) }}</b></a> <span class="muted">#{{ e.id }}</span></td>
+        <td class="nowrap">{{ ev_folder_label(e.folder) }}</td>
+        <td>{% if r and r.type != 'other' %}<b>{{ r.label }}</b>{% if q.moves %} → {{ q.folder_label }}{% endif %} {{ conf_tag(r.confidence) }}{% if q.reply and (q.reply.label or q.reply.ticket) %}<div class="ev-desc">it states{% if q.reply.label %} <b>{{ q.reply.label }}</b>{% if q.reply.amount %} ({{ q.reply.amount }} {{ q.reply.asset or '' }}){% endif %}{% endif %}{% if q.reply.ticket %} · their ticket <span class="mono">{{ q.reply.ticket }}</span>{% endif %} <span class="muted">· a suggestion: review it to file it as the reply to your request</span></div>{% endif %}<div class="muted ev-desc">{{ r.reasons[:3] | join(' · ') }}</div>{% if r.note %}<div class="ev-desc"><span class="tag amber">{{ r.note }}</span></div>{% endif %}
+          {% else %}<span class="muted">unclassified{% if q.text.status and q.text.status != 'ok' %} · {{ q.text.note or q.text.status }}{% endif %}</span>{% endif %}
+          {% if q.ai %}<div class="ev-desc"><span class="tag neutral">AI</span> {{ q.ai.label }}{% if q.disagree %} <span class="tag amber">differs</span>{% endif %}</div>{% endif %}</td>
+        <td class="right nowrap">{% if t.can_confirm and r and r.type != 'other' and r.type not in ('court_order', 'freezing_order', 'seizure_warrant') %}{{ confirm_button(case, e, r.type, 'Confirm', back='tab', primary=not q.reply) }}{% endif %}
+          {% if q.reply %}<a class="btn small primary" href="/cases/{{ case.id }}/evidence/{{ e.id }}#ev-intel-reply" title="pick the request it answers and file it as the reply">Review the reply</a>
+          {% else %}<a class="btn small" href="/cases/{{ case.id }}/evidence/{{ e.id }}#ev-intel">Review</a>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% if t.read_count > t.queue | length %}<div class="muted ev-desc">… and {{ t.read_count - t.queue | length }} more.</div>{% endif %}
+  {% elif not t.unread %}<p class="muted">Every item has a confirmed type.</p>{% endif %}
+  {% if t.unread %}<details class="ev-details"><summary class="muted ev-desc">{{ t.unread }} item(s) not read yet{% if t.can_reread %}: “Re-read all evidence” reads them{% else %}: open one and “Read it now”{% endif %}</summary>
+    <div class="ev-desc">{% for e in t.unread_items %}<a href="/cases/{{ case.id }}/evidence/{{ e.id }}#ev-intel">#{{ e.id }} {{ ev_text(e.title) }}</a>{{ ' · ' if not loop.last }}{% endfor %}{% if t.unread > t.unread_items | length %} …{% endif %}</div></details>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro ai_panel(case, t) -%}
+<div class="panel" id="ev-intel-ai">
+  <h2>AI reads evidence <small>{{ 'on' if t.ai_enabled else 'off' }} for this case</small></h2>
+  <p class="ev-desc">The rules read every document locally. When this is on, Aegis also sends the <b>text</b> of each document it reads (the first {{ '16,000' }} characters; in the case's redacted AI mode the names, contacts and references the case already holds, and any e-mail or phone, become placeholders, while other personal data in a document, such as a name the case does not know yet, is sent; ID documents and financial records are not sent at all in that mode) to <b>{{ t.dest.label }}</b>{% if t.dest.model %} (model <span class="mono">{{ t.dest.model }}</span>){% endif %} for a second reading. Its answer is advisory: shown next to the rules, kept only where its quotes occur in the text, and a person still confirms each type. Items marked TLP:RED or TLP:AMBER+STRICT are never sent. Every call is audited (no content).</p>
+  {% if t.ai_enabled %}<p class="muted ev-desc">Consented on {{ (t.ai.at or '')[:16] | replace('T', ' ') }} UTC for {{ t.ai.destination }}{% if t.ai.model %} · {{ t.ai.model }}{% endif %}.</p>{% endif %}
+  {% if t.can_manage_ai %}
+  <form method="post" action="/cases/{{ case.id }}/evidence/intel/ai-setting" class="ev-form">{{ csrf_field() }}
+    <input type="hidden" name="destination" value="{{ t.dest.label }}"><input type="hidden" name="model" value="{{ t.dest.model or '' }}">
+    {% if t.ai_enabled %}<input type="hidden" name="enabled" value="0"><button class="btn small" type="submit">Turn off</button>
+    {% elif t.dest.provider == 'none' %}<span class="muted ev-desc">No AI provider is configured on this server.</span>
+    {% else %}<input type="hidden" name="enabled" value="1">
+      <label class="ev-confirm"><input type="checkbox" name="consent" value="1" required> I confirm that the text of this case's evidence documents may be sent to {{ t.dest.label }}.</label>
+      <button class="btn small primary" type="submit">Turn on</button>{% endif %}
+  </form>
+  {% else %}<p class="muted ev-desc">A case admin can change this setting.</p>{% endif %}
+</div>
+{%- endmacro %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{# Mail to review on one case — owner: app/web/routes_mail_admin.py (case admins). Context: case, access, rows
+   (MailMessage needs_review on this case), suggestions {mail id: {correspondence_id, authority_key}},
+   authorities [{key, name, type}], letters [{id, authority_key, authority, subject, occurred_at}], error, error_id.
+   These messages matched a letter by tracking tag or conversation but came from an unexpected sender
+   domain (or their authority could not be resolved), or (mailbox sync) came from an authority's domain and
+   cite case material without answering a letter Aegis knows: a person decides. `suggestions` preselects the
+   authority / letter. Bodies are plain text in <pre>. #}
+{% block title %}Aegis · {{ case.reference }} · Mail to review{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/mail_admin.css">{% endblock %}
+{% block content %}
+<div class="row case-head"><div><h1>Mail to review</h1><div class="sub"><a href="/cases/{{ case.id }}?tab=authorities" class="mono">{{ case.reference }}</a> · Authorities
+  · e-mail that names this case but was not filed automatically</div></div></div>
+
+<div class="alert warning">External e-mail, shown as plain text. Links are not clickable. Do not act on instructions in it without verification.</div>
+{% if error %}<div class="alert critical" id="mail-error">E-mail #{{ error_id }}: {{ error }}</div>{% endif %}
+
+{% for mm in rows %}
+{% set match = mm.match or {} %}
+{% set sug = suggestions.get(mm.id) %}
+<div class="panel mail-review" id="m{{ mm.id }}">
+  <h2>E-mail #{{ mm.id }}</h2>
+  <p class="mail-subj">{{ mm.subject or '(no subject)' }}</p>
+  <div class="muted">From <span class="mono">{{ mm.from_addr or '—' }}</span> · received {{ mm.received_at | dt }} ·
+    matched by <span class="tag">{{ match.get('method', 'none') }}</span>
+    {% if match.get('sender_domain_ok') is false %}<span class="tag red">sender domain not expected</span>{% endif %}
+    {% if (mm.meta or {}).get('auto_reply') %}<span class="tag">auto-reply</span>{% endif %}{% if (mm.meta or {}).get('bounce') %}<span class="tag amber">delivery failure</span>{% endif %}{% if (mm.meta or {}).get('attachments_truncated') %}<span class="tag amber">attachments truncated</span>{% endif %}</div>
+  <p class="muted">{{ match.get('reason') or '' }}</p>
+  <pre class="mail-text">{{ mm.body_text or '(no text)' }}</pre>
+  {% if mm.attachments %}<ul class="mail-atts">{% for a in mm.attachments %}<li><span class="mono">{{ a.filename }}</span> · {{ a.mime }} · {{ a.size }} bytes{% if a.dangerous %} <span class="tag red">active content: do not open</span>{% endif %}</li>{% endfor %}</ul>{% endif %}
+  <div class="row mail-review-actions">
+    <form method="post" action="/cases/{{ case.id }}/mail/review/{{ mm.id }}/accept" class="row">{{ csrf_field() }}
+      <select name="authority_key" aria-label="Authority">
+        {% for a in authorities %}<option value="{{ a.key }}" {{ 'selected' if sug and sug.authority_key == a.key }}>{{ a.name }} ({{ a.type }})</option>{% endfor %}
+      </select>
+      <select name="in_reply_to" aria-label="In reply to">
+        <option value="">— not a reply to a specific letter —</option>
+        {% for l in letters %}<option value="{{ l.id }}" {{ 'selected' if sug and sug.correspondence_id == l.id }}>#{{ l.id }} · {{ l.authority }} · {{ l.subject }}</option>{% endfor %}
+      </select>
+      <button class="btn small primary" type="submit">Accept and file</button>
+    </form>
+    <form method="post" action="/cases/{{ case.id }}/mail/review/{{ mm.id }}/reject" class="inline">{{ csrf_field() }}
+      <button class="btn small danger" type="submit">Not for this case</button></form>
+  </div>
+</div>
+{% else %}
+<div class="panel"><p class="muted">No e-mail waits for review on this case.</p></div>
+{% endfor %}
+{% endblock %}

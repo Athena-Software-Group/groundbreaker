@@ -1,0 +1,7 @@
+{# Sub-tabs of the case's block work: Block status (routes_blocks) and Recovery plan (routes_recovery). Context: case,
+   request (the active one is the current path). #}
+{% set here = request.url.path %}
+<nav class="rp-subnav" aria-label="Blocks and recovery">
+  <a href="/cases/{{ case.id }}/blocks" class="{{ 'active' if here.endswith('/blocks') }}" {% if here.endswith('/blocks') %}aria-current="page"{% endif %}>Block status</a>
+  <a href="/cases/{{ case.id }}/recovery-plan" class="{{ 'active' if here.endswith('/recovery-plan') }}" {% if here.endswith('/recovery-plan') %}aria-current="page"{% endif %}>Recovery plan</a>
+</nav>

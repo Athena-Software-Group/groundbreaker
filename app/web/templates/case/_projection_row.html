@@ -1,0 +1,15 @@
+{# The case's projected loss and certainty (app/blocks/recovery.py _projection: the Recovery plan's own figures).
+   Context: case, access, pt (plan_totals) — included by the Overview and the Status summary sub-tab. #}
+{% if pt and pt.projected_loss_usd is not none %}
+<div class="panel proj-row" id="projection">
+  <div class="proj-main">
+    <div class="proj-k"><div class="l">Projected loss</div><div class="v danger">{{ pt.projected_loss_usd | usd }}</div>
+      <div class="muted proj-sub">range {{ pt.projected_loss_low_usd | usd }} – {{ pt.projected_loss_high_usd | usd }}</div></div>
+    <div class="proj-k"><div class="l">Certainty</div><div class="v">{{ '%.0f' | format(pt.projection_certainty_pct) }}%</div>
+      <div class="proj-bar" role="img" aria-label="certainty {{ '%.0f' | format(pt.projection_certainty_pct) }} percent"><span style="width: {{ pt.projection_certainty_pct }}%"></span></div></div>
+    <div class="proj-k"><div class="l">Projected recovery</div><div class="v ok">{{ pt.projected_recovery_usd | usd }}</div>
+      <div class="muted proj-sub">{{ '%.1f' | format(pt.projected_recovery_pct) }}% of the loss</div></div>
+  </div>
+  <div class="muted proj-why">Loss {{ case.loss_usd | usd }} − secured {{ pt.secured_usd | usd }} (frozen on-chain or a confirmed hold) − expected {{ pt.expected_usd | usd }} from the open requests (each traced dollar once, at its move's likelihood) = <b>{{ pt.projected_loss_usd | usd }}</b>. Certainty: how firmly that is pinned down (100% = every dollar's outcome settled; lower = more depends on open requests); the range is ± one standard deviation. <a href="/cases/{{ case.id }}/recovery-plan#moves">Recovery plan</a></div>
+</div>
+{% endif %}

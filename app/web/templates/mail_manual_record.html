@@ -1,0 +1,48 @@
+{# "Record as sent" side panel (manual mode) — owner: app/web/routes_mail.py (manual_record_sent). Included by
+   mail_preview.html in place of the Send panel. Context: case, mm, corr, st, meta, ext (meta.sent_external), expired,
+   busy / busy_text, can_record (case admin, letter still a draft, no other e-mail of it in flight), can_send,
+   record_defaults {sent_at, to, cc, max}, record_form (the values sent with a refused form), default_due_days,
+   upload_max_mb, authority, user_names. #}
+{% set rf = record_form or {} %}
+{% if st == 'sent_external' %}
+<div class="panel mail-record" id="record">
+  <h2>Sent outside Aegis</h2>
+  <div>Sent {{ mm.sent_at | dt }} from Outlook{% if mm.sent_by %} · recorded by {{ user_names.get(mm.sent_by, 'user #' ~ mm.sent_by) }}{% endif %}.</div>
+  <div class="mail-note">To <span class="mono">{{ (mm.to_addrs or []) | join(', ') }}</span>{% if mm.cc_addrs %} · Cc <span class="mono">{{ mm.cc_addrs | join(', ') }}</span>{% endif %}{% if ext.recipients_changed %} <span class="tag amber" title="the addresses recorded differ from the prepared ones">recipients changed</span>{% endif %}</div>
+  {% if ext.evidence_id %}<div class="mail-note">The sent message: evidence <a href="/cases/{{ case.id }}/evidence/{{ ext.evidence_id }}">#{{ ext.evidence_id }}</a> (.{{ ext.upload }}, R3, sha256 recorded).</div>
+  {% else %}<div class="muted mail-note">No copy of the sent message was uploaded; the preview here is the draft Aegis prepared.</div>{% endif %}
+  {% if corr and corr.due_at %}<div class="mail-note">Reply due {{ corr.due_at | dt }}.</div>{% endif %}
+  <div style="margin-top:8px"><a class="btn small" href="/cases/{{ case.id }}/mail/import{% if authority %}?authority={{ authority.key }}{% endif %}">Import the reply (.eml / .msg)</a></div>
+  <div class="muted mail-note">One e-mail per letter: to write again, generate a follow-up letter.</div>
+</div>
+{% elif st in ('prepared', 'expired') and busy %}
+<div class="panel mail-record" id="record"><h2>Record as sent</h2><p class="muted">Not available: another e-mail of this letter is in flight or was sent (see above). Aegis records one e-mail per letter.</p></div>
+{% elif st in ('prepared', 'expired') %}
+<div class="panel mail-record mail-confirm" id="record">
+  <h2>Record as sent</h2>
+  {% if not can_send %}
+  <p class="muted">A case admin sends this e-mail from the investigations mailbox and records it here (date and time, the addresses used, optionally the sent message).</p>
+  {% elif not can_record %}
+  <p class="muted">Not available: the letter is no longer the draft this e-mail was prepared from. Prepare the e-mail again.</p>
+  {% else %}
+  <form method="post" action="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/record-sent" enctype="multipart/form-data" id="mail-record-form">
+    {{ csrf_field() }}
+    <label for="rec-sent-at">Sent at (UTC)</label>
+    <input type="datetime-local" id="rec-sent-at" name="sent_at" value="{{ rf.sent_at or record_defaults.sent_at }}" max="{{ record_defaults.max }}" required>
+    <label for="rec-to">To actually used</label>
+    <input id="rec-to" name="to" class="mono" value="{{ rf.to or record_defaults.to }}" required autocomplete="off">
+    <label for="rec-cc">Cc actually used</label>
+    <input id="rec-cc" name="cc" class="mono" value="{{ rf.cc if rf.to else record_defaults.cc }}" autocomplete="off">
+    <label for="rec-due">Reply expected within (days)</label>
+    <input type="number" id="rec-due" name="due_days" min="0" max="365" value="{{ rf.due_days or default_due_days }}">
+    <label for="rec-file">The sent message (optional: .eml or .msg from Sent Items, up to {{ upload_max_mb }} MB)</label>
+    <input type="file" id="rec-file" name="sent_message" accept=".eml,.msg,message/rfc822,application/vnd.ms-outlook">
+    <div class="muted mail-note">Kept as R3 evidence in the vault with its sha256 (Stop orders &amp; correspondence).</div>
+    <label class="auth-check mail-confirm-item mail-confirm-all"><input type="checkbox" name="confirm_external" value="1" data-mail-confirm>
+      <span>I sent this e-mail from Outlook to the addresses above. Aegis marks letter #{{ mm.correspondence_id }}{% if corr and corr.stop_order_id %} and stop order #{{ corr.stop_order_id }}{% endif %} sent (via e-mail, sent outside Aegis) and starts the reply clock.</span></label>
+    <div style="margin-top:10px"><button class="btn primary" type="submit" id="mail-record-btn" data-sending="Recording…">Record as sent</button></div>
+    <div class="muted mail-note">Once recorded, this letter is never prepared again; write a follow-up letter to write again.</div>
+  </form>
+  {% endif %}
+</div>
+{% endif %}

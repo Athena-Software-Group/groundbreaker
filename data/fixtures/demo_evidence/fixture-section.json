@@ -1,0 +1,121 @@
+{
+  "_comment": "Synthetic demo evidence as INLINE items (hashed on load). Same folder/title/metadata as the 'evidence' section of data/fixtures/demo_case.json, which currently lists them as reference items without a path; replacing that section with this list makes them viewable and verifiable. inline_text must equal the .txt files next to this one (tests/test_evidence.py checks).",
+  "evidence": [
+    {
+      "folder": "digital_artifacts",
+      "title": "Chat excerpt with the 'Adrian Example, CFO' persona (synthetic)",
+      "description": "Synthetic excerpt of the messenger chat in which the persona pitched the investment. Demo file; not a real chat.",
+      "source_type": "chat_export",
+      "storage": "inline",
+      "mime": "text/plain",
+      "doc_date": "2026-10-12T00:00:00Z",
+      "received_from": "Jordan Avery (victim)",
+      "classification": "R3",
+      "tags": [
+        "chat",
+        "persona",
+        "synthetic"
+      ],
+      "shared_with_external": false,
+      "meta": {
+        "demo_file": "data/fixtures/demo_evidence/chat_excerpt.txt",
+        "synthetic": true,
+        "section": "messaging"
+      },
+      "inline_text": "SYNTHETIC DEMO ARTIFACT - fictional chat excerpt (case DEMO-2026-001). No real person or message.\n\n[2026-10-10 09:12] Adrian Example, CFO: Good morning Jordan. Exempla Holding AG confirms the\n  allocation for Northbridge Analytics, Inc. The treasury desk needs the settlement in USDC.\n[2026-10-10 09:15] Jordan Avery: Understood. Which wallet should we use?\n[2026-10-10 09:16] Adrian Example, CFO: Our onboarding portal at exempla-holding.example shows the\n  settlement address. Please send the test amount first.\n[2026-10-12 10:41] Adrian Example, CFO: The window closes at 11:00 UTC today. Please release the\n  full 399,247.92 USDC now.\n[2026-10-12 10:50] Jordan Avery: Sent. Origin tx 0x70abbe14aa9080b572aa69881536e5c165097c0574c4791467e915b708bba814\n[2026-10-12 11:30] Adrian Example, CFO: (no reply; account deleted)\n"
+    },
+    {
+      "folder": "law_enforcement",
+      "title": "IC3 complaint receipt IC3-DEMO-00000000 (synthetic)",
+      "description": "Synthetic receipt for the FBI IC3 online complaint. Demo file; the reference is fictional.",
+      "source_type": "complaint_receipt",
+      "storage": "inline",
+      "mime": "text/plain",
+      "received_from": "Jordan Avery (victim)",
+      "classification": "R3",
+      "tlp": "TLP:AMBER",
+      "tags": [
+        "ic3",
+        "complaint",
+        "synthetic"
+      ],
+      "shared_with_external": true,
+      "meta": {
+        "demo_file": "data/fixtures/demo_evidence/ic3_receipt.txt",
+        "synthetic": true,
+        "reference": "IC3-DEMO-00000000",
+        "section": "reports"
+      },
+      "inline_text": "SYNTHETIC DEMO ARTIFACT - fictional complaint receipt (case DEMO-2026-001).\n\nInternet Crime Complaint Center (IC3) - complaint submitted\nComplaint reference: IC3-DEMO-00000000\nFiled by: Jordan Avery, Northbridge Analytics, Inc.\nType: investment fraud / business impersonation\nReported loss: 399,247.92 USDC on 2026-10-12\nThis receipt is not a real IC3 record.\n"
+    },
+    {
+      "folder": "law_enforcement",
+      "title": "Carabinieri complaint receipt DEMO-IT-0000000000 (synthetic)",
+      "description": "Synthetic receipt for the criminal complaint filed with the Carabinieri — Demo City station (demo). Demo file; the reference is fictional.",
+      "source_type": "police_report",
+      "storage": "inline",
+      "mime": "text/plain",
+      "doc_date": "2026-10-14T09:30:00+02:00",
+      "received_from": "Carabinieri — Demo City station (demo)",
+      "classification": "R3",
+      "tlp": "TLP:AMBER",
+      "tags": [
+        "police",
+        "complaint",
+        "synthetic"
+      ],
+      "shared_with_external": true,
+      "meta": {
+        "demo_file": "data/fixtures/demo_evidence/police_receipt.txt",
+        "synthetic": true,
+        "reference": "DEMO-IT-0000000000",
+        "section": "reports"
+      },
+      "inline_text": "SYNTHETIC DEMO ARTIFACT - fictional police complaint receipt (case DEMO-2026-001).\n\nCarabinieri - Demo City station (demo)\nReceipt of complaint no. DEMO-IT-0000000000, 2026-10-14 09:30 CEST\nComplainant represented by Kestrel Ridge Investigations GmbH (Mara Lindqvist, Director)\nunder a power of attorney.\nSubject: fraud by impersonation of Exempla Holding AG; cryptocurrency transfer of 399,247.92 USDC.\nThis receipt is not a real police record.\n"
+    },
+    {
+      "folder": "digital_artifacts",
+      "title": "Video-call transcript excerpt with the persona (synthetic)",
+      "description": "Synthetic transcript excerpt of a call with the 'Adrian Example, CFO' persona. Demo file; not a real recording.",
+      "source_type": "transcript",
+      "storage": "inline",
+      "inline_text": "SYNTHETIC DEMO ARTIFACT - fictional video-call transcript excerpt (case DEMO-2026-001).\n\nCall recorded by the victim, 2026-10-09 15:00 UTC, 18 minutes. Participants: Jordan Avery\n(Northbridge Analytics, Inc.) and a caller presenting as \"Adrian Example, CFO\" of Exempla Holding AG.\n\n00:02:10 Caller: We work only through our private settlement platform, for compliance reasons.\n00:05:45 Caller: The allocation is reserved for 72 hours. After that it goes to the next investor.\n00:11:30 Jordan Avery: Can we pay by bank wire instead?\n00:11:42 Caller: No. Stablecoin only, it settles the same day.\n",
+      "mime": "text/plain",
+      "doc_date": "2026-10-09T15:00:00Z",
+      "received_from": "Jordan Avery (victim)",
+      "classification": "R3",
+      "tags": [
+        "transcript",
+        "persona",
+        "synthetic"
+      ],
+      "shared_with_external": false,
+      "meta": {
+        "demo_file": "data/fixtures/demo_evidence/meeting_transcript.txt",
+        "synthetic": true,
+        "section": "recordings"
+      }
+    },
+    {
+      "folder": "legal",
+      "title": "Letter of authorisation — Northbridge Analytics, Inc. to Athena Software Group, Inc. (synthetic)",
+      "description": "Synthetic letter of authorisation from the victim's company to Athena Software Group, Inc. (the sender of record of this case's letters). Demo file; not a real document.",
+      "source_type": "authority_instrument",
+      "storage": "inline",
+      "mime": "text/plain",
+      "doc_date": "2026-10-16T00:00:00Z",
+      "received_from": "Jordan Avery (victim)",
+      "classification": "R3",
+      "tags": [
+        "authority",
+        "synthetic"
+      ],
+      "shared_with_external": false,
+      "meta": {
+        "demo_file": "data/fixtures/demo_evidence/letter_of_authorisation.txt",
+        "synthetic": true
+      },
+      "inline_text": "SYNTHETIC DEMO ARTIFACT - fictional letter of authorisation (case DEMO-2026-001). Not a real document.\n\nLETTER OF AUTHORISATION\n\nNorthbridge Analytics, Inc. (the Client), represented by its CEO, Jordan Avery, authorises\nAthena Software Group, Inc. to act on the Client's behalf in the matter of the cryptocurrency\nfraud of 12 October 2026 (loss of 399,247.92 USDC), and in particular to:\n\n- contact virtual-asset service providers, stablecoin issuers, infrastructure providers and\n  law-enforcement agencies about the matter;\n- request the preservation of records and a hold on assets linked to the fraud;\n- receive correspondence about the matter and share it with the Client.\n\nThis authorisation does not include the right to receive funds on the Client's behalf.\n\nSigned for the Client: Jordan Avery, CEO (synthetic signature)\nDate: 2026-10-16\n"
+    }
+  ]
+}

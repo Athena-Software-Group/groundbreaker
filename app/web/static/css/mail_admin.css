@@ -1,0 +1,24 @@
+/* Mail administration and inbound review (owner: the mail feature; linked from admin_mail*.html and
+   case_mail_review.html through their head block). Font sizes come from the --fs-* scale in aegis.css. */
+.mail-cards h2 small { font-weight: normal; }
+.mail-actions { margin-top: 10px; }
+.mail-actions input[type="email"] { min-width: 16rem; }
+.mail-result { margin-bottom: 14px; }
+.mail-result.ok { border-left: 3px solid var(--ok); }
+.mail-result.failed { border-left: 3px solid var(--danger); }
+.small-counts { font-size: var(--fs-sm); word-spacing: .3em; }
+.mail-filter { margin-bottom: 12px; }
+.mail-list td.mail-subject { max-width: 32rem; overflow-wrap: anywhere; }
+pre.mail-text { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 28rem; overflow: auto; background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: var(--fs-sm); }
+.mail-atts { margin: 4px 0 8px 18px; padding: 0; font-size: var(--fs-sm); }
+.mail-form { display: grid; gap: 6px; max-width: 36rem; margin-bottom: 14px; }
+.mail-form select, .mail-form input { width: 100%; }
+.mail-form button { justify-self: start; }
+.mail-review { margin-bottom: 14px; }
+.mail-subj { font-weight: 600; margin: 4px 0 6px; overflow-wrap: anywhere; }
+.mail-review-actions select { max-width: 22rem; }
+label.mail-check { display: inline-flex; white-space: nowrap; align-items: center; gap: 6px; margin: 0; text-transform: none; letter-spacing: 0;
+  font-size: var(--fs-sm); }
+.mail-actions form.inline.row { gap: 8px; }
+.mail-form input[type="checkbox"] { width: auto; }

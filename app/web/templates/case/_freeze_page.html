@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{# On-chain freeze status page — owner: app/web/routes_freeze.py (freeze_page). Context: case, access, st
+   (app.freeze.service.case_status), plan (egress_plan: what each endpoint receives), watched (FreezeWatch rows),
+   chains [(key, label)], tlps, contracts (issuers.CONTRACTS), can_check (poll_watch), can_watch (edit),
+   can_manage (manage_case), show_notes (view_restricted), error, done. #}
+{% import "case/_freeze_macros.html" as fzm %}
+{% import "_owner_macros.html" as own %}
+{% block title %}Aegis · On-chain freeze status · {{ case.reference }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/freeze.css">{% endblock %}
+{% block content %}
+<div class="row case-head fz-head"><div><h1>On-chain freeze status</h1>
+  <div class="sub"><a href="/cases/{{ case.id }}">← {{ case.reference }} · Overview</a>
+    · issuer blacklists (Tether USDT, Circle USDC) read from the chain</div></div></div>
+
+{% if error %}<div class="alert critical">{{ error }}</div>{% endif %}
+{% if done == 'enabled' %}<div class="alert info">On-chain freeze checks are on for this case. Your consent and the endpoints are recorded in the audit log.</div>
+{% elif done == 'disabled' %}<div class="alert info">On-chain freeze checks are off for this case. Nothing more is sent.</div>
+{% elif done == 'watch' %}<div class="alert info">Wallet added to watch.{% if st.enabled %} It is checked on the next run.{% endif %}</div>
+{% elif done == 'unwatch' %}<div class="alert info">Wallet no longer watched. Its earlier readings stay below.</div>{% endif %}
+
+{% if st.enabled and st.consent_outdated %}<div class="alert warning" id="consent-outdated">Endpoints changed, re-confirm: the checks would now also reach {{ st.consent_outdated | join(', ') }}, which the case admin did not consent to. Nothing is sent until a case admin confirms the endpoints again <a href="#setting">below</a>.</div>{% endif %}
+{% if st.unfrozen %}<div class="alert critical">{{ st.unfrozen | length }} wallet{{ 's' if st.unfrozen | length != 1 }} removed from an issuer blacklist: the funds can move again. Contact the issuer and the services they could reach now.</div>{% endif %}
+
+<div class="panel" id="freeze">
+  <div class="row">
+    <h2>Status <small>{% if st.deployment_disabled %}switched off for this deployment (AEGIS_FREEZE_CHECKS_DISABLED){% elif st.enabled and st.consent_outdated %}endpoints changed: re-confirm before the next check{% elif st.enabled %}checks on · every {{ st.interval_minutes }} min on the scheduler{% else %}checks off for this case: nothing is sent{% endif %}</small></h2>
+    <div class="spacer"></div>
+    {% if st.enabled and can_check and not st.deployment_disabled and not st.consent_outdated %}
+    <form method="post" action="/cases/{{ case.id }}/freeze/check" class="inline">{{ csrf_field() }}
+      <input type="hidden" name="next" value="/cases/{{ case.id }}/freeze">
+      <button class="btn small primary" type="submit" title="reads the issuer contracts now (audited)">⟳ Check freeze status now</button></form>
+    {% endif %}
+  </div>
+  <div class="row muted fz-small">
+    <span><b>{{ st.n_wallets }}</b> wallet{{ 's' if st.n_wallets != 1 }} to check</span>
+    <span><b>{{ st.frozen | length }}</b> frozen on-chain ({{ st.frozen_usd | usd }})</span>
+    {% if st.unfrozen %}<span><b>{{ st.unfrozen | length }}</b> freeze{{ 's' if st.unfrozen | length != 1 }} lifted</span>{% endif %}
+    <span><b>{{ st.failing | length }}</b> not blacklisted, transfers failing</span>
+    <span><b>{{ st.unchecked | length }}</b> not checked yet</span>
+    {% if st.last_run_at %}<span>last run {{ st.last_run_at | dt }}{% if st.last_result %} · {{ st.last_result.requests or 0 }} request{{ 's' if (st.last_result.requests or 0) != 1 }} to {{ (st.last_result.hosts or []) | join(', ') or '—' }}{% endif %}</span>{% endif %}
+  </div>
+  <p class="fz-note">Exchange and casino accounts{% if st.not_visible %} ({{ st.not_visible | join(', ') }}){% endif %} cannot be seen on-chain: a freeze there is internal to the service, so it stays confirmed by the recipient's reply to the stop order (Authorities tab), never by these checks.</p>
+</div>
+
+<div class="panel fz-block" id="readings">
+  <h2>Wallets <small>latest reading per issuer contract</small></h2>
+  {% if st.wallets %}
+  <div class="table-scroll"><table class="fz-table">
+    <thead><tr><th>Wallet</th><th>Source</th><th>State</th><th>Readings</th></tr></thead>
+    <tbody>
+    {% for w in st.wallets %}
+    <tr>
+      <td><span class="tag">{{ w.chain_label }}</span><div class="fz-addr">{{ w.address }}</div>
+        {% if w.entity %}<div class="muted fz-small">{{ w.entity }}</div>{% elif w.label %}<div class="muted fz-small">{{ w.label }}</div>{% endif %}
+        {{ own.line(w.owner) }}</td>
+      <td class="fz-small">{{ 'trace' if w.in_trace else ('watched' if w.source == 'watched' else 'earlier') }}{% if w.in_trace and w.watch_id %} + watched{% endif %}
+        {% if w.tlp %}<br><span class="tag amber">{{ w.tlp }}</span>{% endif %}
+        {% if show_notes and w.source_note %}<br><span class="muted">{{ w.source_note }}</span>{% endif %}</td>
+      <td>{{ fzm.state_tag(w.state) }}</td>
+      <td>{% for c in w.checks %}{{ fzm.check_detail(st, w, c) }}{% endfor %}
+        {% if w.pending %}<div class="fz-line muted fz-small">not read yet: {{ w.pending | join(', ') }}</div>{% endif %}
+        {% if w.not_configured %}<div class="fz-line muted fz-small">no RPC endpoint configured for {{ w.not_configured | join(', ') }}</div>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="muted">No wallet to check: the latest trace has no USDT / USDC wallet on a chain the issuers' contracts are read on, and no wallet is watched.</p>{% endif %}
+</div>
+
+<div class="grid cols-2 fz-block">
+<div class="panel" id="watched">
+  <h2>Watched wallets <small>{{ watched | length }} active · checked although not in the trace</small></h2>
+  {% for w in watched %}
+  <div class="row fz-line">
+    <span class="tag">{{ dict(chains).get(w.chain, w.chain) }}</span><span class="fz-addr">{{ w.address }}</span>
+    {% if w.label %}<span class="muted fz-small">{{ w.label }}</span>{% endif %}{% if w.tlp %}<span class="tag amber">{{ w.tlp }}</span>{% endif %}
+    <div class="spacer"></div>
+    {% if can_watch %}<form method="post" action="/cases/{{ case.id }}/freeze/watch/{{ w.id }}/remove" class="inline">{{ csrf_field() }}<button class="btn small" type="submit">Stop watching</button></form>{% endif %}
+  </div>
+  {% if show_notes and w.source_note %}<div class="muted fz-small">source: {{ w.source_note }}</div>{% endif %}
+  {% else %}<p class="muted fz-small">No watched wallets.</p>{% endfor %}
+  {% if can_watch %}
+  <h3 class="ov-h3">Add wallet to watch</h3>
+  <form method="post" action="/cases/{{ case.id }}/freeze/watch" class="fz-form">{{ csrf_field() }}
+    <div><label for="fz-chain">Chain</label><select id="fz-chain" name="chain">{% for key, lbl in chains %}<option value="{{ key }}">{{ lbl }}</option>{% endfor %}</select></div>
+    <div><label for="fz-tlp">TLP of the source</label><select id="fz-tlp" name="tlp"><option value="">none</option>{% for t in tlps %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select></div>
+    <div class="fz-wide"><label for="fz-addr">Address</label><input id="fz-addr" name="address" class="mono" required maxlength="128" placeholder="0x… (EVM) or T… (TRON)"></div>
+    <div><label for="fz-label">Label</label><input id="fz-label" name="label" maxlength="255" placeholder="e.g. consolidation wallet"></div>
+    <div><label for="fz-src">Source note</label><input id="fz-src" name="source_note" maxlength="512" placeholder="e.g. third-party trace report"></div>
+    <div class="fz-wide"><button class="btn small primary" type="submit">Add wallet to watch</button>
+      <span class="muted fz-small">TLP:RED material is not stored here (named recipients only). Label and source note stay inside the case: never in notifications, the assistant or the audit log.</span></div>
+  </form>
+  {% endif %}
+</div>
+
+<div class="panel" id="setting">
+  <h2>On-chain freeze checks <small>{{ 'on' if st.enabled else 'off' }} for this case</small></h2>
+  <p class="fz-small">When on, Aegis reads each wallet's status from the issuers' own contracts: Tether's
+    <code>isBlackListed</code> and Circle's <code>isBlacklisted</code> plus <code>balanceOf</code>, the issuer's blacklist event (for the freeze time) and the wallet's failed token transfers. That sends the case's wallet addresses to these public endpoints, which can link them to the investigation:</p>
+  <div class="table-scroll"><table class="fz-table">
+    <thead><tr><th>Chain</th><th>Endpoint</th><th>Receives</th></tr></thead>
+    <tbody>
+    {% for r in plan %}
+    <tr><td>{{ r.chain_label }}</td><td>{% if r.configured %}<code>{{ r.host }}</code>{% if r.auth %}<br><span class="muted fz-small">{{ r.auth }}</span>{% endif %}{% else %}<span class="muted">not configured: not checked</span>{% endif %}</td>
+      <td class="fz-small">{{ r.purpose }}: {{ r.sends }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% if st.enabled and st.consent_hosts %}<p class="fz-note">Consented endpoints: {{ st.consent_hosts | join(', ') }}{% if st.enabled_at %} · since {{ st.enabled_at | dt }}{% endif %}.</p>{% endif %}
+  {% if can_manage %}
+  {% if st.enabled and st.consent_outdated %}
+  <form method="post" action="/cases/{{ case.id }}/freeze/settings">{{ csrf_field() }}
+    <input type="hidden" name="enabled" value="1">
+    <label class="fz-consent"><input type="checkbox" name="consent" value="1" required>
+      <span>I confirm, as case admin, that this case's wallet addresses may now be sent to the endpoints listed above, including {{ st.consent_outdated | join(', ') }}. The decision is recorded in the audit log.</span></label>
+    <button class="btn small primary" type="submit">Confirm the new endpoints</button>
+  </form>
+  {% endif %}
+  <form method="post" action="/cases/{{ case.id }}/freeze/settings">{{ csrf_field() }}
+    {% if st.enabled %}
+      <input type="hidden" name="enabled" value="">
+      <button class="btn small danger" type="submit">Turn on-chain freeze checks off</button>
+    {% else %}
+      <input type="hidden" name="enabled" value="1">
+      <label class="fz-consent"><input type="checkbox" name="consent" value="1" required>
+        <span>I confirm, as case admin, that this case's wallet addresses may be sent to the public endpoints listed above for issuer freeze checks (on demand and every {{ st.interval_minutes }} minutes). The decision is recorded in the audit log.</span></label>
+      <button class="btn small primary" type="submit">Turn on-chain freeze checks on</button>
+    {% endif %}
+  </form>
+  {% else %}<p class="muted fz-small">A case admin turns the checks on or off.</p>{% endif %}
+</div>
+</div>
+{% endblock %}

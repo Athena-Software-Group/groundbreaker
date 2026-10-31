@@ -1,0 +1,92 @@
+{# Fund-flow tab — owner: app/web/routes_trace.py (fund_flow_tab).
+   Context: run (TraceRun|None), runs (RunSummary list, newest first), run_summary, view (graph|movements|compare|runs),
+   trace_modes; graph view: graph, stats; movements view: movements, chains, assets, hops, asserted_count;
+   compare view: base, head, diff, base_summary, head_summary. Views live in templates/trace_<view>.html. #}
+{% set rs = run_summary %}
+<div class="ff-bar">
+  {% if runs %}
+  <form method="get" action="/cases/{{ case.id }}" class="ff-runsel" data-ff-autosubmit>
+    <input type="hidden" name="tab" value="fund_flow">
+    {% if view != 'graph' %}<input type="hidden" name="view" value="{{ view }}">{% endif %}
+    <span class="ff-k">Version</span>
+    <select name="run_id" aria-label="Trace run">
+      {% for s in runs %}
+      <option value="{{ s.id }}" {% if run and s.id == run.id %}selected{% endif %}>#{{ s.id }}{% if s.label %} · {{ s.label }}{% endif %} · {{ s.at | dt }} · {{ s.provider_mode or 'default' }} · hop {{ s.max_hop }} · {{ s.nodes }} addresses / {{ s.edges }} movements · {{ s.total_taint_usd | usd }}{% if s.status != 'complete' %} · {{ s.status }}{% endif %}</option>
+      {% endfor %}
+    </select>
+    <button class="btn small ff-noscript" type="submit">View</button>
+  </form>
+  <nav class="ff-views" aria-label="Fund-flow views">
+    {% for key, lbl in (('graph', 'Graph'), ('movements', 'Movements'), ('compare', 'Compare runs'), ('runs', 'All runs (' ~ runs|length ~ ')')) %}
+    <a href="/cases/{{ case.id }}?tab=fund_flow{% if run %}&amp;run_id={{ run.id }}{% endif %}{% if key != 'graph' %}&amp;view={{ key }}{% endif %}" class="ff-view {{ 'active' if view == key else '' }}" {% if view == key %}aria-current="page"{% endif %}>{{ lbl }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+  <div class="spacer"></div>
+  {% if can('run_trace') %}
+  <form method="post" action="/cases/{{ case.id }}/trace" class="ff-runform">{{ csrf_field() }}
+    <select name="mode" aria-label="Data provider for the new run" title="Data provider for the new run">
+      <option value="">{{ app_info.provider_mode }} (default)</option>
+      <option value="fixture">fixture (offline)</option>
+      <option value="live" title="Etherscan / TronGrid / mempool.space">live (explorers)</option>
+    </select>
+    <input name="label" maxlength="128" placeholder="label (optional)" aria-label="Label for the new version (optional)" title="Label for the new version (optional)">
+    <button class="btn primary small" type="submit" title="Creates a new version; earlier runs are kept">▶ Run trace</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if run and rs %}
+<div class="ff-runinfo">
+  <span class="tag gold">#{{ rs.id }}</span>
+  {% if rs.label %}<b class="ff-label">{{ rs.label }}</b>{% endif %}
+  <span class="tag {{ 'green' if rs.status == 'complete' else 'red' }}">{{ rs.status }}</span>
+  <span class="ff-stat" title="provider mode">{{ rs.provider_mode or 'default' }}</span>
+  <span class="ff-stat" title="finished">{{ rs.at | dt }}</span>
+  <span class="ff-stat" title="deepest hop / hop limit">hop {{ rs.max_hop }}{% if rs.max_hops %}/{{ rs.max_hops }}{% endif %}</span>
+  <span class="ff-stat" title="addresses in the trace / movements (transfers) between them">{{ rs.nodes }} addresses · {{ rs.edges }} movements</span>
+  <span class="ff-stat" title="exchange / casino deposit and hot-wallet addresses where the trace stopped">{{ rs.vasp_touchpoints }} VASP address{{ 'es' if rs.vasp_touchpoints != 1 }}</span>
+  <span class="ff-stat" title="the case funds that entered the trace (the loss)">traced {{ rs.total_taint_usd | usd }}</span>
+  <span class="ff-stat" title="traced funds that reached exchange / casino deposit addresses (an upper bound where a link is asserted); the Recovery plan's 'in play' also counts swap services">at VASPs {{ rs.vasp_taint_usd | usd }}</span>
+  <div class="spacer"></div>
+  {% if can('run_trace') %}
+  <form method="post" action="/cases/{{ case.id }}/trace" class="inline">{{ csrf_field() }}
+    <input type="hidden" name="mode" value="{{ rs.provider_mode if rs.provider_mode in trace_modes else '' }}">
+    <input type="hidden" name="label" value="re-run of #{{ rs.id }}">
+    <button class="btn small" type="submit" title="same provider mode; creates a new version">⟳ Re-run with {{ rs.provider_mode or 'default' }}</button>
+  </form>
+  {% endif %}
+  {% if can('export') %}
+  <details class="ff-downloads ff-menu">
+    <summary class="btn small" title="exports of this run">Download ▾</summary>
+    <div class="ff-menu-items">
+      <a href="/api/cases/{{ case.id }}/trace/runs/{{ run.id }}/movements.txt" title="fixed-width movement report">movements .txt</a>
+      <a href="/api/cases/{{ case.id }}/trace/runs/{{ run.id }}/movements.csv" title="movement listing">movements .csv</a>
+      <a href="/api/cases/{{ case.id }}/trace/runs/{{ run.id }}/report.md" title="trace report (Markdown)">report .md</a>
+      <a href="/api/cases/{{ case.id }}/trace/runs/{{ run.id }}/report.docx" title="trace report (Word)">report .docx</a>
+    </div>
+  </details>
+  {% endif %}
+</div>
+{% if rs.error %}<div class="ff-error">Run failed: {{ rs.error }}</div>{% endif %}
+<details class="ff-notes">
+  <summary>Label &amp; notes{% if rs.notes %}: <span class="ff-notes-preview">{{ rs.notes | truncate(140) }}</span>{% else %} <span class="muted">(none)</span>{% endif %}</summary>
+  {% if rs.notes %}<div class="ff-notes-text">{{ rs.notes }}</div>{% endif %}
+  {% if can('annotate_run') %}
+  <form method="post" action="/cases/{{ case.id }}/trace/runs/{{ run.id }}/annotate" class="ff-annotate">{{ csrf_field() }}
+    <input type="hidden" name="view" value="{{ view }}">
+    <input name="label" maxlength="128" value="{{ rs.label or '' }}" placeholder="label, e.g. live re-run after relay check" aria-label="Label">
+    <textarea name="notes" rows="2" maxlength="4000" placeholder="notes on this version (what changed, what to verify)" aria-label="Notes">{{ rs.notes or '' }}</textarea>
+    <button class="btn small" type="submit">Save label &amp; notes</button>
+  </form>
+  {% endif %}
+</details>
+{% endif %}
+
+{% if not run %}
+<div class="panel"><p class="muted">No trace yet.{% if can('run_trace') %} Press <b>Run trace</b>.{% endif %}</p></div>
+{% elif view == 'movements' %}{% include "trace_movements.html" %}
+{% elif view == 'compare' %}{% include "trace_compare.html" %}
+{% elif view == 'runs' %}{% include "trace_runs.html" %}
+{% else %}{% include "case/_freeze_legend.html" %}{% include "trace_graph.html" %}
+{% endif %}

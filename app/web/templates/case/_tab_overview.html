@@ -1,0 +1,190 @@
+{# Overview tab — owner: app/web/routes.py (overview_tab).
+   Context: run, stats, cands, alerts, funds (assistant rules: funds_position), open_orders, overdue, upcoming,
+   holds, drafts, summary_meta, summary, summary_hidden, notifications, read_ids, event_labels, pending,
+   SeedRole, watch_count, now, sender_setup (signatory, on_behalf_of, instrument, link: while the sender profile has
+   no authority document attached; investigators and up). On-chain freeze block: the Jinja global freeze_overview
+   (app/web/routes_freeze.py); the To do card: the Jinja global todo_card (app/web/routes_todo.py) #}
+{% set fz = freeze_overview(case, access) if freeze_overview is defined else none %}
+{% if fz %}<link rel="stylesheet" href="/static/css/freeze.css">{% endif %}
+{% if sender_setup %}
+<div class="panel ov-block" id="sender-setup">
+  <span>Sender of record set: <b>{{ sender_setup.signatory }}</b> on behalf of <b>{{ sender_setup.on_behalf_of }}</b> — <a href="{{ sender_setup.link }}">attach the signed {{ sender_setup.instrument }}</a></span>
+</div>
+{% endif %}
+{% if pending and can('edit') %}
+<div class="panel pending ov-block">
+  <h2>Inputs still needed <small>the trace currently roots at the perpetrator wallet; supplying these makes the origin hop verifiable</small></h2>
+  <div class="grid cols-2">
+  {% for s in pending %}
+    <form method="post" action="/cases/{{ case.id }}/seeds" class="row">{{ csrf_field() }}
+      <input type="hidden" name="role" value="{{ s.role.value }}">
+      <input type="hidden" name="chain" value="{{ s.chain.value }}">
+      <div class="ov-grow"><label>{{ s.role.value | replace('_',' ') }} <span class="muted">— {{ s.note }}</span></label>
+        <input name="value" class="mono" placeholder="{{ '0x… transaction hash' if s.role.value == 'origin_tx' else '0x… wallet address' }}" required></div>
+      <div class="ov-save"><button class="btn small" type="submit">Save</button></div>
+    </form>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{# ---- funds position ---- #}
+<div class="grid kpi ov-block" id="funds">
+  {# At freezable services (and in play), the issuer lever and owner unknown: the Recovery plan's own figures (each
+     traced dollar once; an issuer wallet the trace saw forward everything on counts nothing), the same numbers as its
+     KPI strip and moves #}
+  {% set pt = plan_totals(case, access) if plan_totals is defined and access.can('view') else none %}
+  <div class="panel kpi"><div class="v danger">{{ case.loss_usd | usd }}</div><div class="l">Loss ({{ '{:,.2f}'.format(case.loss_amount) if case.loss_amount and case.loss_amount >= 1000 else case.loss_amount | amt }} {{ case.loss_asset }})</div></div>
+  <div class="panel kpi"><div class="v">{{ (funds.traced_usd | usd) if funds and funds.traced_usd is not none else '—' }}</div><div class="l">Traced (upper bound)</div></div>
+  {% if pt %}
+  <div class="panel kpi"><div class="v accent">{{ pt.freezable_usd | usd }}</div><div class="l">At freezable services<br><span class="muted fz-kpi-sub">exchange / casino accounts, each traced dollar once · <a href="/cases/{{ case.id }}/recovery-plan#moves">{{ '$' ~ '{:,.0f}'.format(pt.in_play_usd) }} in play</a> with swap services and issuers</span></div></div>
+  <div class="panel kpi"><div class="v">{{ pt.issuer_usd | usd }}</div><div class="l">Issuer blacklist lever{% for x in pt.issuer_moved_on %}<br><span class="muted fz-kpi-sub">{{ x.name }}: moved on ({{ x.wallets | join(', ') }}), balance unconfirmed</span>{% endfor %}</div></div>
+  {% else %}
+  <div class="panel kpi"><div class="v accent">{{ (funds.at_freezable_services_usd | usd) if funds else '—' }}</div><div class="l">At freezable services</div></div>
+  <div class="panel kpi"><div class="v">{{ (funds.issuer_blacklist_lever_usd | usd) if funds else '—' }}</div><div class="l">Issuer blacklist lever</div></div>
+  {% endif %}
+  <div class="panel kpi"><div class="v ok">{{ (funds.frozen_usd | usd) if funds else '—' }}</div><div class="l">Frozen (confirmed holds){% if fz %}<span class="muted fz-kpi-sub">confirmed by the exchange's / recipient's reply</span>{% endif %}{% if funds and funds.frozen_upper_bound_usd %}<br><span class="muted">+ up to {{ funds.frozen_upper_bound_usd | usd }} frozen, amount not reported (upper bound)</span>{% endif %}</div></div>
+  {% include "case/_freeze_kpi.html" %}
+  {% set uo = pt.unknown_owner if pt else none %}
+  {% if uo %}
+  <div class="panel kpi"><div class="v"><a href="/cases/{{ case.id }}/recovery-plan#owners">{{ uo.usd | usd if uo.usd else '—' }}</a></div><div class="l">Owner unknown{% if uo.n %}<br><span class="muted fz-kpi-sub">{{ uo.n }} wallet{{ 's' if uo.n != 1 }} holding {{ '$' ~ '{:,.0f}'.format(uo.threshold_usd) }} or more, no known owner</span>{% endif %}</div></div>
+  {% else %}
+  <div class="panel kpi"><div class="v">{{ (funds.dormant_self_custody_usd | usd) if funds else '—' }}</div><div class="l">Dormant self-custody</div></div>
+  {% endif %}
+</div>
+{% include "case/_projection_row.html" %}
+<div class="row ov-strip muted">
+  <span><b>{{ stats.nodes if stats else '—' }}</b> addresses</span>
+  <span><b>{{ stats.max_hop if stats else '—' }}</b> max hops</span>
+  <span><b>{{ stats.vasp_touchpoints if stats else '—' }}</b> VASP touchpoints</span>
+  <span><b>{{ cands | length if cands else 0 }}</b> freeze candidates</span>
+  <span>chains <b>{{ stats.chains | join(' · ') if stats else '—' }}</b></span>
+  {% if run %}<span>latest trace <a href="/cases/{{ case.id }}?tab=fund_flow&amp;run_id={{ run.id }}">#{{ run.id }}{% if run.label %} · {{ run.label }}{% endif %}</a> · {{ (run.finished_at or run.started_at) | dt }}</span>{% endif %}
+  {% if funds %}<span class="ov-funds-run">{% if funds.based_on_run %}funds position based on trace run <b>#{{ funds.based_on_run.run_id }}</b>{% if funds.based_on_run.label %} · {{ funds.based_on_run.label }}{% endif %} (the latest){% else %}funds position: no trace run yet{% endif %}</span>
+  <span class="ov-method" title="{% if pt %}at freezable services (exchange, casino and OTC accounts), in play, issuer blacklist lever and owner unknown = the Recovery plan's figures (each traced dollar counted once; an issuer wallet the trace saw forward everything on counts nothing until a reading shows a balance; owner unknown = wallets holding at least the larger of $1,000 and 1% of the loss that no source attributes); {% endif %}{{ funds.method }}">how these figures are computed</span>{% endif %}
+</div>
+
+{# ---- to do (app/domain/todo; owner app/web/routes_todo.py, Jinja global todo_card): the top open tasks ---- #}
+{% set tdc = todo_card(case, access) if todo_card is defined and access.can('view') else none %}
+{% include "todo_card.html" %}
+
+{% include "case/_freeze_overview.html" %}
+
+{# ---- block status (app/blocks; owner app/web/routes_blocks.py, Jinja global block_status_card) ---- #}
+{% set bkc = block_status_card(case, access) if block_status_card is defined and access.can('view') else none %}
+{% include "blocks_card.html" %}
+
+{# ---- recovery plan (app/blocks/recovery; owner app/web/routes_recovery.py, Jinja global recovery_card) ---- #}
+{% set rpc = recovery_card(case, access) if recovery_card is defined and access.can('view') else none %}
+{% include "recovery_card.html" %}
+
+{# ---- status summary ---- #}
+<div class="panel ov-block" id="status">
+  <div class="row">
+    <h2>Case status</h2>
+    {% if summary_meta %}<span class="tag {{ 'gold' if summary_meta.source == 'ai' else '' }}">{{ summary_meta.label or summary_meta.source }}</span>
+      <span class="muted ov-small">{% if summary_meta.generated_at %}{{ summary_meta.generated_at[:16] | replace('T', ' ') }} UTC · {% endif %}{{ summary_meta.mode or '' }}{{ ' mode' if summary_meta.mode }}</span>{% endif %}
+    <div class="spacer"></div>
+    <a class="btn small" href="/cases/{{ case.id }}?tab=assistant#assistant-summary">{{ 'Open AI Assistant (Pythia)' if summary_meta else 'Generate a summary' }}</a>
+  </div>
+  {% if case.status_summary %}<p class="ov-status">{{ case.status_summary }}</p>
+  {% if summary_meta and summary_meta.source == 'ai' %}<div class="muted ov-small">Generated by <span class="mono">{{ summary_meta.served_model or summary_meta.model }}</span> via {{ summary_meta.provider_label or summary_meta.provider or 'the configured AI provider' }} · {{ summary_meta.generated_at[:16] | replace('T', ' ') }} UTC</div>{% endif %}
+  {% else %}<p class="muted">No status summary yet. Pythia, the AI assistant, writes one from the trace, stop orders and correspondence (rule-based when no AI is configured).</p>{% endif %}
+  {% if summary %}
+  <div class="grid cols-2">
+    <div>
+      <h3 class="ov-h3">Next steps</h3>
+      {% for s in (summary.next_steps or [])[:5] %}
+        <div class="ov-step"><span class="tag {{ {'high':'red','medium':'amber'}.get(s.priority, '') }}">{{ s.priority }}</span> {{ s.action }} <span class="muted">· {{ s.owner_role | replace('_', ' ') }}</span></div>
+      {% else %}<div class="muted">None listed.</div>{% endfor %}
+    </div>
+    <div>
+      <h3 class="ov-h3">Deadlines &amp; risks</h3>
+      {% for d in (summary.deadlines or [])[:3] %}<div class="ov-step"><span class="mono">{{ (d.due or '')[:10] }}</span> {{ d.what }}</div>{% endfor %}
+      {% for r in (summary.risks or [])[:3] %}<div class="ov-step muted">⚠ {{ r }}</div>{% endfor %}
+      {% if not summary.deadlines and not summary.risks %}<div class="muted">None listed.</div>{% endif %}
+    </div>
+  </div>
+  {% elif summary_hidden %}<p class="muted ov-small">The detailed summary was generated in full mode and is visible to investigators only.</p>{% endif %}
+</div>
+
+<div class="grid cols-2 ov-block">
+  {# ---- stop orders & replies ---- #}
+  <div class="panel" id="open-orders">
+    <div class="row"><h2>Open stop orders <small>{{ open_orders | length }} open{% if drafts %} · {{ drafts }} draft{{ 's' if drafts != 1 }}{% endif %}</small></h2>
+      <div class="spacer"></div><a class="btn small" href="/cases/{{ case.id }}?tab=authorities">Authorities desk</a></div>
+    {% if open_orders %}
+    <div class="table-scroll"><table class="ov-table">
+      <thead><tr><th>Recipient</th><th>Kind</th><th>Status</th><th>Sent</th><th>Reply due</th></tr></thead>
+      <tbody>
+      {% for r in open_orders %}
+        <tr>
+          <td><a href="/cases/{{ case.id }}/authorities/{{ r.authority.key }}#o{{ r.order.id }}">{{ r.authority.name }}</a></td>
+          <td>{{ r.order.kind | replace('_', ' ') }}</td>
+          {# its status as Block status words it (one wording on every page); the stop order's own state without one #}
+          {% set bst = (bkc.status or {}).get('o' ~ r.order.id) if bkc else none %}
+          <td>{% if bst %}<span class="bk-badge bk-{{ bst.tone }}">{{ bst.text }}</span>{% if bst.confirm_tag %} <span class="tag amber">to confirm</span>{% endif %}{% else %}<span class="tag {{ {'draft':'amber','sent':'blue','acknowledged':'blue','frozen':'green'}.get(r.state, '') }}">{{ r.state }}</span>{% endif %}</td>
+          <td class="nowrap">{{ r.order.sent_at | dt if r.order.sent_at else '—' }}</td>
+          <td class="nowrap">{% if r.due %}{{ r.due | dt }}{% if r.overdue %} <span class="tag red">overdue</span>{% endif %}{% else %}—{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="muted">No open stop orders.{% if cands %} {{ cands | length }} freeze candidate{{ 's' if cands | length != 1 }} in the latest trace.{% endif %}</div>{% endif %}
+
+    {% if holds %}
+    <h3 class="ov-h3">Holds reported by recipients</h3>
+    {% for h in holds %}<div class="ov-step"><span class="tag green">{{ h.hold.state }}</span> {{ h.authority.name }}: <span class="mono">{{ h.hold.amount }} {{ h.hold.asset or '' }}</span></div>{% endfor %}
+    {% endif %}
+
+    <h3 class="ov-h3" id="overdue">Overdue replies <small class="muted">{{ overdue | length }}</small></h3>
+    {% for o in overdue %}
+      <div class="ov-step"><span class="tag red">{{ o.days_late }} day{{ 's' if o.days_late != 1 }} late</span> <a href="{{ o.link }}">{{ o.authority.name }}</a> · {{ 'stop order' if o.kind == 'stop_order' else 'letter' }} #{{ o.id }} · due {{ o.due | dt }}</div>
+    {% else %}<div class="muted ov-small">Nothing overdue.</div>{% endfor %}
+    {% if upcoming %}
+    <h3 class="ov-h3">Due within 7 days</h3>
+    {% for o in upcoming %}<div class="ov-step"><span class="tag amber">{{ o.days_left }}d</span> <a href="{{ o.link }}">{{ o.authority.name }}</a> · {{ 'stop order' if o.kind == 'stop_order' else 'letter' }} #{{ o.id }} · due {{ o.due | dt }}</div>{% endfor %}
+    {% endif %}
+  </div>
+
+  {# ---- notifications & alerts ---- #}
+  <div class="panel" id="latest-notifications">
+    <div class="row"><h2>Latest notifications</h2><div class="spacer"></div>
+      <a class="btn small" href="/cases/{{ case.id }}?tab=notifications">All events</a></div>
+    {% for n in notifications %}
+      <div class="alert {{ n.severity }} ov-note {{ 'is-read' if n.id in read_ids else 'is-unread' }}">
+        <div class="row"><b>{% if n.link %}<a href="{{ n.link }}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</b>
+          <div class="spacer"></div><span class="muted nowrap ov-small">{{ n.created_at | dt }}</span></div>
+        <div class="ov-small muted">{{ event_labels.get(n.event_type, n.event_type) }}{% if n.usd is not none %} · {{ n.usd | usd }}{% endif %}</div>
+      </div>
+    {% else %}<div class="muted">No events yet.</div>{% endfor %}
+
+    <div class="row ov-alerts-head" id="alerts">
+      <h2>Movement alerts <small>{{ watch_count }} addresses on watch</small></h2><div class="spacer"></div>
+      {% if can('poll_watch') %}<form method="post" action="/cases/{{ case.id }}/watch/poll" class="inline">{{ csrf_field() }}<button class="btn small" type="submit">⟳ Poll watch list</button></form>
+      {% if alerts | rejectattr('acknowledged') | list %}<form method="post" action="/cases/{{ case.id }}/watch/alerts/ack-all" class="inline">{{ csrf_field() }}<button class="btn small" type="submit">Acknowledge all</button></form>{% endif %}{% endif %}
+    </div>
+    {% for a in alerts %}
+      <div class="alert {{ a.severity }}{{ ' is-read' if a.acknowledged else '' }}"><div class="row"><span><b>{{ a.severity | upper }}</b> · {{ a.created_at | dt }}{% if a.acknowledged %} · <span class="muted">acknowledged</span>{% endif %}</span><div class="spacer"></div>
+        {% if can('poll_watch') and not a.acknowledged %}<form method="post" action="/cases/{{ case.id }}/watch/alerts/{{ a.id }}/ack" class="inline">{{ csrf_field() }}<button class="btn small" type="submit">Acknowledge</button></form>{% endif %}</div>
+        {{ a.message }}{% if a.tx_hash %}<br><code class="ov-hash">{{ a.tx_hash }}</code>{% endif %}</div>
+    {% else %}
+      <div class="muted ov-small">No movement detected on watched addresses. Polling runs on the scheduler (<code>scripts/run_scheduler.py</code>) or with the button above.</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="panel ov-block">
+  <h2>Case facts</h2>
+  <div class="grid cols-2">
+    <div class="kv ov-small">
+      {% if case.facts.impersonated_entity %}<div><span class="muted">Impersonated:</span> {{ case.facts.impersonated_entity }}</div>{% endif %}
+      {% if case.facts.persona %}<div><span class="muted">Persona:</span> {{ case.facts.persona }}</div>{% endif %}
+      {% if case.facts.domains %}<div><span class="muted">Domains:</span> {{ case.facts.domains | join(', ') }}</div>{% endif %}
+      {% for c in complaints %}<div><span class="muted">Complaint:</span> {{ c.authority }} — <code>{{ c.reference }}</code>{% if c.masked %} <span class="muted">(masked for your role)</span>{% endif %}</div>{% endfor %}
+      {% for i in case.facts.infrastructure or [] %}<div><span class="muted">{{ i.provider }}:</span> {{ i.detail }}</div>{% endfor %}
+    </div>
+    <div>{% if case.summary %}<div class="muted ov-small">{{ case.summary }}</div>{% endif %}</div>
+  </div>
+</div>
+{% if not run %}<div class="panel"><p class="muted">No trace yet. Open <a href="/cases/{{ case.id }}?tab=fund_flow">Fund flow</a> and press <b>Run trace</b>.</p></div>{% endif %}

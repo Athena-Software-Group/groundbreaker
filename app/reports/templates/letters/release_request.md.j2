@@ -1,0 +1,40 @@
+{# Release / return-of-funds request to a counterparty that confirmed a hold. Context: see _context_release #}
+**Subject:** {{ subject }}
+
+Dear {{ salutation }},
+
+{% include "letters/_intro.md.j2" %}
+
+Following our letter of {{ ref.date_fmt }} ("{{ ref.subject }}"){% if ref.external_ref %}, your reference {{ ref.external_ref | code }}{% endif %}, you confirmed on {{ hold.date_fmt }} that {% if hold.amount %}{{ (hold.amount | fmt_amt ~ ' ' ~ (hold.asset or '')) | bold }}{% else %}the funds{% endif %} associated with the identifiers below {{ 'are' if not hold.amount else 'is' }} held. Thank you. We now ask you to **release the held funds for return to the victim**.
+
+### 1. Identifiers and funds held
+
+{% if identifiers %}
+{% include "letters/_identifiers.md.j2" %}
+
+{% else %}
+The identifiers are listed in our letter of {{ ref.date_fmt }}.
+{% endif %}
+
+### 2. Requested action
+
+- Release of the held funds{% if hold.amount %} ({{ hold.amount | fmt_amt }} {{ hold.asset }}){% endif %} for return to the victim, {{ victim.name }}{% if origin.victim_wallet %}, to the wallet from which the funds originated ({{ origin.victim_wallet | code }}){% endif %}, or to an account designated in the formal process.
+- Your requirements for the release: forms, proof of ownership of the originating wallet (for example a signed message), identity documents of the victim, and any law-enforcement or court order you require.
+- Confirmation that the hold stays in place until the release is completed.
+
+{% include "letters/_complaints.md.j2" %}
+
+We can supply:
+
+- {{ sender.instrument }}
+- Evidence of the victim's ownership of the originating wallet
+- The forensic report on the fund flow
+
+{% if extra_note %}
+{{ extra_note }}
+
+{% endif %}
+{% include "letters/_signature.md.j2" %}
+
+{% include "letters/_footer.md.j2" %}
+

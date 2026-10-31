@@ -1,0 +1,84 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. Hosting / infra: no funds, so the value is a takedown of a phishing project and preservation of its records. The contact-us page publishes abuse and legal aliases on supabase.com; they are declared with value null until the catalogue's address list is extended in a reviewed change. No separate LE address is published.",
+  "key": "supabase",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": null,
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "Customer projects are served at <project-ref>.supabase.co: the project ref is the identifier to cite (provider_ids). Ask for preservation before, or together with, a takedown: contact data is kept 60 days after an account closes, and the privacy policy describes a 'legal hold' only where Supabase faces threat of a legal claim. A courtesy preservation request from a private party has no legal force; say so.",
+  "entities": [
+    {"key": "supabase-inc", "name": "Supabase Inc", "jurisdiction": null,
+     "notes": "Named in the site footer; the page does not state where it is incorporated.", "source_ids": ["s2"]},
+    {"key": "supabase-pte", "name": "Supabase Pte. Ltd. (data controller for EEA / UK / Swiss users)", "jurisdiction": null,
+     "notes": "Jurisdiction not stated; the policy says data may be transferred to the United States and Singapore.",
+     "source_ids": ["s2"]}
+  ],
+  "domains": {
+    "own": ["supabase.com"],
+    "sibling": [
+      {"domain": "supabase.io", "entity": "supabase-inc",
+       "purpose": "Older domain: the Acceptable Use Policy still names its abuse and legal aliases there",
+       "source_ids": ["s3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"}
+    ],
+    "vendor_portals": []
+  },
+  "channels": [
+    {
+      "key": "supabase.abuse", "kind": "email", "value": null, "purpose": "abuse", "role_default": "to",
+      "label": "Abuse reports (AUP violations: phishing, malware, unlawful activity)",
+      "notes": "Published on the contact-us page as the abuse alias on supabase.com (the AUP gives it on supabase.io); not yet catalogued as a value: confirm it there and add it as a case channel. Anyone may report.",
+      "source_url": "https://supabase.com/contact-us", "who": "any",
+      "source_ids": ["s1", "s3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "supabase.legal", "kind": "email", "value": null, "purpose": "legal", "role_default": "to",
+      "label": "Legal inquiries, formal complaints and regulatory inquiries (Grievance Officer: General Counsel)",
+      "notes": "Published on the contact-us page as the legal alias on supabase.com; not yet catalogued as a value. Security vulnerabilities go to the security alias, never abuse reports.",
+      "source_url": "https://supabase.com/contact-us", "who": "any",
+      "source_ids": ["s1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "supabase.le": {
+      "who": "le_only",
+      "notes": "No separate law-enforcement address or portal is published (contact-us page): an officer writes to the legal alias. Leave null.",
+      "source_ids": ["s1", "s2"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "takedown", "kind": "takedown", "requester": ["victim", "pi", "counsel", "le"],
+      "channel_keys": ["supabase.abuse"],
+      "instrument": {"type": "none"},
+      "evidence": ["incident_narrative", "provider_ids", "comms_export"],
+      "on_refusal": "preservation",
+      "notes": "Report the full project URL (*.supabase.co), screenshots, the time observed and why it is fraud. Supabase may investigate, suspend or terminate access (AUP 6.1) and may report suspected illegal activity to law enforcement (AUP 6.2); it has no duty to monitor (6.3). Action and timing are discretionary and undocumented.",
+      "source_ids": ["s1", "s3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "preservation", "kind": "private_notice", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["supabase.legal"],
+      "instrument": {"type": "none", "notes": "A courtesy preservation request; cite the police / IC3 reference."},
+      "evidence": ["provider_ids", "incident_narrative", "complaint_ref", "loa"],
+      "on_refusal": "data_disclosure",
+      "notes": "Ask Supabase to preserve the project and account records for a stated time window. A legal hold is documented only where Supabase faces threat of a legal claim; whether a third-party request triggers one is not stated.",
+      "source_ids": ["s2"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "data_disclosure", "kind": "data_disclosure", "requester": ["le", "court", "counsel"],
+      "channel_keys": ["supabase.legal"],
+      "instrument": {"type": "subpoena",
+                     "notes": "The privacy policy discloses to third parties 'as required by law or subpoena' and to comply with 'reasonable requests of law enforcement'."},
+      "evidence": ["provider_ids", "court_order", "le_agency_identity"],
+      "source_ids": ["s2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [],
+  "tickets": [],
+  "sources": [
+    {"id": "s1", "title": "Supabase Contact Us", "url": "https://supabase.com/contact-us", "retrieved_at": "2026-10-20"},
+    {"id": "s2", "title": "Supabase Privacy Policy", "url": "https://supabase.com/privacy", "retrieved_at": "2026-10-20"},
+    {"id": "s3", "title": "Supabase Acceptable Use Policy", "url": "https://supabase.com/aup", "retrieved_at": "2026-10-20"}
+  ]
+}

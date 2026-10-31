@@ -1,0 +1,49 @@
+/* authorities feature styles — owned by the authorities feature (app/web/routes_authorities.py). Linked from base.html on every page. */
+.table-wrap { overflow-x: auto; }
+/* stop-order table actions: Open and .docx stack when the row is short of width (1280 px) */
+.so-actions .btn { margin: 1px 0; white-space: nowrap; }
+.auth-list tr.auth-overdue td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+.auth-unassigned summary { cursor: pointer; margin-bottom: 6px; }
+
+.auth-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .auth-grid { grid-template-columns: 1fr; } }
+.auth-side > .panel { margin-bottom: 14px; }
+.auth-side form label:first-of-type { margin-top: 4px; }
+
+.tl-filters { margin-bottom: 12px; }
+.tl-filters select { width: auto; flex: 1 1 120px; padding: 5px 8px; font-size: var(--fs-sm); }
+.timeline { position: relative; padding-left: 18px; border-left: 2px solid var(--border); }
+.tl-item { position: relative; margin: 0 0 14px; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; }
+.tl-item::before { content: ""; position: absolute; left: -25px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); border: 2px solid var(--bg); }
+.tl-item.tl-in::before { background: var(--ok); }
+.tl-item.tl-out::before { background: var(--accent-2); }
+.tl-item.tl-note::before { background: var(--warn); }
+.tl-item.tl-draft { border-style: dashed; }
+.tl-item:target { border-color: var(--accent); }
+.tl-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: var(--fs-xs-up); color: var(--muted); }
+.tl-dir { font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text); }
+.tl-in .tl-dir { color: var(--ok); }
+.tl-out .tl-dir { color: var(--accent-2); }
+.tl-note .tl-dir { color: var(--warn); }
+.tl-subject { font-weight: 600; margin: 4px 0 2px; overflow-wrap: anywhere; }
+.tl-sub { font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.tl-evidence { font-size: var(--fs-sm); margin-top: 4px; }
+.tl-body { margin-top: 8px; }
+.tl-body summary { cursor: pointer; color: var(--accent-2); font-size: var(--fs-sm); }
+.tl-body .letter { margin-top: 8px; padding: 20px 24px; font-size: 13px; }
+.tl-text { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--mono); font-size: var(--fs-sm); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin: 8px 0 0; }
+.tl-restricted { font-size: var(--fs-sm); margin-top: 6px; font-style: italic; }
+.tl-actions { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+
+.auth-order { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.auth-order:last-of-type { border-bottom: none; }
+.auth-order:target { background: var(--panel-2); }
+.auth-status summary { cursor: pointer; color: var(--accent-2); font-size: var(--fs-sm); margin-top: 4px; }
+.auth-template-help { font-size: var(--fs-xs-up); padding-left: 16px; margin: 10px 0 0; }
+.auth-template-help li { margin-bottom: 4px; }
+.auth-check { display: flex; gap: 6px; align-items: center; text-transform: none; letter-spacing: 0; font-size: var(--fs-sm); }
+.auth-check input { width: auto; }
+.auth-side .letter, .auth-main .letter { overflow-wrap: anywhere; }
+
+/* deep links (#generate from the Fund flow recommendations) land below the sticky header */
+#generate, .tl-item { scroll-margin-top: 72px; }

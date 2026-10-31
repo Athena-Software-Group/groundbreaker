@@ -1,0 +1,52 @@
+/* To do (app/domain/todo.py; owner app/web/routes_todo.py): the tab, the Overview card and the tab bar's badge.
+   Linked from base.html (FEATURES): the badge shows on every case page. Uses the aegis.css tokens only. */
+
+.todo-badge { display: inline-block; min-width: 1.5em; padding: 0 6px; margin-left: 4px; border-radius: 10px;
+  background: var(--danger); color: #10161d; font-size: var(--fs-xs); font-weight: 700; text-align: center;
+  line-height: 1.6; vertical-align: middle; }
+
+.todo-head { align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.todo-filters { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.todo-filter { padding: 3px 10px; border: 1px solid var(--border); border-radius: 12px; color: var(--muted);
+  font-size: var(--fs-sm); }
+.todo-filter:hover { text-decoration: none; color: var(--text); border-color: var(--accent-2); }
+.todo-filter.active { color: #10161d; background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.todo-small { font-size: var(--fs-xs); }
+.todo-late { color: var(--danger); font-weight: 600; }
+
+.todo-prio { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: var(--fs-xs); font-weight: 700;
+  border: 1px solid var(--border); white-space: nowrap; }
+.todo-p1 { border-color: var(--danger); color: var(--danger); }
+.todo-p2 { border-color: var(--warn); color: var(--warn); }
+.todo-p3 { color: var(--muted); }
+
+.todo-scroll { overflow-x: auto; }
+.todo-table { width: 100%; }
+.todo-table td { vertical-align: top; }
+.todo-row-late { box-shadow: inset 3px 0 0 var(--danger); }
+.todo-row:target { outline: 1px solid var(--accent); }
+.todo-what { min-width: 18em; }
+.todo-why { margin-top: 2px; font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.todo-note { margin-top: 2px; color: var(--accent-2); overflow-wrap: anywhere; }
+.todo-manage { white-space: nowrap; }
+.todo-manage form, .todo-manage details { display: inline-block; vertical-align: top; }
+.todo-menu { position: relative; }
+.todo-menu summary { list-style: none; }
+.todo-menu summary::-webkit-details-marker { display: none; }
+.todo-pop { position: absolute; right: 0; z-index: 5; margin-top: 4px; padding: 8px; min-width: 16em; text-align: left;
+  white-space: normal; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+.todo-pop label:first-of-type { margin-top: 0; }
+.todo-pop .btn { margin-top: 6px; }
+
+.todo-add { margin-top: 16px; }
+.todo-add summary { cursor: pointer; }
+.todo-add-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(12em, 1fr)); gap: 0 12px;
+  align-items: end; margin-top: 8px; }
+.todo-add-title, .todo-add-note { grid-column: 1 / -1; }
+.todo-hidden, .todo-done { margin-top: 16px; }
+.todo-hidden summary { cursor: pointer; }
+.todo-list { margin: 6px 0 0; padding-left: 1.2em; display: grid; gap: 6px; }
+
+.todo-card-table th, .todo-card-table td { padding-top: 6px; padding-bottom: 6px; }
+.todo-card-table .todo-what { min-width: 16em; }
+.todo-card-more { margin: 8px 0 0; }

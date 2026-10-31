@@ -1,0 +1,51 @@
+{# Overview tab: on-chain freeze status (app/freeze; owner app/web/routes_freeze.py). Context: fz
+   (routes_freeze.freeze_overview: app.freeze.service.case_status + can_check / can_manage, or None). #}
+{% import "case/_freeze_macros.html" as fzm %}
+{% import "_owner_macros.html" as own %}
+{% if fz %}
+<div class="panel ov-block fz-ov" id="freeze">
+  <div class="row">
+    <h2>On-chain freeze status <small>{% if fz.deployment_disabled %}switched off for this deployment{% elif fz.enabled and fz.consent_outdated %}endpoints changed: a case admin must re-confirm{% elif fz.enabled %}issuer blacklists checked{% if fz.last_run_at %} · last run {{ fz.last_run_at | dt }}{% endif %}{% else %}checks off: nothing is sent{% endif %}</small></h2>
+    <div class="spacer"></div>
+    {% if fz.enabled and fz.can_check and not fz.deployment_disabled and not fz.consent_outdated %}
+    <form method="post" action="/cases/{{ case.id }}/freeze/check" class="inline">{{ csrf_field() }}
+      <input type="hidden" name="next" value="/cases/{{ case.id }}">
+      <button class="btn small" type="submit" title="reads the issuer contracts now (audited)">⟳ Check freeze status now</button></form>
+    {% endif %}
+    <a class="btn small" href="/cases/{{ case.id }}/freeze">{{ 'Details & watched wallets' if fz.enabled or fz.n_checked else ('Set up on-chain checks' if fz.can_manage else 'Details') }}</a>
+  </div>
+  {% if fz.unfrozen %}
+  <ul class="fz-list">
+    {% for w in fz.unfrozen %}{% for c in w.checks if c.unfrozen %}{% set u = c.unfrozen %}
+    <li><span class="tag fz-unfrozen">freeze lifted: funds can move</span>
+      <span class="fz-addr">{{ w.short }}</span> <span class="tag">{{ w.chain_label }}</span> {{ own.badge(w.owner) }} <b>{{ c.balance_label }} {{ c.symbol }}</b>
+      <span class="muted fz-small">· was blacklisted by {{ c.issuer }} {% if u.was_frozen_at_basis == 'event' %}{{ fzm.when(u.was_frozen_at) }}{% else %}at or before {{ fzm.when(u.was_frozen_at) }}{% endif %} · removed {% if u.removed_at_basis != 'event' %}at or before {% endif %}{{ fzm.when(u.removed_at) }}</span></li>
+    {% endfor %}{% endfor %}
+  </ul>
+  {% endif %}
+  {% if fz.frozen %}
+  <ul class="fz-list">
+    {% for w in fz.frozen %}{% for c in w.checks if c.blacklisted %}
+    <li><span class="tag fz-frozen"><i class="fz-oc-mark" aria-hidden="true"></i>{{ c.issuer }} blacklist</span>
+      <span class="fz-addr">{{ w.short }}</span> <span class="tag">{{ w.chain_label }}</span> {{ own.badge(w.owner) }} <b>{{ c.balance_label }} {{ c.symbol }}</b>
+      <span class="muted fz-small">· {% if c.frozen_at_basis == 'event' %}blacklisted {{ fzm.when(c.frozen_at) }}{% else %}frozen at or before {{ fzm.when(c.frozen_at) }}{% endif %}{% if c.failed_count %} · {{ c.failed_count }} failed transfer attempt{{ 's' if c.failed_count != 1 }}{% endif %}</span></li>
+    {% endfor %}{% endfor %}
+  </ul>
+  {% endif %}
+  {% if fz.moved %}<ul class="fz-list">{% for w in fz.moved %}{% for c in w.funds_left %}{% set f = c.funds_left %}
+    <li><span class="tag fz-unfrozen">funds left</span> <span class="fz-addr">{{ w.short }}</span> <span class="tag">{{ w.chain_label }}</span> {{ own.badge(w.owner) }} <b>{{ f.from_label }} → {{ f.to_label }} {{ c.symbol }}</b>
+      <span class="muted fz-small">· between {{ fzm.when(f.from_at) }} and {{ fzm.when(f.at) }}: re-trace now and ask the next custodian or issuer</span></li>
+  {% endfor %}{% endfor %}</ul>{% endif %}
+  {% if fz.failing %}<div class="fz-line fz-small">{% for w in fz.failing %}<span class="tag fz-failing">transfers failing</span> <span class="fz-addr">{{ w.short }}</span> {{ own.badge(w.owner) }}{{ ' · ' if not loop.last }}{% endfor %} <span class="muted">(not blacklisted: low balance or gas can also make transfers fail)</span></div>{% endif %}
+  <div class="row muted fz-small">
+    <span><b>{{ fz.n_checked }}</b> of {{ fz.n_wallets }} wallet{{ 's' if fz.n_wallets != 1 }} checked</span>
+    <span><b>{{ fz.frozen | length }}</b> frozen on-chain</span>
+    {% if fz.unfrozen %}<span><b>{{ fz.unfrozen | length }}</b> freeze{{ 's' if fz.unfrozen | length != 1 }} lifted</span>{% endif %}
+    {% if fz.unchecked %}<span><b>{{ fz.unchecked | length }}</b> not checked yet</span>{% endif %}
+    {% if fz.errors %}<span><b>{{ fz.errors | length }}</b> check{{ 's' if fz.errors | length != 1 }} failed</span>{% endif %}
+    {% if fz.stale %}<span><b>{{ fz.stale | length }}</b> last attempt{{ 's' if fz.stale | length != 1 }} failed (the last good reading shows)</span>{% endif %}
+  </div>
+  {% set owned = fz.wallets | selectattr('owner') | list %}{% if owned %}<div class="fz-line fz-small">Owners: {% for w in owned[:6] %}<span class="fz-addr">{{ w.short }}</span> {{ own.badge(w.owner) }}{{ ' ' }}{% endfor %}<a href="/cases/{{ case.id }}/recovery-plan#owners">who owns these wallets →</a></div>{% endif %}
+  <p class="fz-note">Exchange and casino accounts{% if fz.not_visible %} ({{ fz.not_visible | join(', ') }}){% endif %} cannot be seen on-chain; their freeze stays confirmed by the recipient's reply.</p>
+</div>
+{% endif %}

@@ -1,0 +1,60 @@
+{# Movement listing of one run (included by case/_tab_fund_flow.html).
+   Context: run, movements (export.Movement list), chains, assets, hops, asserted_count.
+   Sorting and filtering: static/js/trace.js (no-op without JS: the full table stays readable). #}
+<div class="panel ff-movements-panel">
+  <div class="ff-filters" data-ff-filters="ff-movements">
+    <h2>Movements <small>trace #{{ run.id }} · {{ movements | length }} movements · {{ asserted_count }} asserted</small></h2>
+    <div class="spacer"></div>
+    <label class="ff-inline">Chain
+      <select data-ff-filter="chain"><option value="">all</option>{% for c in chains %}<option value="{{ c }}">{{ c }}</option>{% endfor %}</select></label>
+    <label class="ff-inline">Asset
+      <select data-ff-filter="asset"><option value="">all</option>{% for a in assets %}<option value="{{ a }}">{{ a }}</option>{% endfor %}</select></label>
+    <label class="ff-inline">Hop
+      <select data-ff-filter="hop"><option value="">all</option>{% for h in hops %}<option value="{{ h }}">{{ h }}</option>{% endfor %}</select></label>
+    <label class="ff-inline">Asserted
+      <select data-ff-filter="asserted"><option value="">all</option><option value="no">observed only</option><option value="yes">asserted only</option></select></label>
+    <input type="search" data-ff-filter="q" placeholder="tx hash, address or label" aria-label="Search movements">
+    <span class="muted ff-count" data-ff-count></span>
+  </div>
+  <div class="ff-table-wrap">
+  <table class="ff-table" id="ff-movements">
+    <thead><tr>
+      <th><button type="button" data-ff-sort="text">Time (UTC)</button></th>
+      <th class="num"><button type="button" data-ff-sort="num">Hop</button></th>
+      <th><button type="button" data-ff-sort="text">Chain</button></th>
+      <th>Tx hash</th>
+      <th><button type="button" data-ff-sort="text">From</button></th>
+      <th><button type="button" data-ff-sort="text">To</button></th>
+      <th><button type="button" data-ff-sort="text">Asset</button></th>
+      <th class="num"><button type="button" data-ff-sort="num">Amount</button></th>
+      <th class="num"><button type="button" data-ff-sort="num">USD</button></th>
+      <th class="num"><button type="button" data-ff-sort="num">Taint USD</button></th>
+      <th><button type="button" data-ff-sort="text">Source</button></th>
+      <th class="num"><button type="button" data-ff-sort="num">Conf.</button></th>
+      <th><button type="button" data-ff-sort="text">Asserted</button></th>
+    </tr></thead>
+    <tbody>
+    {% for m in movements %}
+    <tr data-chain="{{ m.chain }}" data-asset="{{ m.asset }}" data-hop="{{ m.hop }}" data-asserted="{{ 'yes' if m.asserted else 'no' }}"
+        data-q="{{ (m.tx_hash ~ ' ' ~ m.from_address ~ ' ' ~ m.to_address ~ ' ' ~ (m.from_label or '') ~ ' ' ~ (m.to_label or '')) | lower }}"
+        class="{{ 'ff-asserted' if m.asserted else '' }}">
+      <td class="mono" data-v="{{ m.time_utc }}">{{ m.time_utc }}</td>
+      <td class="num" data-v="{{ m.hop }}">{{ m.hop }}</td>
+      <td data-v="{{ m.chain }}">{{ m.chain }}</td>
+      <td class="mono"><span class="ff-addr" title="{{ m.tx_hash }}">{{ m.tx_hash[:10] ~ '…' ~ m.tx_hash[-6:] if m.tx_hash|length > 20 else m.tx_hash }}</span>{% if m.sub_index %}<span class="muted">#{{ m.sub_index }}</span>{% endif %}<button type="button" class="ff-copy" data-copy="{{ m.tx_hash }}" title="Copy tx hash" aria-label="Copy tx hash">⧉</button></td>
+      <td class="mono" data-v="{{ m.from_label or m.from_address }}"><span class="ff-addr" title="{{ m.from_address }}">{{ m.from_address[:6] ~ '…' ~ m.from_address[-4:] if m.from_address|length > 14 else m.from_address }}</span><button type="button" class="ff-copy" data-copy="{{ m.from_address }}" title="Copy address" aria-label="Copy address">⧉</button>{% if m.from_label %}<div class="ff-sub" title="{{ m.from_label }}">{{ m.from_label }}</div>{% endif %}</td>
+      <td class="mono" data-v="{{ m.to_label or m.to_address }}"><span class="ff-addr" title="{{ m.to_address }}">{{ m.to_address[:6] ~ '…' ~ m.to_address[-4:] if m.to_address|length > 14 else m.to_address }}</span><button type="button" class="ff-copy" data-copy="{{ m.to_address }}" title="Copy address" aria-label="Copy address">⧉</button>{% if m.to_label %}<div class="ff-sub" title="{{ m.to_label }}">{{ m.to_label }}</div>{% endif %}</td>
+      <td data-v="{{ m.asset }}">{{ m.asset }}</td>
+      <td class="num mono" data-v="{{ m.amount if m.amount is not none else -1 }}">{{ m.amount | amt if m.amount is not none else '?' }}</td>
+      <td class="num mono" data-v="{{ m.amount_usd if m.amount_usd is not none else -1 }}">{{ m.amount_usd | usd }}</td>
+      <td class="num mono" data-v="{{ m.taint_usd }}">{{ m.taint_usd | usd }}</td>
+      <td data-v="{{ m.data_source }}"><span class="tag">{{ m.data_source }}</span></td>
+      <td class="num" data-v="{{ m.confidence }}">{{ '%.2f' | format(m.confidence) }}</td>
+      <td data-v="{{ 'yes' if m.asserted else 'no' }}">{% if m.asserted %}<span class="tag amber">asserted</span>{% else %}<span class="muted">no</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted ff-foot">Solid evidence first: rows from an explorer source are observed on-chain; <span class="tag amber">asserted</span> rows (hash pending or amount unknown) must be verified before filing. Full values are in the cells' tooltips and the downloads.</p>
+</div>

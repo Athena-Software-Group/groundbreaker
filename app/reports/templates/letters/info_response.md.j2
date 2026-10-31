@@ -1,0 +1,58 @@
+{# Answer to a provider's reply: their ticket, what they asked, their deadline, what is enclosed, the hold to keep.
+   Context: see app.domain.correspondence._context_info_response #}
+**Subject:** {{ subject }}
+
+Dear {{ salutation }},
+
+{% include "letters/_intro.md.j2" %}
+
+We write in answer to your message of {{ ans.reply_fmt }}{% if ans.ticket %} (your ticket {{ ans.ticket | code }}){% endif %} about our request of {{ ans.sent_fmt }}{% if ans.held %}, in which you told us that you have temporarily frozen the account concerned. Thank you for acting so quickly{% endif %}.
+{% if ans.deadline_fmt %}
+
+{% if ans.deadline_theirs %}You asked for this by **{{ ans.deadline_fmt }}**: we answer within that time.{% else %}We answer before **{{ ans.deadline_fmt }}**, within the time your process allows.{% endif %}
+{% endif %}
+
+### 1. What you asked for
+
+{% for a in ans.asks %}
+- **{{ a.label }}**: {{ a.answer }}.
+{% else %}
+- The documents your message refers to are enclosed; please tell us at once if anything else is needed.
+{% endfor %}
+
+{% include "letters/_complaints.md.j2" %}
+
+### 2. Identifiers concerned
+
+{% if identifiers %}
+{% include "letters/_identifiers.md.j2" %}
+
+{% if tx_hashes %}
+Transactions concerned: {% for h in tx_hashes %}{{ h | code }}{{ ', ' if not loop.last else '.' }}{% endfor %}{{ '' }}
+
+{% endif %}
+{% else %}
+The identifiers are listed in our request of {{ ans.sent_fmt }}.
+{% endif %}
+{% if ans.keep or ans.extend %}
+
+### 3. Keeping the hold in place
+
+{% if ans.extend %}
+Your message says the funds were moved to {% for x in ans.extend %}{{ x | code }}{{ ', ' if not loop.last else '' }}{% endfor %} on your platform: we ask you to extend the hold to {{ 'them' if ans.extend | length > 1 else 'it' }} as well, and to preserve the records of the transfer.
+
+{% endif %}
+{% if ans.keep %}
+{{ ans.keep }}
+{% endif %}
+{% endif %}
+
+{% if extra_note %}
+{{ extra_note }}
+
+{% endif %}
+Please do **not notify** the account holder, as this could lead to the movement of funds and the destruction of evidence.
+
+{% include "letters/_signature.md.j2" %}
+
+{% include "letters/_footer.md.j2" %}

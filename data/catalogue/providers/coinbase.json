@@ -1,0 +1,152 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. Coinbase's help and legal pages refuse automated fetches (HTTP 403): their wording comes from search snippets, so official claims are at most medium confidence. Criminal process goes through Coinbase's Kodex portal (LE officers only); civil process goes to its registered agent; victims can only report (Scam Hub for customers, the security inbox for phishing) and file IC3.",
+  "key": "coinbase",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": "US",
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "Coinbase states no issuing jurisdiction: about half of its law-enforcement requests are non-US, and its international / EEA legal page has its own Kodex tenant. There is no public freeze-request procedure: freezes and seizures go through law enforcement process. The LE-questions inbox and the security inbox are not catalogued here (each address needs its own review).",
+  "entities": [
+    {"key": "coinbase-us", "name": "Coinbase (US)", "jurisdiction": "US", "source_ids": ["c1", "c2"]},
+    {"key": "coinbase-intl", "name": "Coinbase international / EEA entities", "separate": true,
+     "notes": "The EEA legal page links its own Kodex sign-up; which entity holds a given account is not stated.",
+     "source_ids": ["c3"]}
+  ],
+  "domains": {
+    "own": ["coinbase.com"],
+    "sibling": [],
+    "vendor_portals": [
+      {"host": "app.kodexglobal.com", "path_prefix": "/gov/", "tenant": null, "le_only": true,
+       "source_ids": ["c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+      {"host": "app.kodexglobal.com", "path_prefix": "/coinbase-intl/", "tenant": "coinbase-intl", "le_only": true,
+       "source_ids": ["c3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+    ]
+  },
+  "channels": [
+    {
+      "key": "coinbase.kodex", "kind": "webform", "value": "https://app.kodexglobal.com/gov/signup", "purpose": "le_request",
+      "role_default": "to", "label": "Law-enforcement request portal (Kodex)",
+      "notes": "'Subpoenas for criminal matters can be submitted by Law Enforcement Officers via our portal'; the officer creates an account first. Aegis never registers or submits there.",
+      "source_url": "https://www.coinbase.com/legal/us",
+      "who": "le_only", "source_ids": ["c1", "c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "coinbase.kodex_intl", "kind": "webform", "value": "https://app.kodexglobal.com/coinbase-intl/signup",
+      "purpose": "le_request", "role_default": "to", "label": "Law-enforcement request portal, international / EEA (Kodex)",
+      "notes": "Linked from Coinbase's EEA legal page (search snippet; the page refused a direct fetch).",
+      "source_url": "https://www.coinbase.com/legal/eea",
+      "who": "le_only", "source_ids": ["c3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "coinbase.le_questions", "kind": "email", "value": null, "purpose": "le_request", "role_default": "to",
+      "label": "Law-enforcement questions inbox",
+      "notes": "Coinbase names a subpoenas inbox on coinbase.com for other questions from law enforcement (and help with the portal goes to Kodex). For officers; not catalogued until reviewed.",
+      "source_url": "https://help.coinbase.com/en/coinbase/other-topics/legal-policies/who-do-i-contact-for-a-subpoena-request-or-dispute-or-to-send-a-legal-document",
+      "who": "le_only", "source_ids": ["c1", "c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "coinbase.registered_agent", "kind": "postal", "value": null, "purpose": "legal", "role_default": "to",
+      "label": "Registered Agent for Service of Process (civil matters)",
+      "notes": "Civil subpoenas and court papers are served on Coinbase's registered agent, not through the portal. Counsel looks up the current agent before service.",
+      "source_url": "https://help.coinbase.com/en/coinbase/other-topics/legal-policies/who-do-i-contact-for-a-subpoena-request-or-dispute-or-to-send-a-legal-document",
+      "who": "counsel_with_order", "source_ids": ["c1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "coinbase.security", "kind": "email", "value": null, "purpose": "abuse", "role_default": "to",
+      "label": "Security inbox (phishing and scam-site reports)",
+      "notes": "Coinbase's help centre names a security inbox on coinbase.com for reporting phishing sites; signed-in customers use the in-app Scam Hub instead. Report only: no freeze is promised. Confirm the address before use.",
+      "source_url": "https://help.coinbase.com/en/coinbase/privacy-and-security/avoiding-phishing-and-scams/reporting-phishing-sites",
+      "who": "any", "source_ids": ["c4"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "coinbase.le": {
+      "who": "le_only",
+      "notes": "Coinbase's LE channel is its Kodex portal (coinbase.kodex; international / EEA: coinbase.kodex_intl), for law enforcement officers only.",
+      "source_ids": ["c1", "c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "victim_report", "kind": "victim_report", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["coinbase.security"],
+      "instrument": {"type": "none", "notes": "An IC3 or police reference is recommended; Coinbase's help centre points victims to IC3."},
+      "evidence": ["tx_list_copyable", "receiving_account", "comms_export", "ic3_ref", "incident_narrative"],
+      "expected_replies": ["auto_reply", "acknowledged", "le_process_required"],
+      "on_refusal": "le_freeze",
+      "notes": "Coinbase may flag addresses or restrict accounts internally; authorised transfers are treated as final and no freeze is guaranteed (secondary sources). Hand off to the case officer, who submits through Kodex.",
+      "source_ids": ["c4", "c5", "c7"], "basis": "R", "confidence": "L", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_records", "kind": "data_disclosure", "requester": ["le"], "channel_keys": ["coinbase.kodex", "coinbase.kodex_intl"],
+      "instrument": {"type": "subpoena", "notes": "Subpoena, court order or search warrant matched to the record type."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "receiving_account"],
+      "expected_replies": ["acknowledged", "info_requested"],
+      "on_refusal": "mlat",
+      "notes": "Each request is reviewed; Coinbase may narrow over-broad requests or object to legally insufficient ones. Users are typically notified of legal process unless a non-disclosure order applies (secondary).",
+      "source_ids": ["c1", "c6", "c7"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_freeze", "kind": "le_request", "requester": ["le"], "channel_keys": ["coinbase.kodex", "coinbase.kodex_intl"],
+      "instrument": {"type": "le_request", "notes": "No public freeze-request procedure; the instrument depends on the jurisdiction."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "receiving_account", "trace_report_run", "urgency_stmt"],
+      "expected_replies": ["acknowledged", "le_process_required", "frozen"], "outcomes": ["frozen"],
+      "on_refusal": "seizure",
+      "notes": "Coinbase says it supported freezes in multi-agency scam operations; how a single freeze request is handled is not published.",
+      "source_ids": ["c6", "c7"], "basis": "R", "confidence": "L", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "seizure", "kind": "court_order", "requester": ["le", "court"], "entity": "coinbase-us",
+      "channel_keys": ["coinbase.kodex"],
+      "instrument": {"type": "seizure_warrant", "issuer_jurisdictions": ["US"]},
+      "evidence": ["seizure_warrant", "tx_list_copyable", "receiving_account"],
+      "outcomes": ["frozen"],
+      "notes": "US seizure warrant per secondary (law-firm) sources.",
+      "source_ids": ["c7"], "basis": "R", "confidence": "L", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "civil_process", "kind": "court_order", "requester": ["counsel", "court"],
+      "channel_keys": ["coinbase.registered_agent"],
+      "instrument": {"type": "court_order", "notes": "A civil subpoena or court order served on the registered agent."},
+      "evidence": ["court_order", "tx_list_copyable", "receiving_account"],
+      "expected_replies": ["acknowledged", "info_requested"],
+      "notes": "The civil route for counsel holding process (e.g. a US TRO or expedited-discovery subpoena).",
+      "source_ids": ["c1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "mlat", "kind": "cross_border", "requester": ["le", "court"], "entity": "coinbase-us",
+      "instrument": {"type": "mlat", "issuer_jurisdictions": ["US"]},
+      "evidence": ["domestic_order", "mlat_bundle", "tx_list_copyable"],
+      "notes": "For a non-US agency whose process Coinbase US will not accept (inferred).",
+      "source_ids": ["c6"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "Law Enforcement Officers via our portal", "means": "le_process_required", "instrument": "subpoena",
+     "channel_key": "coinbase.kodex", "path": "le_records",
+     "source_ids": ["c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "Registered Agent for Service of Process", "means": "le_process_required", "instrument": "court_order",
+     "channel_key": "coinbase.registered_agent", "path": "civil_process",
+     "source_ids": ["c1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "kodexglobal.com", "means": "redirected", "channel_key": "coinbase.kodex", "path": "le_records",
+     "source_ids": ["c1", "c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "tickets": [],
+  "sources": [
+    {"id": "c1", "title": "Coinbase Help: Who do I contact for a subpoena request, dispute, or to send a legal document?",
+     "url": "https://help.coinbase.com/en/coinbase/other-topics/legal-policies/who-do-i-contact-for-a-subpoena-request-or-dispute-or-to-send-a-legal-document",
+     "retrieved_at": "2026-10-20"},
+    {"id": "c2", "title": "Coinbase Legal (US)", "url": "https://www.coinbase.com/legal/us", "retrieved_at": "2026-10-20"},
+    {"id": "c3", "title": "Coinbase Legal (EEA)", "url": "https://www.coinbase.com/legal/eea", "retrieved_at": "2026-10-20"},
+    {"id": "c4", "title": "Coinbase Help: Reporting phishing sites",
+     "url": "https://help.coinbase.com/en/coinbase/privacy-and-security/avoiding-phishing-and-scams/reporting-phishing-sites",
+     "retrieved_at": "2026-10-20"},
+    {"id": "c5", "title": "Coinbase Help: Submit a claim to the FBI IC3",
+     "url": "https://help.coinbase.com/en/coinbase/privacy-and-security/fbi-ccc", "retrieved_at": "2026-10-20"},
+    {"id": "c6", "title": "Coinbase Transparency Report 2025", "url": "https://www.coinbase.com/blog/transparency-report-2025",
+     "retrieved_at": "2026-10-20"},
+    {"id": "c7", "title": "Dynamis LLP: Crypto account subpoenaed, frozen, or seized (secondary)",
+     "url": "https://www.dynamisllp.com/knowledge/crypto-exchange-subpoena-frozen-account-seized", "retrieved_at": "2026-10-20"}
+  ]
+}

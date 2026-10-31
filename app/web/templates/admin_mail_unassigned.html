@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{# Unassigned inbound mail — owner: app/web/routes_mail_admin.py. Context: rows (MailMessage, direction in,
+   no case), show ("open" | "all"). Senders and subjects are untrusted external text: escaped, never links. #}
+{% block title %}Aegis · Unassigned mail{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/mail_admin.css">{% endblock %}
+{% block content %}
+<div class="row case-head"><div><h1>Unassigned mail</h1><div class="sub">System administration · <a href="/admin/mail">mail</a>
+  · e-mail in the case mailbox that no letter claimed. Only system admins see this queue.</div></div></div>
+
+<div class="row mail-filter">
+  <a class="btn small {{ 'primary' if show == 'open' else '' }}" href="/admin/mail/unassigned">Waiting</a>
+  <a class="btn small {{ 'primary' if show == 'all' else '' }}" href="/admin/mail/unassigned?show=all">All without a case (incl. ignored, rejected)</a>
+</div>
+
+<div class="panel" id="mail-unassigned">
+{% if rows %}
+<div class="table-scroll"><table class="mail-list"><thead><tr><th>#</th><th>Received</th><th>From</th><th>Subject</th><th>Status</th><th>Attachments</th><th></th></tr></thead><tbody>
+{% for mm in rows %}<tr>
+  <td class="mono">{{ mm.id }}</td>
+  <td>{{ mm.received_at | dt }}</td>
+  <td class="mono">{{ mm.from_addr or '—' }}</td>
+  <td class="mail-subject">{{ mm.subject or '(no subject)' }}{% if (mm.meta or {}).get('auto_reply') %} <span class="tag">auto-reply</span>{% endif %}{% if (mm.meta or {}).get('bounce') %} <span class="tag amber">bounce</span>{% endif %}{% if (mm.meta or {}).get('metadata_only') %} <span class="tag" title="from an authority's domain, cites no case material: the text is read from the mailbox only when opened">metadata only</span>{% endif %}</td>
+  <td><span class="tag {{ {'unassigned': 'amber', 'rejected': 'red', 'ignored': ''}.get(mm.status.value, '') }}">{{ mm.status.value }}</span>{% if mm.error_reason %} <span class="muted">{{ mm.error_reason }}</span>{% endif %}</td>
+  <td>{{ (mm.attachments or []) | length }}</td>
+  <td>{% if mm.status.value == 'unassigned' %}<a class="btn small" href="/admin/mail/unassigned/{{ mm.id }}">Open</a>{% endif %}</td>
+</tr>{% endfor %}
+</tbody></table></div>
+{% else %}<p class="muted">Nothing here.</p>{% endif %}
+</div>
+{% endblock %}

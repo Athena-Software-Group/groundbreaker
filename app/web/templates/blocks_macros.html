@@ -1,0 +1,113 @@
+{# Block status macros (app/web/routes_blocks.py): the status badge, the on-chain lines, the Confirm form and the
+   Dismiss / tie-to-letter form of an e-mail sent from Outlook that waits for review. #}
+{% macro badge(status, text, tone=None) -%}
+<span class="bk-badge{{ ' bk-st-' ~ status if status }} bk-{{ tone or {'frozen':'green','hold_placed':'green','funds_returned':'gold','declined_other':'red','declined_no_assets':'red','delivery_failed':'red','redirected':'amber','info_requested':'amber','unclear':'amber','le_process_required':'purple','acknowledged':'blue','awaiting':'blue','not_sent':'amber'}.get(status, 'neutral') }}">{{ text }}</span>
+{%- endmacro %}
+
+{% macro onchain(oc) -%}
+<div class="bk-onchain">
+  {% for e in oc.frozen %}<div class="bk-small"><span class="tag green">on-chain blacklisted</span> <span class="mono">{{ e.short }}</span> {{ e.chain_label }} · <b>{{ e.balance_label }} {{ e.symbol }}</b></div>{% endfor %}
+  {% for e in oc.lifted %}<div class="bk-small"><span class="tag red">freeze lifted</span> <span class="mono">{{ e.short }}</span> {{ e.chain_label }} · {{ e.balance_label }} {{ e.symbol }}</div>{% endfor %}
+  {% for e in oc.lever %}<div class="bk-small"><span class="tag amber">not frozen</span> <span class="mono">{{ e.short }}</span> {{ e.chain_label }} · <b>{{ e.balance_label }} {{ e.symbol }}</b></div>{% endfor %}
+  {% for e in oc.moved %}{% set f = e.funds_left %}<div class="bk-small"><span class="tag red">funds left</span> <span class="mono">{{ e.short }}</span> {{ e.chain_label }} · {{ f.from_label }} → {{ f.to_label }} {{ e.symbol }}: re-trace now and ask the next custodian or issuer</div>{% endfor %}
+  {% for e in (oc.frozen or []) + (oc.lever or []) if e.stale_note %}<div class="muted bk-small">{{ e.short }}: {{ e.stale_note }}</div>{% endfor %}
+  {% if not oc.frozen and not oc.lever and not oc.lifted and not oc.moved %}<div class="muted bk-small">on-chain: nothing frozen, no balance to freeze</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro confirm_form(case, r, statuses, next_url=None) -%}
+<details class="bk-confirm-box" data-open-if-hash>
+  <summary class="btn small {{ 'primary' if r.needs_confirmation }}">Confirm status</summary>
+  <form method="post" action="/cases/{{ case.id }}/blocks/{{ r.key }}/confirm" class="bk-confirm-form">{{ csrf_field() }}
+    {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+    {% if r.confirm_default.reply_id %}<input type="hidden" name="reply_id" value="{{ r.confirm_default.reply_id }}">{% endif %}
+    <label>Status <select name="status" data-amount-toggle required>
+      <option value="" {{ 'selected' if not r.confirm_default.status }} disabled>— choose what the reply says —</option>
+      {% for k, label in statuses %}<option value="{{ k }}" {{ 'selected' if r.confirm_default.status == k }}>{{ label }}</option>{% endfor %}
+    </select></label>
+    <div class="bk-amount-row" data-amount-row>
+      <label>Amount <input name="amount" inputmode="decimal" value="{{ r.confirm_default.amount }}" placeholder="e.g. 12633.77"></label>
+      <label>Asset <input name="asset" value="{{ r.confirm_default.asset }}" placeholder="USDT" size="6"></label>
+      {% if r.confirm_default.amount_hint %}<div class="muted bk-small">Suggested: {{ r.confirm_default.amount_hint }} — type the amount held yourself.</div>{% endif %}
+    </div>
+    {% if r.suggestion %}<div class="alert warning bk-small" role="note">Nothing is preselected: {{ r.suggestion.text }} is a suggestion ({{ r.suggestion.source_text }}). Choose the status yourself; a hold or freeze needs the amount held.{% if r.suggestion.warnings %} Warnings: {{ r.suggestion.warnings | join('; ') }}.{% endif %}</div>{% endif %}
+    <label>Note <input name="note" maxlength="500" placeholder="optional"></label>
+    {% if r.confirm_default.risky %}<div class="bk-risky alert warning bk-small" role="note">Not preselected from the AI: {{ r.confirm_default.why }}.{% if r.confirm_default.ai_reading %} The AI read it as <b>{{ r.confirm_default.ai_reading }}</b> (shown as text only).{% elif r.confirm_default.rules_reading %} The rules read it as <b>{{ r.confirm_default.rules_reading }}</b> (shown as text only).{% endif %} Read the reply before confirming.</div>
+    <label class="bk-check"><input type="checkbox" name="read_reply" value="1"> I read the reply myself (required to confirm a hold, freeze or return from this reply)</label>{% endif %}
+    <div class="bk-confirm-actions">
+      <button class="btn small" type="submit" title="records your reading on the reply and the timeline">Confirm</button>
+      {% if r.can_apply %}<button class="btn small primary" type="submit" name="apply" value="1" title="also moves the stop order (frozen with the amount held, acknowledged, declined, released)">Confirm &amp; apply to stop order</button>{% endif %}
+    </div>
+    {% if not r.can_apply and r.request.startswith('Stop order') %}<div class="muted bk-small">A case admin applies it to the stop order.</div>{% endif %}
+  </form>
+</details>
+{%- endmacro %}
+
+
+{% macro outlook_form(r) -%}
+<details class="bk-confirm-box" data-open-if-hash>
+  <summary class="btn small primary">Dismiss / tie to letter</summary>
+  {% if r.outlook.letters %}<form method="post" action="{{ r.outlook.action }}" class="bk-confirm-form">{{ csrf_field() }}
+    <input type="hidden" name="action" value="tie">
+    <label>Letter it carried <select name="letter" required>
+      {% for key, label in r.outlook.letters %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+    </select></label>
+    <div class="bk-confirm-actions"><button class="btn small primary" type="submit" title="a draft is recorded as sent at the e-mail's date (its .eml is the evidence); a sent letter is linked">Tie to letter</button></div>
+  </form>{% endif %}
+  <form method="post" action="{{ r.outlook.action }}" class="bk-confirm-form">{{ csrf_field() }}
+    <input type="hidden" name="action" value="dismiss">
+    <div class="bk-confirm-actions"><button class="btn small" type="submit" title="it carried no letter: it stays on the timeline, off the review lists">Dismiss</button></div>
+  </form>
+</details>
+{%- endmacro %}
+
+{# What the replies say beyond their status (app.blocks.report.intel_view): ticket, instrument, asks, deadlines,
+   contacts, channels and new identifiers, each proposal one click (a person confirms: nothing is added by itself). #}
+{% macro intel(case, r) -%}
+{% set x = r.intel %}
+<details class="bk-intel" open>
+  <summary class="bk-small"><b>Read from the reply</b> <span class="muted">(advisory)</span></summary>
+  {% if x.tickets %}<div class="bk-small">Ticket {% for t in x.tickets %}<span class="mono">{{ t.value }}</span>{% if t.system %} <span class="muted">{{ t.system }}</span>{% endif %}{% if t.source == 'ai' %} <span class="tag neutral">AI</span>{% endif %}{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}
+  {% if x.instrument %}<div class="bk-small">Requires <b>{{ x.instrument.label }}</b>{% if x.instrument.jur and x.instrument.type != 'us_or_fr_court_order' %} <span class="muted">({{ x.instrument.jur | join(' / ') }}{% if x.instrument.jur_from == 'playbook' %}, from the playbook{% endif %})</span>{% endif %}{% if x.instrument.via == 'ai' %} <span class="tag neutral">AI</span>{% endif %}
+    {% if x.instrument.ai_label %}<span class="tag amber" title="the rules' reading is shown; check the reply">AI reads: {{ x.instrument.ai_label }}</span>{% endif %}
+    {% if x.instrument.quote %}<div><q>{{ x.instrument.quote }}</q></div>{% endif %}</div>{% endif %}
+  {% if x.asks %}<div class="bk-small">They ask for: {% for a in x.asks %}<span class="tag amber" {% if a.quote %}title="{{ a.quote }}"{% endif %}>{{ a.label }}</span> {% endfor %}</div>{% endif %}
+  {% for d in x.deadlines %}<div class="bk-small">{{ d.label | capitalize }} <b>{{ d.due_fmt }}</b>
+    {% if d.ambiguous %}<span class="tag amber" title="the day and month could be read either way: it changes no clock until a person confirms it">ambiguous date — confirm</span>{% elif d.suggestion %}<span class="tag amber">suggestion</span>{% elif d.auto %}<span class="tag blue" title="an unambiguous deadline: it may shorten the request's clock">clock</span>{% else %}<span class="tag neutral" title="applied when a person confirms the hold">on confirmation</span>{% endif %}
+    {% if d.approx %}<span class="muted">(approximate: counted from the reply)</span>{% endif %}{% if d.source == 'ai' %} <span class="tag neutral">AI</span>{% endif %}
+    {% if d.quote %}<div class="muted"><q>{{ d.quote }}</q></div>{% endif %}</div>{% endfor %}
+  {% for c in x.contacts %}<div class="bk-small bk-intel-item">LE contact: {{ c.agency or '' }}{% if c.role or c.name %} · {{ c.role or '' }} {{ c.name or '' }}{% endif %}{% if c.reference %} · ref <span class="mono">{{ c.reference }}</span>{% endif %}{% if c.email %} · <span class="mono">{{ c.email }}</span>{% endif %}{% if c.phone %} · {{ c.phone }}{% endif %}
+    {% if x.can_contact %}<form method="post" action="/cases/{{ case.id }}/evidence/le-contacts" class="inline">{{ csrf_field() }}
+      <input type="hidden" name="agency" value="{{ c.agency_default }}"><input type="hidden" name="name" value="{{ c.name or '' }}">
+      <input type="hidden" name="role" value="{{ c.role or '' }}"><input type="hidden" name="email" value="{{ c.email or '' }}">
+      <input type="hidden" name="phone" value="{{ c.phone or '' }}"><input type="hidden" name="reference" value="{{ c.reference or '' }}">
+      <input type="hidden" name="notes" value="{{ c.note }}">
+      <button class="btn small" type="submit" title="add it to the case's LE contacts (check the details first)">Add as LE contact</button></form>{% endif %}</div>{% endfor %}
+  {% for c in x.channels %}<div class="bk-small">Names <span class="mono bk-addr">{{ c.value }}</span> <span class="tag {{ 'red' if c.le_only else 'amber' if c.pick else 'neutral' }}">{{ 'LE only portal' if c.le_only else c.class_label }}{% if c.tenant %} · {{ c.tenant }}{% endif %}</span>{% if c.pick %} <span class="muted">— a person picks it before any letter goes there</span>{% endif %}</div>{% endfor %}
+  {% for i in x.identifiers if not i.known %}<div class="bk-small bk-intel-item">New {{ i.kind | replace('_', ' ') }}{% if i.chain %} ({{ i.chain }}){% endif %} <span class="mono bk-addr">{{ i.value }}</span>{% if i.source == 'ai' %} <span class="tag neutral">AI</span>{% endif %}
+    {% if i.watched %}<span class="tag green">watched</span>{% elif i.watch and x.can_watch %}<form method="post" action="/cases/{{ case.id }}/freeze/watch" class="inline">{{ csrf_field() }}
+      <input type="hidden" name="address" value="{{ i.value }}"><input type="hidden" name="source_note" value="{{ i.source_note }}">
+      {% if i.watch_chain == 'tron' %}<input type="hidden" name="chain" value="tron">{% else %}<select name="chain" aria-label="chain">{% for ch in ('ethereum', 'base', 'arbitrum', 'polygon', 'optimism') %}<option value="{{ ch }}">{{ ch }}</option>{% endfor %}</select>{% endif %}
+      <button class="btn small" type="submit" title="check this wallet for an issuer freeze (app.freeze)">Watch for a freeze</button></form>{% endif %}
+    {% if x.can_trace and i.kind in ('address', 'tx') %}<a class="bk-small" href="/cases/{{ case.id }}/trace" title="add it to the trace and run it again">re-trace</a>{% endif %}</div>{% endfor %}
+  {% if x.disagree %}<div class="bk-small bk-warning">⚠ the rules and the AI read the {{ x.disagree | join(' and the ') }} differently: the rules' reading is shown, check the reply</div>{% endif %}
+</details>
+{%- endmacro %}
+
+{% macro path_form(case, r) -%}
+<details class="bk-confirm-box">
+  <summary class="btn small">Record a step</summary>
+  <form method="post" action="/cases/{{ case.id }}/blocks/{{ r.key }}/path" class="bk-confirm-form">{{ csrf_field() }}
+    <label>Step <select name="step" required>
+      <option value="" selected disabled>— what happened —</option>
+      {% for k, label in r.path.steps %}<option value="{{ k }}">{{ label }}</option>{% endfor %}
+      <option value="outcome">Outcome</option>
+      {% if r.path.confirmed %}<option value="undo">Undo the last recorded step</option>{% endif %}
+    </select></label>
+    <label>Outcome <select name="outcome"><option value="">—</option>{% for k, label in r.path.outcomes %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select></label>
+    <div class="muted bk-small">Frozen or funds returned: use Confirm status (with the amount held).</div>
+    <label>Note <input name="note" maxlength="500" placeholder="e.g. the officer's portal reference"></label>
+    <div class="bk-confirm-actions"><button class="btn small" type="submit">Record</button></div>
+  </form>
+</details>
+{%- endmacro %}

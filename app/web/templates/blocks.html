@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{# Block status page — owner: app/web/routes_blocks.py (blocks_page). Context: case, access, v (app.blocks.report.page_view:
+   rows, summary, filters, types, f, statuses, ai, ai_enabled, disclaimer, generated_at), dest (classify_ai.destination),
+   ai_active / ai_reason (whether replies of this case go to the AI now, and why not), can_refresh (investigators+),
+   can_manage (case admins), show_quotes (view_restricted), done / msg (flash), query (the current filters). #}
+{% import "blocks_macros.html" as bk with context %}
+{% block title %}Aegis · Block status · {{ case.reference }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/blocks.css"><link rel="stylesheet" href="/static/css/recovery.css"><script src="/static/js/blocks.js" defer></script>{% endblock %}
+{% block content %}
+{% set qs = query | urlencode %}
+<div class="row case-head bk-head">
+  <div><h1>Block status</h1>
+    <div class="sub"><a href="/cases/{{ case.id }}">← {{ case.reference }} · Overview</a> · every block requested from every authority, what they answered and what to do next</div></div>
+  <div class="spacer"></div>
+  <div class="bk-head-actions">
+    {% if can_refresh %}<form method="post" action="/cases/{{ case.id }}/blocks/refresh" class="inline">{{ csrf_field() }}
+      <button class="btn small" type="submit" title="classify the replies again (rules{{ '; AI for replies it has not read' if ai_active else '' }})">⟳ Classify replies now</button></form>{% endif %}
+    {% if access.can('export') %}
+    <span class="bk-export">Export
+      <a class="btn small" href="/cases/{{ case.id }}/blocks/export.md{{ '?' ~ qs if qs }}">.md</a>
+      <a class="btn small" href="/cases/{{ case.id }}/blocks/export.csv{{ '?' ~ qs if qs }}">.csv</a>
+      <a class="btn small" href="/cases/{{ case.id }}/blocks/export.docx{{ '?' ~ qs if qs }}">.docx</a></span>
+    {% endif %}
+  </div>
+</div>
+{% include "case/_tabs_nav.html" %}
+{% include "_plan_subnav.html" %}
+
+{% if done %}<div class="alert info" role="status">{{ done }}</div>{% endif %}
+{% if msg == 'applied' %}<div class="alert info" role="status">Status confirmed and applied to the stop order. It is on the authority's timeline and in the audit log.</div>
+{% elif msg == 'proposed' %}<div class="alert info" role="status">Status confirmed as a proposal: a case admin applies it to the stop order.</div>
+{% elif msg == 'confirmed' %}<div class="alert info" role="status">Status confirmed. It is on the authority's timeline and in the audit log.</div>
+{% elif msg == 'tied' %}<div class="alert info" role="status">The e-mail from Outlook is tied to its letter: a draft is recorded as sent at the e-mail's date.</div>
+{% elif msg == 'step' %}<div class="alert info" role="status">Path step recorded. It is on the authority's timeline and in the audit log.</div>
+{% elif msg == 'dismissed' %}<div class="alert info" role="status">The e-mail from Outlook is dismissed: it stays on the authority's timeline.</div>{% endif %}
+
+{% set s = v.summary %}
+<div class="panel bk-summary">
+  <div class="bk-kpis">
+    <div class="bk-kpi"><b>{{ s.total }}</b><span>requests</span></div>
+    <div class="bk-kpi"><b>{{ s.awaiting }}</b><span>waiting for an answer</span></div>
+    <div class="bk-kpi {{ 'bk-kpi-hot' if s.overdue }}"><b>{{ s.overdue }}</b><span>overdue</span></div>
+    <div class="bk-kpi {{ 'bk-kpi-hot' if s.needs_confirmation }}"><b>{{ s.needs_confirmation }}</b><span>to confirm</span></div>
+    <div class="bk-kpi {{ 'bk-kpi-hot' if s.to_review }}" title="{{ s.needs_review }} replies / Outlook e-mails to review, {{ s.our_action }} requests waiting on our action"><b>{{ s.to_review }}</b><span>to review</span></div>
+    <div class="bk-kpi"><b>{{ s.not_sent }}</b><span>not sent</span></div>
+    <div class="bk-kpi bk-kpi-ok"><b>{{ s.frozen_fmt | join(' · ') if s.frozen_fmt else '—' }}</b><span>held / frozen (confirmed by a person)</span></div>
+  </div>
+  <form method="get" action="/cases/{{ case.id }}/blocks" class="bk-filters" data-autosubmit>
+    <label>Show <select name="status">
+      {% for k, label in v.filters.items() %}<option value="{{ k }}" {{ 'selected' if v.f.status == k }}>{{ label }}</option>{% endfor %}
+    </select></label>
+    <label>Authority type <select name="type"><option value="">All types</option>
+      {% for k, label in v.types %}<option value="{{ k }}" {{ 'selected' if v.f.type == k }}>{{ label }}</option>{% endfor %}
+    </select></label>
+    <label class="bk-check"><input type="checkbox" name="overdue" value="1" {{ 'checked' if v.f.overdue }}> overdue only</label>
+    <label class="bk-check"><input type="checkbox" name="review" value="1" {{ 'checked' if v.f.review }}> to confirm / review</label>
+    <button class="btn small" type="submit">Apply</button>
+    {% if query %}<a class="muted bk-reset" href="/cases/{{ case.id }}/blocks">reset</a>{% endif %}
+    <span class="spacer"></span><span class="muted bk-count">{{ v.rows | length }} of {{ v.n_all }} shown</span>
+  </form>
+</div>
+
+<div class="panel bk-table-panel">
+  <div class="table-wrap">
+  <table class="bk-table">
+    <thead><tr><th>Authority · request</th><th>Sent · to · waiting</th><th>Last reply</th><th>Status</th><th>Evidence</th><th>Next action</th></tr></thead>
+    <tbody>
+    {% for r in v.rows %}
+    <tr id="{{ r.key }}" class="{{ 'bk-row-hot' if r.needs_confirmation or r.overdue }}">
+      <td class="bk-who"><a href="/cases/{{ case.id }}/authorities/{{ r.authority.key }}"><b>{{ r.authority.name }}</b></a>
+        <div class="muted bk-small">{{ r.authority.type }}</div>
+        <div class="bk-req"><a href="{{ r.href }}">{{ r.request }}</a>{% if r.kind_note %} <span class="muted bk-small">{{ r.kind_note }}</span>{% endif %}</div></td>
+      <td class="bk-sent">{% if r.sent %}<span class="nowrap">{{ r.sent_fmt }}</span>{% if r.channel %} <span class="muted bk-small">· {{ r.channel }}</span>{% endif %}{% if r.resent and not r.first_to %}<br><span class="tag blue">resent {{ r.resent_fmt if r.resent_at else r.last_outbound_fmt[:11] }}</span>{% endif %}{% else %}<span class="muted">not sent</span>{% endif %}
+        {% if r.first_to %}<div class="bk-resent"><span class="tag blue">resent {{ r.resent_fmt if r.resent_at else r.last_outbound_fmt[:11] }}</span> to {% for t in r.to %}<span class="mono bk-addr">{{ t }}</span>{{ ', ' if not loop.last }}{% endfor %}
+          <span class="muted bk-small">(first sent to {% for t in r.first_to %}<span class="mono bk-addr">{{ t }}</span>{{ ', ' if not loop.last }}{% endfor %})</span></div>
+        {% else %}{% for t in r.to %}<div class="mono bk-addr">{{ t }}</div>{% endfor %}{% endif %}
+        <div class="bk-wait">{% if r.days_waiting is not none %}<b>{{ r.days_waiting }}</b> day{{ 's' if r.days_waiting != 1 }} waiting{% endif %}{% if r.due and r.days_waiting is not none %} <span class="muted bk-small">· due {{ r.due_fmt }}</span>{% endif %}{% if r.overdue %} <span class="tag red">overdue</span>{% endif %}</div>
+        {% if r.next_deadline %}<div class="bk-small"><span class="tag amber">{{ r.next_deadline.label }} {{ r.next_deadline.due_fmt }}</span></div>{% endif %}</td>
+      <td class="bk-last">{% if r.last_reply %}<a href="{{ r.last_reply.href }}" class="nowrap">{{ r.last_reply.at_fmt }}</a>
+        <div class="muted bk-small">{{ r.replies | length }} repl{{ 'y' if r.replies | length == 1 else 'ies' }}{% if r.last_reply.untrusted %} · mailbox{% endif %}</div>
+        {% if r.last_reply.sender_domain_ok is sameas false %}<span class="tag amber" title="the reply did not come from the authority's own domain">sender not verified</span>{% endif %}
+        {% if r.replies | length > 1 %}<details class="bk-replies"><summary>all replies</summary>
+          {% for x in r.replies %}<div class="bk-reply"><a href="{{ x.href }}">{{ x.at_fmt }}</a> {{ bk.badge(x.status, x.label) }} <span class="muted">{{ x.source }}</span></div>{% endfor %}</details>{% endif %}
+        {% else %}<span class="muted">none</span>{% endif %}</td>
+      <td class="bk-status">{{ bk.badge(r.status, r.label, r.tone) }}
+        {% if r.suggestion %}<div class="bk-detail"><span class="tag amber bk-suggest" title="{{ r.suggestion.source_text }}: a person confirms every hold, freeze or return; it counts in no total until then">{{ r.detail }}</span></div>
+        {% elif r.detail %}<div class="bk-detail">{{ r.detail }}</div>{% endif %}
+        <div class="muted bk-small">{{ r.source_text }}</div>
+        {% if r.path %}<div class="bk-small bk-path"><span class="tag {{ 'purple' if r.path.step in ('le_only_redirect', 'le_route_open') else 'blue' }}" title="where the request stands in the provider's process (derived from the replies, the playbook and the linked LE brief)">{{ r.path.label }}</span>{% if r.path.suggests %} <span class="tag amber" title="a person confirms it">suggests {{ r.path.suggests }}</span>{% endif %}{% if r.path.route == 'cross_border' %} <span class="tag amber" title="{{ r.path.route_text }}">cross-border</span>{% endif %}</div>{% endif %}
+        {% if r.hold_expires %}<div class="bk-small"><span class="tag red" title="the hold lapses unless an order arrives">hold until {{ r.hold_expires_fmt }}</span></div>{% endif %}
+        {% if r.ticket %}<div class="muted bk-small">ticket <span class="mono">{{ r.ticket }}</span></div>{% endif %}
+        {% if r.needs_confirmation %}<span class="tag amber">{{ 'proposed — awaiting a case admin' if r.proposal else 'to confirm' }}</span>{% endif %}
+        {% if r.needs_review and not r.needs_confirmation and r.kind != 'outlook' %}<span class="tag amber">review the reply</span>{% endif %}
+        {% if r.applied %}<span class="tag green" title="a case admin applied it to the stop order">applied</span>{% endif %}</td>
+      <td class="bk-evidence">{% if r.suggestion %}<div class="bk-suggestion" role="note"><b>{{ r.suggestion.text }}</b> <span class="muted bk-small">— {{ r.suggestion.source_text }}, not confirmed</span>
+          {% if r.suggestion.quote %}<div><q>{{ r.suggestion.quote }}</q></div>{% endif %}
+          {% for w in r.suggestion.warnings %}<div class="bk-small bk-warning">⚠ {{ w }}</div>{% endfor %}</div>{% endif %}
+        {% if r.quote and not (r.suggestion and r.suggestion.quote == r.quote) %}<q>{{ r.quote }}</q>{% elif r.quote %}{% elif r.last_reply and not show_quotes %}<span class="muted bk-small">reply text visible to investigators</span>{% elif not r.onchain %}<span class="muted">—</span>{% endif %}
+        {% for x in r.replies if x.note or x.ai %}<div class="bk-reply-notes" data-reply="{{ x.id }}"><a class="muted bk-small" href="{{ x.href }}">reply of {{ x.at_fmt }}</a>
+          {% if x.note %}<div class="muted bk-small bk-note">{{ x.note }}</div>{% endif %}
+          {% if x.ai %}<div class="bk-small bk-ai">AI: {{ x.ai.label }}{% if not x.ai.verified %} <span class="muted">({{ 'its quote names an outcome the reply negates / asks about / makes conditional' if x.ai.quote_blocked else 'quote not found in the reply' if x.ai.quote_dropped else 'no supporting quote' }}: not used)</span>{% endif %}{% if x.risky %} <span class="tag amber" title="not preselected in Confirm status">advisory only — read the reply</span>{% endif %}{% if x.ai.rationale %} <span class="muted">— {{ x.ai.rationale }}</span>{% endif %}</div>{% endif %}</div>{% endfor %}
+        {% if r.intel %}{{ bk.intel(case, r) }}{% endif %}
+        {% if r.onchain %}{{ bk.onchain(r.onchain) }}{% endif %}</td>
+      <td class="bk-next">{% if r.next_action.href %}<a href="{{ r.next_action.href | mail_return }}">{{ r.next_action.text }}</a>{% else %}{{ r.next_action.text }}{% endif %}
+        {% if r.next_action.evidence %}<details class="bk-evidence-needs bk-small"><summary>What the next step needs ({{ r.next_action.evidence | length }})</summary><ul>{% for e in r.next_action.evidence %}<li>{{ e.label }}</li>{% endfor %}</ul></details>{% endif %}
+        {% if r.path and r.path.can_step %}<div class="bk-step">{{ bk.path_form(case, r) }}</div>{% endif %}
+        {% if r.can_confirm %}<div class="bk-confirm">{{ bk.confirm_form(case, r, v.statuses) }}</div>{% endif %}
+        {% if r.outlook %}<div class="bk-outlook">{{ bk.outlook_form(r) }}</div>{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="muted">{% if v.n_all %}No request matches these filters.{% else %}No blocks requested yet: stop orders and letters appear here once drafted.{% endif %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted bk-small bk-disclaimer">{{ v.disclaimer }} Reply text is untrusted: Aegis never acts on it by itself.</p>
+</div>
+
+<div class="panel bk-ai-panel" id="ai-setting">
+  <h2>AI reads mailbox replies <small>{{ 'on' if v.ai_enabled else 'off' }} for this case{% if v.ai_enabled and not ai_active and ai_reason %} · inactive: {{ ai_reason }}{% endif %}</small></h2>
+  {% if ai_unavailable %}<p class="alert warning bk-small" id="ai-unavailable">{{ ai_unavailable }}{% if v.ai_enabled %} No reply is sent to a model while this lasts.{% endif %}</p>{% endif %}
+  <p class="bk-small">The rules classify every reply locally. When this is on, Aegis also sends the <b>full text</b> of each new reply (subject and body, quoted earlier messages included) to <b>{{ dest.label }}</b>{% if dest.model %} (model <span class="mono">{{ dest.model }}</span>){% endif %} for a second reading. The reply is marked as untrusted data; the AI's answer is advisory only: it is shown next to the rules, a status where the two disagree needs review, and nothing changes a stop order until a person confirms it. Every call is audited (no content).</p>
+  {% if v.ai_enabled %}<p class="muted bk-small">Consented by {{ v.ai.by_name or ('user #' ~ v.ai.by) }} on {{ (v.ai.at or '')[:16] | replace('T', ' ') }} UTC for {{ v.ai.destination }}{% if v.ai.model %} · {{ v.ai.model }}{% endif %}.</p>{% endif %}
+  {% if can_manage %}
+  <form method="post" action="/cases/{{ case.id }}/blocks/ai-setting" class="bk-ai-form">{{ csrf_field() }}
+    <input type="hidden" name="destination" value="{{ dest.label }}">
+    {% if v.ai_enabled %}
+      <input type="hidden" name="enabled" value="0"><button class="btn small" type="submit">Turn off</button>
+    {% elif dest.provider == 'none' %}
+      <span class="muted bk-small">No AI provider is configured on this server.</span>
+    {% elif ai_unavailable %}
+      <span class="muted bk-small">It can be turned on once the AI is available on this server.</span>
+    {% else %}
+      <input type="hidden" name="enabled" value="1">
+      <label class="bk-check"><input type="checkbox" name="consent" value="1" required> I confirm that the full text of this case's mailbox replies may be sent to {{ dest.label }}.</label>
+      <button class="btn small primary" type="submit">Turn on</button>
+    {% endif %}
+  </form>
+  {% else %}<p class="muted bk-small">A case admin can change this setting.</p>{% endif %}
+</div>
+{% endblock %}

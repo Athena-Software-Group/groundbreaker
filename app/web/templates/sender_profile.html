@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{# Sender of record — owner: app/web/routes_mail.py (sender_profile_page / _save). Context: case, access, profile
+   (SenderProfile | None), values (form values), docs (visible evidence: id, title (masked), folder, classification,
+   tlp, blocked reason, checked), error, saved, preview_md (intro + signature rendered from the saved profile),
+   can_edit (manage_sender_profile), block_text, docs_all / docs_hidden (the picker lists Legal / Law-enforcement
+   documents and PDFs, never .eml or files received by e-mail; ?docs=all widens it), sender_help (what the sender of
+   record is), org_default / instrument_default / signatory_default (app.domain.sender org_name() / DEFAULT_INSTRUMENT /
+   signatory_name()). #}
+{% block title %}Aegis · Sender profile · {{ case.reference }}{% endblock %}
+{% block content %}
+<div class="row case-head" style="margin-bottom:12px"><div><h1>Sender profile</h1>
+  <div class="sub"><a href="/cases/{{ case.id }}?tab=authorities">← {{ case.reference }} · Authorities</a>
+    · who new letters and e-mails come from</div></div></div>
+
+{% if error %}<div class="alert critical">{{ error }}</div>{% endif %}
+{% if saved and not error %}<div class="alert info">Saved. New letters use this profile; letters already drafted, sent or imported are not changed.</div>{% endif %}
+{% if not profile %}<div class="alert info">No sender profile yet: e-mails still go out (nothing to acknowledge), but new letters are signed with the PI-firm block from the case facts. Save the profile below so they read “{{ org_default }}, on behalf of …”{% if not can_edit %} (a case admin sets it up){% endif %}.</div>{% endif %}
+
+<div class="auth-grid">
+<div class="auth-main">
+  <div class="panel">
+    <h2>Profile <small>"{{ values.org_name or org_default }}, on behalf of …"</small></h2>
+    <form method="post" action="/cases/{{ case.id }}/sender-profile" class="mail-profile-form">
+      {{ csrf_field() }}
+      <fieldset {% if not can_edit %}disabled{% endif %}>
+      <div class="row">
+        <div style="flex:1"><label>Organisation</label><input name="org_name" maxlength="255" value="{{ values.org_name or org_default }}"></div>
+        <div style="flex:1"><label>On behalf of (the victim)</label><input name="on_behalf_of" maxlength="255" required value="{{ values.on_behalf_of or '' }}"></div>
+      </div>
+      <div class="row">
+        <div style="flex:1"><label>Signatory</label><input name="signatory_name" maxlength="255" value="{{ values.signatory_name or '' }}"></div>
+        <div style="flex:1"><label>Signatory's title</label><input name="signatory_title" maxlength="255" value="{{ values.signatory_title or '' }}"></div>
+      </div>
+      <div class="row">
+        <div style="flex:1"><label>Contact e-mail (in the signature)</label><input name="contact_email" maxlength="255" class="mono" value="{{ values.contact_email or '' }}" placeholder="empty = the case mailbox"><div class="muted" style="font-size:var(--fs-xs)">Leave empty to use the case mailbox the e-mail is sent from (AEGIS_MAIL_FROM), so replies come back to Aegis.</div></div>
+        <div style="flex:1"><label>Phone</label><input name="phone" maxlength="64" value="{{ values.phone or '' }}"></div>
+      </div>
+      <label>Postal address</label><input name="postal_address" maxlength="512" value="{{ values.postal_address or '' }}">
+      <label>Authority instrument</label><input name="instrument" maxlength="128" value="{{ values.instrument or 'Letter of Authorisation' }}">
+      <label class="auth-check"><input type="checkbox" name="instrument_is_poa" value="1"> The instrument on file is literally a Power of Attorney (required to use those words)</label>
+      <label>Signature block (optional; replaces the composed lines, one line each)</label>
+      <textarea name="signature_block" rows="4" maxlength="4000">{{ values.signature_block or '' }}</textarea>
+      <label>Default Cc (comma-separated)</label><input name="cc_default" class="mono" value="{{ values.cc_default or '' }}">
+      <label>Authority documents (attached to e-mails by default)</label>
+      <div class="mail-docs">
+        {% for d in docs %}
+        <label class="mail-doc{{ ' muted' if d.blocked else '' }}"><input type="checkbox" name="authority_evidence_ids" value="{{ d.id }}" {% if d.checked %}checked{% endif %} {% if d.blocked %}disabled{% endif %}>
+          <span class="mail-doc-title">#{{ d.id }} {{ d.title }}</span>
+          <span class="mail-doc-tags"><span class="tag">{{ d.folder }}</span> <span class="tag">{{ d.classification }}</span>{% if d.tlp %} <span class="tag red">{{ d.tlp }}</span>{% endif %}{% if d.blocked %} <span class="tag amber" title="{{ block_text.get(d.blocked, d.blocked) }}">cannot be attached</span>{% endif %}</span></label>
+        {% else %}<div class="muted">No Legal / Law-enforcement document or PDF yet. Upload the signed authority instrument to the Legal folder first.</div>{% endfor %}
+      </div>
+      <div class="muted mail-note">{% if docs_all %}Showing every evidence item except e-mails and files received by e-mail. <a href="/cases/{{ case.id }}/sender-profile">Show likely authority documents only</a>{% else %}Showing Legal / Law-enforcement documents and PDFs{% if docs_hidden %} ({{ docs_hidden }} other item{{ 's' if docs_hidden != 1 }} hidden){% endif %}. <a href="/cases/{{ case.id }}/sender-profile?docs=all">Show all</a>{% endif %}</div>
+      {% if can_edit %}<div style="margin-top:10px"><button class="btn primary" type="submit">Save profile</button></div>{% endif %}
+      </fieldset>
+      {% if not can_edit %}<div class="muted" style="margin-top:8px;font-size:var(--fs-sm)">Only case admins can change the sender profile.</div>{% endif %}
+    </form>
+  </div>
+</div>
+<aside class="auth-side">
+  <div class="panel">
+    <h2>Letter preview <small>opening and signature, from the saved profile</small></h2>
+    {% if preview_md %}<div class="letter mail-sig-preview">{{ preview_md | md }}</div>
+    {% else %}<div class="muted">Save the profile to see how letters will open and close.</div>{% endif %}
+  </div>
+  <div class="panel mail-profile-help" id="sender-of-record">
+    <h2>What is the sender of record?</h2>
+    <p class="muted" style="font-size:var(--fs-sm)">{{ sender_help }}</p>
+    <dl class="muted" style="font-size:var(--fs-sm);margin:0">
+      <dt>Organisation</dt><dd>Who writes: “We write as <b>{{ values.org_name or org_default }}</b> …”, and the signature's last line. Default: {{ org_default }}.</dd>
+      <dt>On behalf of</dt><dd>The victim the letters are written for (required): “… on behalf of <b>{{ values.on_behalf_of or '…' }}</b>”. Never put in a mail header.</dd>
+      <dt>Signatory and title</dt><dd>Who signs, above the organisation line. Default: {{ signatory_default }} (the investigations desk).</dd>
+      <dt>Contact e-mail</dt><dd>Printed in the signature, and offered as “Cc the sender of record” (ticked) when an e-mail is sent. Empty: the case mailbox, which needs no Cc (its Sent Items keeps the copy).</dd>
+      <dt>Authority instrument</dt><dd>What the victim signed: “acting under the victim's <b>{{ values.instrument or instrument_default }}</b> (attached)”. Default: {{ instrument_default }}; only say Power of Attorney when that is literally what is on file.</dd>
+      <dt>Signature block</dt><dd>Optional: replaces the composed signature lines, one line each.</dd>
+      <dt>Authority documents</dt><dd>Offered (pre-ticked) as attachments when an e-mail is prepared; TLP:RED / TLP:AMBER items can never be attached.</dd>
+    </dl>
+    <p class="muted mail-note">The e-mail's From is the configured case mailbox and its display name. A letter written before the profile was set up (or changed) is flagged in the e-mail editor, with a one-click <b>Use the sender profile's signature</b>; letters already sent or imported are never changed.</p>
+  </div>
+</aside>
+</div>
+{% endblock %}

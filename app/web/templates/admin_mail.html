@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{# Mail settings — owner: app/web/routes_mail_admin.py. Context: info (app.mail.config.describe: masked ids,
+   never the secret), status (TransportStatus), dev_enforced, inbound (sync state, never the delta link),
+   unassigned, reviews [{case_id, reference, count}], recent (outbound metadata only), result (last action). #}
+{% block title %}Aegis · Mail{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/mail_admin.css">{% endblock %}
+{% block content %}
+<div class="row case-head"><div><h1>Mail</h1><div class="sub">System administration · the case mailbox Aegis sends from and reads replies from
+  · <a href="/admin/mail/unassigned">unassigned mail ({{ unassigned }})</a> · <a href="/admin/mail/mailbox">mailbox sync (Inbox &amp; Sent Items)</a> · <a href="/directory">contact directory</a>
+  · <a href="/admin/audit">global audit log</a></div></div></div>
+
+{% if not status.configured %}<div class="alert info">{{ status.reason }}. Letters can still be prepared and downloaded as <span class="mono">.eml</span>; nothing is sent.</div>{% endif %}
+
+{% if result %}
+<div class="panel tight mail-result {{ 'ok' if result.ok else 'failed' }}" id="mail-result">
+  {% if result.action == 'token' %}
+    {% if result.ok %}<span class="tag green">token OK</span> expires in {{ result.expires_in or '—' }} s ·
+      application roles: {% for r in result.roles %}<span class="tag {{ 'green' if r in ('Mail.Send', 'Mail.ReadWrite') else '' }} mono">{{ r }}</span>{% else %}<span class="tag amber">none listed</span>{% endfor %}
+      {% if 'Mail.Send' not in result.roles or 'Mail.ReadWrite' not in result.roles %}<div class="muted">Aegis needs both Mail.Send and Mail.ReadWrite (application permissions, admin consent granted).</div>{% endif %}
+    {% else %}<span class="tag red">token test failed</span> {{ result.error }}{% endif %}
+  {% elif result.action == 'mailbox' %}
+    {% if result.checks %}
+      {% for c in result.checks %}<div>{% if c.ok %}<span class="tag green">OK</span>{% else %}<span class="tag red">problem</span>{% endif %} <span class="mono">{{ c.label }}</span>{% if c.error %} — {{ c.error }}{% endif %}</div>{% endfor %}
+    {% elif result.ok %}<span class="tag green">mailbox OK</span> inbox reachable · {{ result.total if result.total is not none else '—' }} messages, {{ result.unread if result.unread is not none else '—' }} unread
+    {% else %}<span class="tag red">mailbox test failed</span> {{ result.error }}{% endif %}
+  {% elif result.action == 'test_send' %}
+    {% if result.ok %}<span class="tag green">sent</span> The test message went out through <span class="mono">{{ result.transport }}</span>.
+    {% else %}<span class="tag red">not sent</span> {{ result.error }}{% endif %}
+  {% elif result.action == 'sync' %}
+    {% if result.ok %}<span class="tag green">mailbox checked</span>{% else %}<span class="tag {{ 'amber' if result.counts else 'red' }}">sync</span> {{ result.error }}{% endif %}
+    {% if result.counts %}<div class="mono small-counts">{% for k, v in result.counts.items() %}{{ k }}={{ v }} {% endfor %}</div>{% endif %}
+  {% elif result.action == 'reset' %}
+    {% if result.ok %}<span class="tag green">reset</span> The delta link was cleared; only mail received from now on is read.{% else %}<span class="tag red">not reset</span> {{ result.error }}{% endif %}
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="grid cols-2 mail-cards">
+<div class="panel" id="mail-transport">
+  <h2>Transport <small>read-only; set through the environment (docs/m365-setup.md)</small></h2>
+  <div class="table-scroll"><table><tbody>
+    <tr><th>Transport</th><td><span class="mono">{{ info.transport }}</span> <span class="muted">AEGIS_MAIL_TRANSPORT</span>
+      {% if status.configured %}<span class="tag green">configured</span>{% else %}<span class="tag amber">not configured</span>{% endif %}</td></tr>
+    <tr><th>Status</th><td>{{ status.reason }}</td></tr>
+    <tr><th>Mailbox</th><td>{% if info.mailbox %}<span class="mono">{{ info.mailbox }}</span>{% else %}—{% endif %} <span class="muted">AEGIS_MAIL_FROM</span></td></tr>
+    <tr><th>From name</th><td>{{ info.from_name }} <span class="muted">AEGIS_MAIL_FROM_NAME</span></td></tr>
+    {% if info.transport == 'graph' %}
+    <tr><th>Tenant / client</th><td><span class="mono">{{ info.tenant }}</span> / <span class="mono">{{ info.client }}</span> <span class="muted">masked</span></td></tr>
+    <tr><th>Client secret</th><td>{% if info.secret_configured %}<span class="tag green">configured</span>{% else %}<span class="tag amber">not set</span>{% endif %}
+      {% if info.cert_path_set %}<span class="tag red">certificate path set (not supported in v1)</span>{% endif %}</td></tr>
+    <tr><th>Hosts</th><td><span class="mono">{{ info.graph_host or '—' }}</span> · <span class="mono">{{ info.login_host or '—' }}</span>
+      {% if info.host_problem %}<span class="tag red">refused</span> <span class="muted">{{ info.host_problem }}</span>{% elif info.test_override %}<span class="tag amber">local test mock</span> <span class="muted">APP_ENV=local: AEGIS_M365_TEST_* points Graph at a mock on 127.0.0.1</span>{% else %}<span class="tag green">allowed</span>{% endif %}</td></tr>
+    {% elif info.transport == 'file' %}
+    <tr><th>Folders</th><td>outbox {% if info.outbox_set %}<span class="tag green">set</span>{% else %}<span class="tag amber">not set</span>{% endif %}
+      · inbox {% if info.inbox_set %}<span class="tag green">set</span>{% else %}<span class="tag amber">not set</span>{% endif %} <span class="muted">(paths are not shown)</span></td></tr>
+    {% endif %}
+    <tr><th>Limits</th><td>{{ '%.1f' | format(info.max_message_bytes / 1000000) }} MB per e-mail · {{ info.send_per_hour }} sends / hour per case,
+      {{ info.send_per_hour_global }} overall · {{ info.test_sends_per_hour }} test messages / hour · timeout {{ info.timeout | int }} s</td></tr>
+    <tr><th>Dev safety net</th><td>{% if dev_enforced %}<span class="tag amber">enforced</span> APP_ENV=local + graph: recipients only in {% for d in info.dev_allowed_domains %}<span class="mono">{{ d }}</span>{{ ', ' if not loop.last }}{% endfor %}{% elif info.live_sending %}<span class="tag green">live sending ON</span> <span class="muted">AEGIS_MAIL_LIVE_SENDING=1: the case mailbox sends to any recipient (LE-only channels stay blocked)</span>{% else %}<span class="tag">not enforced</span> <span class="muted">(only with APP_ENV=local and the graph transport)</span>{% endif %}</td></tr>
+  </tbody></table></div>
+  <div class="row mail-actions">
+    <form method="post" action="/admin/mail/token-test" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" {{ '' if info.transport == 'graph' and status.configured else 'disabled' }}>Token test</button></form>
+    <form method="post" action="/admin/mail/mailbox-test" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" {{ '' if info.transport != 'none' else 'disabled' }}>Mailbox test</button></form>
+  </div>
+  <form method="post" action="/admin/mail/test-send" class="row mail-actions" id="mail-test-send">{{ csrf_field() }}
+    <label class="muted" for="test-to">Test message to</label>
+    <input id="test-to" name="to" type="email" required maxlength="254" placeholder="you@example.com" autocomplete="off">
+    <button class="btn small primary" type="submit" {{ '' if status.configured else 'disabled' }}>Send test message</button>
+    <span class="muted">Subject "Aegis test message", no case data.</span>
+  </form>
+</div>
+
+<div class="panel" id="mail-inbound">
+  <h2>Inbound <small>replies to letters, read from the case mailbox</small></h2>
+  <div class="table-scroll"><table><tbody>
+    <tr><th>Enabled</th><td>{% if inbound.enabled %}<span class="tag green">on</span>{% else %}<span class="tag">off</span>{% endif %} <span class="muted">AEGIS_MAIL_INBOUND</span>
+      {% if inbound.problem %}<div class="muted">{{ inbound.problem }}</div>{% endif %}</td></tr>
+    <tr><th>Reads mail since</th><td>{{ inbound.since | dt if inbound.since else ('every file in the inbox folder' if info.transport == 'file' else 'the first sync') }}</td></tr>
+    <tr><th>Last sync</th><td>started {{ inbound.last_started_at | dt }} · finished {{ inbound.last_finished_at | dt }} · last success {{ inbound.last_success_at | dt }}</td></tr>
+    <tr><th>Last result</th><td>{% if inbound.last_result %}<span class="mono small-counts">{% for k in ('fetched', 'received', 'needs_review', 'unassigned', 'ignored', 'rejected', 'duplicates', 'skipped_old', 'errors') %}{{ k }}={{ inbound.last_result.get(k, 0) }} {% endfor %}</span>
+      {% if inbound.last_result.trigger %}<span class="muted">({{ inbound.last_result.trigger }})</span>{% endif %}{% else %}—{% endif %}</td></tr>
+    <tr><th>Last error</th><td>{% if inbound.last_error %}<span class="tag red">error</span> {{ inbound.last_error }}{% else %}—{% endif %}</td></tr>
+    <tr><th>Lease</th><td>{% if inbound.lease_held %}<span class="tag amber">a sync is running</span>{% else %}free{% endif %}</td></tr>
+    <tr><th>Delta link</th><td>{% if inbound.delta_stored %}stored{% else %}none{% endif %} <span class="muted">(never shown)</span></td></tr>
+  </tbody></table></div>
+  <div class="row mail-actions">
+    <form method="post" action="/admin/mail/sync" class="inline">{{ csrf_field() }}<button class="btn small primary" type="submit" {{ '' if inbound.enabled and not inbound.problem else 'disabled' }}>Check mailbox now</button></form>
+    <form method="post" action="/admin/mail/reset-sync" class="inline row">{{ csrf_field() }}
+      <label class="mail-check"><input type="checkbox" name="confirm" value="1" required> forget the sync position</label>
+      <button class="btn small danger" type="submit">Reset sync</button></form>
+  </div>
+</div>
+
+<div class="panel" id="mail-queues">
+  <h2>Queues</h2>
+  <p><a href="/admin/mail/unassigned"><b>{{ unassigned }}</b> unassigned</a> <span class="muted">— inbound mail no case claimed; only system admins see it.</span></p>
+  {% if reviews %}
+  <div class="table-scroll"><table><thead><tr><th>Case</th><th>Waiting for review</th></tr></thead><tbody>
+    {% for r in reviews %}<tr><td><a href="/cases/{{ r.case_id }}/mail/review" class="mono">{{ r.reference }}</a></td><td>{{ r.count }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<p class="muted">No e-mail waits for a case admin's review.</p>{% endif %}
+</div>
+
+<div class="panel" id="mail-recent">
+  <h2>Recent outbound <small>metadata only: no subjects, no addresses</small></h2>
+  {% if recent %}
+  <div class="table-scroll"><table><thead><tr><th>Case</th><th>E-mail</th><th>Letter</th><th>Status</th><th>Transport</th><th>Sent</th><th>Size</th></tr></thead><tbody>
+    {% for m in recent %}<tr>
+      <td class="mono">{{ m.reference or '—' }}</td>
+      <td class="mono">{% if m.case_id %}<a href="/cases/{{ m.case_id }}/mail/messages/{{ m.id }}">#{{ m.id }}</a>{% else %}#{{ m.id }}{% endif %}</td>
+      <td class="mono">{% if m.corr_id and m.case_id %}<a href="/cases/{{ m.case_id }}/authorities/correspondence/{{ m.corr_id }}">#{{ m.corr_id }}</a>{% else %}—{% endif %}</td>
+      <td><span class="tag {{ {'sent': 'green', 'failed': 'red', 'unknown': 'red', 'sending': 'amber', 'prepared': 'blue'}.get(m.status, '') }}">{{ m.status }}</span></td>
+      <td class="mono">{{ m.transport }}</td><td>{{ m.sent_at | dt }}</td>
+      <td>{% if m.size %}{{ '%.1f' | format(m.size / 1024) }} KB{% else %}—{% endif %}</td>
+    </tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<p class="muted">Nothing prepared or sent yet.</p>{% endif %}
+</div>
+</div>
+{% endblock %}

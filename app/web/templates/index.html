@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Aegis · Cases{% endblock %}
+{% block content %}
+<div class="row" style="margin-bottom:14px">
+  <div><h1>Cases</h1><div class="sub">Each case is one victim loss event; traces, freeze candidates and stop orders hang off it. You see the cases you are a member of.</div></div>
+  <div class="spacer"></div>
+  {% if may_create_cases(current_user()) %}<a class="btn primary" href="/cases/new">+ New case</a>{% endif %}
+</div>
+<div class="panel tight">
+<div class="table-scroll">
+<table class="cases-table">
+  <thead><tr><th>Reference</th><th>Title</th><th class="c-opt">Your role</th><th>Victim</th><th class="right">Loss</th><th class="c-opt">Fraud date</th><th class="c-opt">Last trace</th><th>Open orders</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  {% set ext = r.role and r.role.value == 'external' %}
+  <tr>
+    <td class="mono nowrap"><a href="/cases/{{ r.case.id }}">{{ r.case.reference }}</a></td>
+    <td>{{ r.case.title }}</td>
+    <td class="c-opt"><span class="tag">{{ r.role.value | replace('_', ' ') if r.role else '—' }}</span></td>
+    <td>{% if not ext %}{{ r.case.victim_name }}{% if r.case.victim_entity %}<br><span class="muted">{{ r.case.victim_entity }}</span>{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
+    <td class="right nowrap c-loss" data-label="Loss">{% if not ext %}{{ r.case.loss_usd | usd }}<br><span class="muted">{{ r.case.loss_amount | amt }} {{ r.case.loss_asset }}</span>{% else %}—{% endif %}</td>
+    <td class="nowrap c-opt">{{ r.case.fraud_date | dt }}</td>
+    <td class="c-opt">{% if r.run and not ext %}<span class="tag {{ 'green' if r.run.status.value == 'complete' else 'red' }}">#{{ r.run.id }} {{ r.run.status.value }}</span> <span class="muted">{{ r.run.stats.get('nodes', 0) }} nodes · {{ r.run.stats.get('terminal_vasp', 0) }} VASP</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+    <td class="c-orders" data-label="Open orders">{{ r.open_orders if not ext else '—' }}</td>
+    <td class="right c-open"><a class="btn small" href="/cases/{{ r.case.id }}">Open</a></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="9" class="muted">No cases you are a member of. Create one, ask a case admin to add you, or seed the demo case with <code>python -m scripts.seed_case</code>.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+</div>
+{% endblock %}

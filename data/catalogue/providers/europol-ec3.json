@@ -1,0 +1,28 @@
+{
+  "_comment": "I0 law-enforcement playbook (schema: app/domain/playbook.py). Europol / EC3 takes no crime reports from citizens and does not contact them: never draft to it. A victim or PI goes to the national police; the national case officer decides whether to involve Europol (or Eurojust) for cross-border linking. Every path is LE-only, so the next action is a brief to the national case officer.",
+  "key": "europol-ec3",
+  "version": 1,
+  "side": "le",
+  "le_role": "coordination",
+  "jurisdiction": "EU",
+  "issuer_jurisdictions": [],
+  "notes": "Europol has no power to arrest or to investigate on information from citizens and deals only with information from the competent law-enforcement agencies; it issues no freezing order itself (freezing / evidence orders between member states are national: Reg. (EU) 2018/1805, EIO). Its 'Report cybercrime online' page lists the national reporting sites.",
+  "domains": {"own": ["europol.europa.eu"], "sibling": [], "vendor_portals": []},
+  "paths": [
+    {
+      "key": "national_coordination", "kind": "cross_border", "requester": ["le", "court"],
+      "instrument": {"type": "none", "notes": "Through the member state's Europol national unit (SIENA); nothing from the victim side."},
+      "evidence": ["complaint_ref", "tx_list_copyable", "trace_report_run"],
+      "notes": "Ask the national case officer (e.g. Carabinieri, Polizia Postale) whether to pass the case to Europol for multi-country linking. No reply to a citizen is expected.",
+      "source_ids": ["e1", "e2", "e3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "sources": [
+    {"id": "e1", "title": "Europol FAQ: Can I report a crime to Europol?",
+     "url": "https://www.europol.europa.eu/faq/can-i-report-crime-to-europol", "retrieved_at": "2026-10-20"},
+    {"id": "e2", "title": "Europol: Report a crime", "url": "https://www.europol.europa.eu/report-a-crime",
+     "retrieved_at": "2026-10-20"},
+    {"id": "e3", "title": "Europol: Report cybercrime online",
+     "url": "https://www.europol.europa.eu/report-a-crime/report-cybercrime-online", "retrieved_at": "2026-10-20"}
+  ]
+}

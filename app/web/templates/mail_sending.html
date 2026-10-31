@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{# The "Sending…" screen of the guided send — owner: app/web/routes_mail.py (message_sending). Context: case, access,
+   mm (the outbound e-mail), corr, authority, steps (the stepper: 1–3 done, 4 sending), state (routes_mail.send_state:
+   pending | sent | failed | unknown | other), status_url (GET …/status, polled by js/mail.js), next_url (GET
+   …/after-send: where the flow goes once the mailbox answered — back to return_to with the success banner, the editor
+   with the error, or the preview), return_to. No inline script (CSP): js/mail.js reads the data attributes. #}
+{% block title %}Aegis · Sending e-mail #{{ mm.id }} · {{ case.reference }}{% endblock %}
+{% block content %}
+<div class="row case-head" style="margin-bottom:12px"><div><h1>E-mail <small class="muted">#{{ mm.id }}{% if corr %} · letter #{{ corr.id }}{% endif %}</small></h1>
+  <div class="sub">{% if authority %}to <a href="/cases/{{ case.id }}/authorities/{{ authority.key }}">{{ authority.name }}</a> · {% endif %}from <span class="mono">{{ mm.mailbox or 'the case mailbox' }}</span></div></div></div>
+{% set link = false %}{% include "_mail_stepper.html" %}
+<div class="panel mail-sending is-{{ state }}" id="mail-sending" data-status-url="{{ status_url }}" data-next-url="{{ next_url }}" data-state="{{ state }}">
+  <div class="mail-hourglass" aria-hidden="true"><span>⌛</span></div>
+  <div class="mail-sending-text" role="status" aria-live="polite">
+    <h2 id="mail-sending-h">{% if state == 'pending' %}Sending…{% elif state == 'sent' %}Sent ✓{% elif state == 'failed' %}Not sent{% elif state == 'unknown' %}Not confirmed{% else %}Nothing on its way{% endif %}</h2>
+    <p id="mail-sending-msg">{% if state == 'pending' %}Waiting for the mailbox to confirm e-mail #{{ mm.id }}{% if authority %} to {{ authority.name }}{% endif %}. Keep this page open: it goes on by itself.{% elif state == 'sent' %}The mailbox confirmed it. Taking you back…{% elif state == 'failed' %}The mailbox refused it. Taking you back to the editor…{% elif state == 'unknown' %}The mailbox could not confirm it. Opening the e-mail to check the mailbox…{% else %}Opening the e-mail…{% endif %}</p>
+    <p class="muted mail-note" id="mail-sending-slow" hidden>This is taking longer than usual. You can leave this page: the send goes on, and the e-mail's page shows how it ended.</p>
+    <p><a class="btn small" href="{{ next_url }}" id="mail-sending-next">Continue</a></p>
+  </div>
+</div>
+{% endblock %}

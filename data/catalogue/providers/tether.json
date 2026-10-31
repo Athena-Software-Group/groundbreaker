@@ -1,0 +1,131 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. Tether's USDT LE channel is unknown (the LE policy tab is not machine-readable; inforequests@tether.to is published on the Hadron by Tether LE page, and Tether's compliance desk points private USDT requests to law enforcement, who write there: an LE-only address). T3 FCU is LE-only (TRON USDT). The on-chain AddedBlackList event is the ground truth for frozen, never an e-mail.",
+  "key": "tether",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": null,
+  "issuer_jurisdictions": [],
+  "ground_truth": "onchain",
+  "notes": "Frozen only when the USDT contract's AddedBlackList event / isBlackListed() says so (app/freeze). DestroyedBlackFunds = burn (before a reissue); RemovedBlackList = lifted. Tether reports working with agencies in many countries, so no issuer jurisdiction is set. A compliance@ alias without an official Tether source is never catalogued.",
+  "entities": [
+    {"key": "tether-usdt", "name": "Tether (USDT issuer)", "source_ids": ["t2"]}
+  ],
+  "domains": {"own": ["tether.to", "tether.io"], "sibling": [], "vendor_portals": []},
+  "channels": [
+    {
+      "key": "tether.t3fcu", "kind": "webform", "value": null, "purpose": "le_request", "role_default": "to",
+      "label": "T3 FCU Law Enforcement Inquiry form (USDT on TRON)",
+      "notes": "Verified law-enforcement agencies only. The wording that requests from private individuals or organisations are not processed comes from a search-index snippet of the T3 FCU site (which returned 404 when checked, Oct 2026); TRM's blog describes only agencies flagging wallets. Confirm before an officer uses it. Aegis never submits there; it prepares the pack the officer pastes in.",
+      "who": "le_only", "source_ids": ["t5", "t6"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "tether.support", "kind": "webform", "value": null, "purpose": "general", "role_default": "to",
+      "label": "Tether Support desk",
+      "notes": "Tether's terms point prohibited-use questions to its support desk (cs.tether.to), open to anyone; ticket-style replies are inferred. Confirm the address before use.",
+      "who": "any", "source_ids": ["t2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "tether.inforequests", "kind": "email", "value": "inforequests@tether.to", "purpose": "le_request",
+      "role_default": "to", "label": "Tether law-enforcement inquiries",
+      "notes": "Published on the Hadron by Tether LE page; Tether's compliance desk answers private USDT freeze requests by declining to act, recommending local law enforcement and asking that the officer direct questions here (the LE department managing the case submits directly). Private parties brief the officer; the officer writes here.",
+      "source_url": "https://hadron.tether.to/en/law-enforcement",
+      "who": "le_only", "source_ids": ["t7"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "tether.le": {
+      "who": "le_only",
+      "notes": "Tether's own law-enforcement channel for USDT: not published in a readable form (the LE policy tab gives no address); agencies are onboarded to Tether's platform directly. Leave null.",
+      "source_ids": ["t1", "t7", "t8"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "private_notice", "kind": "private_notice", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["tether.support"],
+      "instrument": {"type": "none", "notes": "A police / IC3 reference is strongly advised."},
+      "evidence": ["tx_list_copyable", "balance_reading", "trace_report_run", "complaint_ref", "loa",
+                   "non_disclosure_stmt"],
+      "produces": ["prior_ticket_ref"],
+      "expected_replies": ["auto_reply", "acknowledged", "le_process_required"],
+      "on_refusal": "le_request",
+      "notes": "Value: Tether knows while the funds are still in place, and the ticket number goes into the LE request. No source says a private report alone gets a freeze: hand off to the LE officer as soon as the ticket arrives.",
+      "source_ids": ["t1", "t3"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_request", "kind": "le_request", "requester": ["le"], "channel_keys": ["tether.le", "tether.inforequests"],
+      "instrument": {"type": "le_request",
+                     "notes": "Tether's other policies (Hadron by Tether, Tether Gold) and a 2018 Tether policy quoted by a law firm ask for 'appropriate legal process'; the current USDT policy text is not readable (unverified). In practice a request from a verified law-enforcement agent has sufficed (being challenged in court, 2026)."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "balance_reading", "prior_ticket_ref", "complaint_ref"],
+      "expected_replies": ["acknowledged", "frozen"], "outcomes": ["frozen"],
+      "on_refusal": "court_order",
+      "notes": "Policy wording reported from Tether's sibling policies (the USDT LE tab only links its policy); freezes on an agent's request reported (medium). Confirm on-chain.",
+      "source_ids": ["t1", "t3", "t7", "t9"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "t3fcu_tron", "kind": "le_request", "requester": ["le"], "channel_keys": ["tether.t3fcu"],
+      "instrument": {"type": "le_request", "notes": "A verified LE request; no court order needed (reported)."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "balance_reading", "prior_ticket_ref"],
+      "timing": {"response_days": 1},
+      "expected_replies": ["frozen"], "outcomes": ["frozen"],
+      "on_refusal": "le_request",
+      "notes": "USDT on TRON only; frozen within about 24 hours (self-reported by TRM / Tether).",
+      "source_ids": ["t5", "t10"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "data_disclosure", "kind": "data_disclosure", "requester": ["le", "court"], "channel_keys": ["tether.le"],
+      "instrument": {"type": "subpoena", "notes": "Production order, warrant or subpoena (reported from Tether's sibling policies; the 'narrowly tailored' wording is unverified for USDT)."},
+      "notes": "Most USDT holders are secondary-market wallets with no Tether KYC: pursue KYC at the off-ramp exchange.",
+      "source_ids": ["t1", "t7"], "basis": "R", "confidence": "L", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "court_order", "kind": "court_order", "requester": ["le", "court"],
+      "instrument": {"type": "seizure_warrant", "notes": "Seizure / forfeiture order naming a government- or court-controlled destination wallet."},
+      "evidence": ["seizure_warrant", "tx_list_copyable"],
+      "outcomes": ["funds_returned"],
+      "notes": "Burn (DestroyedBlackFunds) then reissue to the designated wallet; months, tied to the court process. Not available to private requesters.",
+      "source_ids": ["t8", "t9"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "appropriate legal process", "means": "le_process_required", "instrument": "le_request", "path": "le_request",
+     "source_ids": ["t7"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "law enforcement agency", "means": "le_process_required", "instrument": "le_request", "path": "le_request",
+     "source_ids": ["t1"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"},
+    {"phrase": "law enforcement department managing the case must directly submit", "means": "le_process_required",
+     "instrument": "le_request", "path": "le_request", "source_ids": ["o1"], "basis": "O", "confidence": "H",
+     "retrieved_at": "2026-10"},
+    {"phrase": "do not wish to be drawn into a possible dispute", "means": "le_process_required",
+     "instrument": "le_request", "path": "le_request", "source_ids": ["o1"], "basis": "O", "confidence": "H",
+     "retrieved_at": "2026-10"}
+  ],
+  "tickets": [
+    {"system": "tether_support", "regex": null, "source_ids": ["t2"], "basis": "I", "confidence": "L",
+     "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "o1", "title": "Tether compliance standard reply (observed auto-reply)", "observed": true, "retrieved_at": "2026-10"},
+    {"id": "t1", "title": "Tether Law Enforcement Requests Policy (legal page tab)",
+     "url": "https://tether.to/en/legal/?tab=law-enforcement-requests", "retrieved_at": "2026-10-20"},
+    {"id": "t2", "title": "Tether Token Terms of Sale and Service", "url": "https://tether.to/en/legal/",
+     "retrieved_at": "2026-10-20"},
+    {"id": "t3", "title": "Tether: decision on Tornado Cash addresses ('verified law enforcement agent')",
+     "url": "https://tether.io/news/tether-holds-firm-on-decision-not-to-freeze-tornado-cash-addresses-awaits-law-enforcement-instruction/",
+     "retrieved_at": "2026-10-20"},
+    {"id": "t5", "title": "TRM Labs: T3 Financial Crime Unit, a model for public-private disruption",
+     "url": "https://www.trmlabs.com/resources/blog/t3-financial-crime-unit-a-model-for-public-private-disruption-in-the-age-of-stablecoins",
+     "retrieved_at": "2026-10-20"},
+    {"id": "t6", "title": "T3 Financial Crime Unit site", "url": "https://t3fcu.org/", "retrieved_at": "2026-10-20"},
+    {"id": "t7", "title": "Hadron by Tether law enforcement policy (not USDT)", "url": "https://hadron.tether.to/en/law-enforcement",
+     "retrieved_at": "2026-10-20"},
+    {"id": "t8", "title": "The Block: Tether onboarded FBI, Secret Service to its platform",
+     "url": "https://www.theblock.co/post/267973/tether-weve-onboarded-fbi-secret-service-to-our-platform",
+     "retrieved_at": "2026-10-20"},
+    {"id": "t9", "title": "CoinDesk: Tether sued over a USDT freeze allegedly made before a US warrant",
+     "url": "https://www.coindesk.com/business/2026/09/02/tether-sued-over-usd42-4-million-usdt-freeze-allegedly-made-months-before-u-s-warrant",
+     "retrieved_at": "2026-10-20"},
+    {"id": "t10", "title": "Tether: 450 million frozen and counting (T3 FCU)",
+     "url": "https://tether.io/news/450-million-frozen-and-counting-t3-financial-crime-unit-continues-global-crackdown-on-illicit-crypto-flows/",
+     "retrieved_at": "2026-10-20"}
+  ]
+}

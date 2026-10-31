@@ -1,0 +1,123 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. MEXC's victim ticket (Report Abnormal Funds) can get a temporary freeze, which lapses unless proof that the police accepted the case arrives within 48 hours of the documents being submitted; an LE request through LEORS is also expected within 48 hours. LEORS is LE-only and access takes 15-20 business days to approve, so the officer registers at once.",
+  "key": "mexc",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": null,
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "A temporary freeze is discretionary and short: record it as hold_placed, never frozen. LE freezes last 30 days at most unless the Order states a duration, and an Order with no duration is lifted. Return of assets needs a judicial decision; LE requests alone are not recognised. mexc.ai and mx-activities.live copy the LEORS text and are not MEXC domains.",
+  "entities": [],
+  "domains": {"own": ["mexc.com"], "sibling": [], "vendor_portals": []},
+  "channels_ext": {
+    "mexc.le": {
+      "who": "le_only",
+      "notes": "LEORS is for 'governmental entities or judicial bodies authorized to obtain evidence'; MEXC 'will not review or respond to requests sent by non-law enforcement officials through LEORS'. Access requests are generally reviewed within 15-20 business days. Aegis never registers or submits there.",
+      "source_ids": ["mx1", "mx2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    "mexc.report": {
+      "who": "victim_or_rep",
+      "notes": "Report Abnormal Funds ticket. MEXC asks for KYC on MEXC or proof of identity of the reporter.",
+      "source_ids": ["mx2", "mx3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "victim_report", "kind": "victim_report", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["mexc.report"],
+      "instrument": {"type": "none",
+                     "notes": "None to open the ticket; proof that the police accepted the case keeps the freeze, and a valid police report receipt may get it extended."},
+      "evidence": ["incident_narrative", "ownership_proof", "receiving_account", "tx_list_copyable", "victim_id",
+                   "police_report", "loa"],
+      "produces": ["prior_ticket_ref"],
+      "timing": {"deadlines": [
+        {"key": "police_acceptance", "what": "submit_by", "hours": 48, "starts": "provider_freeze_confirmed", "by": "victim",
+         "action": "Send MEXC proof that the police accepted the case (the police report receipt), or MEXC unfreezes the assets. Inferred from the Handling Process page's 48 hours (counted there from the submission: the clock below) and applied from MEXC's temporary freeze; the earlier one governs. The stolen-funds article's 48 hours is the LE request's (le_request), a police receipt there only lets MEXC extend.",
+         "source_ids": ["mx3"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"},
+        {"key": "police_acceptance_from_submission", "what": "submit_by", "hours": 48, "starts": "sent", "by": "victim",
+         "action": "Send MEXC proof that the police accepted the case within 48 hours of submitting the supporting documents, or MEXC unfreezes the assets (the Handling Process page's own start; the earlier clock governs).",
+         "source_ids": ["mx3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+        {"key": "le_request", "what": "submit_by", "hours": 48, "starts": "provider_freeze_confirmed", "by": "le",
+         "action": "An LE request through LEORS keeps the assets frozen; if the officer is not yet onboarded, send the police receipt and ask MEXC to extend.",
+         "source_ids": ["mx2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+      ]},
+      "expected_replies": ["acknowledged", "info_requested", "hold_placed", "le_process_required"],
+      "outcomes": ["hold_placed"],
+      "on_refusal": "le_freeze",
+      "conflict": "The stolen-funds article asks for an LE request within 48 hours without saying what starts the clock; the handling-process article counts 48 hours from the submission of the supporting documents and asks for proof of police acceptance. Track both; the earlier one governs.",
+      "notes": "Fastest lever for MEXC: the victim files the ticket with the full TxID list at once and the police report the same day. The pages address the victim and do not say whether a representative may file: submit it with the victim's identity proof and a letter of authority. MEXC shares no investigation details with the reporter.",
+      "source_ids": ["mx2", "mx3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_freeze", "kind": "le_request", "requester": ["le", "court"], "channel_keys": ["mexc.le"],
+      "instrument": {"type": "freezing_order", "language": ["en"],
+                     "notes": "A valid Order from an authorised LE agency or judicial body that states the restriction duration, in English or with a certified English translation."},
+      "evidence": ["le_agency_identity", "freeze_duration_stmt", "english_version", "tx_list_copyable",
+                   "receiving_account", "prior_ticket_ref", "non_disclosure_stmt"],
+      "timing": {"portal_onboarding_days": 28, "deadlines": [
+        {"key": "max_freeze", "what": "auto_lift", "days": 30, "starts": "order_served", "by": "le",
+         "action": "MEXC freezes for 30 days at most unless the Order says otherwise: serve a court order or a renewal before then.",
+         "source_ids": ["mx1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"}
+      ]},
+      "expected_replies": ["acknowledged", "info_requested", "frozen"], "outcomes": ["frozen"],
+      "on_refusal": "data_disclosure",
+      "notes": "Every Order must state the duration, or MEXC lifts all restrictions. LEORS access approval is generally 15-20 business days (about four weeks): register as soon as the case is opened.",
+      "source_ids": ["mx1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "preservation", "kind": "le_request", "requester": ["le"], "channel_keys": ["mexc.le"],
+      "instrument": {"type": "le_request", "notes": "A request in connection with official judicial investigations."},
+      "evidence": ["le_agency_identity", "provider_ids", "tx_list_copyable"],
+      "timing": {"preservation_days": 60, "deadlines": [
+        {"key": "preservation_expiry", "what": "hold_until", "days": 60, "starts": "sent", "by": "le",
+         "action": "Records are preserved for 60 days from MEXC's receipt of the formal request (counted from its sending, the earliest proxy): request an extension through LEORS before expiry.",
+         "source_ids": ["mx1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"}
+      ]},
+      "notes": "Preservation keeps records; it does not freeze funds.",
+      "source_ids": ["mx1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "data_disclosure", "kind": "data_disclosure", "requester": ["le", "court"], "channel_keys": ["mexc.le"],
+      "instrument": {"type": "court_order", "language": ["en"],
+                     "notes": "A warrant, court order or its local equivalent is required to compel disclosure."},
+      "evidence": ["court_order", "le_agency_identity", "english_version", "non_disclosure_stmt"],
+      "notes": "Without a formal legal request MEXC may notify the user before disclosing personal data: include a non-disclosure statement or order.",
+      "source_ids": ["mx1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "return", "kind": "release", "requester": ["court", "le"], "channel_keys": ["mexc.le"],
+      "instrument": {"type": "judicial_decision", "notes": "A lawful decision of a competent judicial body (court order); LE requests alone are not recognised for asset return."},
+      "evidence": ["court_order", "le_agency_identity"],
+      "outcomes": ["funds_returned"],
+      "source_ids": ["mx1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "within 48 hours", "means": "info_requested", "path": "victim_report",
+     "source_ids": ["mx2", "mx3"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "police report receipt", "means": "info_requested", "instrument": "police_report", "path": "victim_report",
+     "source_ids": ["mx2"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "temporarily freeze", "means": "hold_placed", "path": "victim_report",
+     "source_ids": ["mx2", "mx3"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "non-law enforcement officials", "means": "le_process_required", "instrument": "freezing_order",
+     "channel_key": "mexc.le", "path": "le_freeze",
+     "source_ids": ["mx1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "contact the law enforcement department", "means": "le_process_required", "path": "le_freeze",
+     "source_ids": ["mx2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "clearly specify the duration", "means": "info_requested", "path": "le_freeze",
+     "source_ids": ["mx1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "tickets": [
+    {"system": "mexc_support", "regex": null, "source_ids": ["mx2"], "basis": "I", "confidence": "L",
+     "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "mx1", "title": "MEXC Law Enforcement Guidelines",
+     "url": "https://www.mexc.com/support/article/law-enforcement-guidelines-4403594593434", "retrieved_at": "2026-10-20"},
+    {"id": "mx2", "title": "MEXC: How to Report Stolen Funds Transferred into an MEXC Account",
+     "url": "https://www.mexc.com/support/article/how-to-report-stolen-funds-transferred-into-an-mexc-account-17827791512560",
+     "retrieved_at": "2026-10-20"},
+    {"id": "mx3", "title": "MEXC Stolen Asset Handling Process",
+     "url": "https://www.mexc.com/support/article/stolen-asset-handling-process-15440563148953", "retrieved_at": "2026-10-20"}
+  ]
+}

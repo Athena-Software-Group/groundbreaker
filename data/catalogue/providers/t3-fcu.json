@@ -1,0 +1,50 @@
+{
+  "_comment": "I0 playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. T3 Financial Crime Unit (Tether, TRON, TRM Labs) takes requests from verified law-enforcement agencies only: no path is open to a victim, PI or counsel, so the next action is always a brief to the LE officer with the pack (the LE-only gate). Aegis never submits to its form. Tether's own playbook (tether.json) carries the same form as tether.t3fcu.",
+  "key": "t3-fcu",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": null,
+  "issuer_jurisdictions": [],
+  "ground_truth": "onchain",
+  "notes": "USDT on TRON. TRM traces, Tether executes the freeze at the issuer level: frozen only when the USDT-TRON contract's AddedBlackList event / isBlackListed() says so (app/freeze). Works with law enforcement in 23 jurisdictions on five continents (not named, May 2026), so no issuer jurisdiction is set. The T3+ private-sector tier (exchanges) is coordination only, not an intake for victims.",
+  "domains": {"own": ["t3fcu.org"],
+              "sibling": [{"domain": "trmlabs.com", "entity": null, "purpose": "TRM Labs, T3 founding partner (tracing; publishes T3 updates)",
+                           "source_ids": ["c1", "c2"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"}],
+              "vendor_portals": []},
+  "channels": [
+    {
+      "key": "t3-fcu.form", "kind": "webform", "value": null, "purpose": "le_request", "role_default": "to",
+      "label": "T3 FCU Law Enforcement Inquiry form",
+      "notes": "Exclusively for verified law-enforcement agencies. The wording that requests from private individuals or organisations are not processed comes from a search-index snippet (the site returned 404); TRM's blog describes only agencies flagging wallets. Asks for the agency and country, contact, crime typology, USDT amount, TRON addresses and tx hashes, context and documents. The site returned 404 when checked (Oct 2026): the officer confirms the current form. Aegis prepares the pack the officer pastes in.",
+      "who": "le_only", "source_ids": ["c3", "c1"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "paths": [
+    {
+      "key": "le_freeze_tron", "kind": "le_request", "requester": ["le"], "channel_keys": ["t3-fcu.form"],
+      "instrument": {"type": "le_request", "notes": "A verified law-enforcement request; Tether freezes without waiting for a court order (reported)."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "balance_reading", "trace_report_run", "prior_ticket_ref",
+                   "complaint_ref"],
+      "timing": {"response_days": 1},
+      "expected_replies": ["acknowledged", "frozen"], "outcomes": ["frozen"],
+      "notes": "Freezes within 24 hours of the request (TRM, May 2026; self-reported). If T3 does not act, the officer writes to Tether's own LE channel with legal process (tether.json, le_request).",
+      "source_ids": ["c1", "c2"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "exclusively for verified Law Enforcement Agencies", "means": "le_process_required", "instrument": "le_request",
+     "path": "le_freeze_tron", "source_ids": ["c3"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "will not be processed", "means": "le_process_required", "instrument": "le_request", "path": "le_freeze_tron",
+     "source_ids": ["c3"], "basis": "R", "confidence": "L", "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "c1", "title": "TRM Labs: T3 Financial Crime Unit, a model for public-private disruption (May 2026)",
+     "url": "https://www.trmlabs.com/resources/blog/t3-financial-crime-unit-a-model-for-public-private-disruption-in-the-age-of-stablecoins",
+     "retrieved_at": "2026-10-20"},
+    {"id": "c2", "title": "TRM Labs: T3 FCU marks 100 million in criminal assets frozen across five continents",
+     "url": "https://www.trmlabs.com/resources/blog/t3-financial-crime-unit-marks-enforcement-victory-100-million-in-criminal-assets-frozen-across-five-continents",
+     "retrieved_at": "2026-10-20"},
+    {"id": "c3", "title": "T3 Financial Crime Unit site (Law Enforcement Inquiry form; 404 when fetched, text via the search index)",
+     "url": "https://t3fcu.org/", "retrieved_at": "2026-10-20"}
+  ]
+}

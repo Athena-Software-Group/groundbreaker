@@ -1,0 +1,45 @@
+{# "Send it yourself" checklist — owner: app/web/routes_mail.py (preview_page, manual mode). Included by
+   mail_preview.html. Context: case, mm, corr, checklist ({to, cc, bcc, subject, text, html, mailto | None}), guidance
+   (mail_guidance.Guidance | None), visible_atts / n_restricted, can_send (case admin: downloads), confirm_rows
+   (unverified / typed-in addresses). The Copy buttons read the JSON block below (js/mail.js: Clipboard API, the body
+   as rich HTML with a plain-text fallback); nothing on this panel sends anything. #}
+{% set n_atts = (mm.attachments or []) | length %}
+<div class="panel mail-manual" id="send-yourself">
+  <h2>Send it yourself <small>draft — you send · Aegis sends nothing</small></h2>
+  <div class="alert info mail-manual-howto" role="note"><b>Send from the investigations mailbox{% if mm.mailbox and mm.mailbox != 'upload' %} (<span class="mono">{{ mm.mailbox }}</span>){% endif %} in Outlook; keep the subject unchanged so replies are matched.</b>
+    The tracking tag <span class="mono">{{ checklist.tag }}</span> at the end of the subject is how a reply finds letter #{{ mm.correspondence_id }}.</div>
+  <script type="application/json" id="mail-manual-data">{{ checklist | tojson }}</script>
+  <ol class="mail-steps">
+    <li><b>Start a new e-mail</b> in Outlook from the investigations mailbox{% if can_send %} — or open the <a href="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/draft.eml" id="mail-draft-link">Outlook draft (.eml)</a>, which already holds every field and attachment{% endif %}.</li>
+    <li><b>Copy each field</b> into it:
+      <table class="mail-copy">
+        <tbody>
+        <tr><th>To</th><td class="mono" id="mail-copy-to-v">{{ checklist.to }}</td><td><button class="btn small" type="button" data-mail-copy="to" aria-label="Copy the To addresses">Copy</button></td></tr>
+        {% if guidance %}{% for a in mm.to_addrs or [] %}{% set why = guidance.why_for(a) %}{% if why %}<tr class="mail-why"><td></td><td colspan="2" class="muted"><span class="mono">{{ a }}</span>: {{ why }}</td></tr>{% endif %}{% endfor %}{% endif %}
+        <tr><th>Cc</th><td class="mono" id="mail-copy-cc-v">{{ checklist.cc or '—' }}</td><td>{% if checklist.cc %}<button class="btn small" type="button" data-mail-copy="cc" aria-label="Copy the Cc addresses">Copy</button>{% endif %}</td></tr>
+        {% if checklist.bcc %}<tr><th>Bcc</th><td class="mono" id="mail-copy-bcc-v">{{ checklist.bcc }}</td><td><button class="btn small" type="button" data-mail-copy="bcc" aria-label="Copy the Bcc addresses">Copy</button></td></tr>{% endif %}
+        <tr><th>Subject</th><td class="mono" id="mail-copy-subject-v">{{ checklist.subject }}</td><td><button class="btn small" type="button" data-mail-copy="subject" aria-label="Copy the subject">Copy</button></td></tr>
+        <tr><th>Body</th><td class="muted">the letter ({{ checklist.text | length }} characters) — pasted with its formatting; plain text where the mail app takes no formatting</td><td><button class="btn small" type="button" data-mail-copy="body" aria-label="Copy the body">Copy</button></td></tr>
+        </tbody>
+      </table>
+      <div class="muted mail-note mail-copy-status" id="mail-copy-status" role="status" aria-live="polite"></div>
+    </li>
+    <li><b>Attach the files</b> ({{ n_atts }}):
+      {% if not n_atts %}<span class="muted">none.</span>
+      {% elif can_send %}<a class="btn small" href="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/attachments.zip" id="mail-zip-link">Download all attachments (.zip)</a>
+      <ul class="mail-att-list">
+        {% for a in mm.attachments or [] %}
+        <li><a href="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/attachments/{{ loop.index }}" class="mono">{{ a.filename }}</a> <span class="muted">{{ '{:,}'.format(a.size) }} B</span></li>
+        {% endfor %}
+      </ul>
+      {% else %}<span class="muted">a case admin downloads them (each download is audited).</span>{% endif %}
+    </li>
+    <li><b>Check before you press Send</b>{% if confirm_rows %}: confirm {{ confirm_rows | length }} unverified address{{ 'es' if confirm_rows | length != 1 }} ({% for r in confirm_rows %}<span class="mono">{{ r.address }}</span>{{ ', ' if not loop.last }}{% endfor %}) on the recipient's own portal or website{% else %}: every address is verified in the directory{% endif %}; the attachments are the ones listed; the subject still ends with the tag.</li>
+    <li><b>Send it from Outlook, then record it here</b> with <a href="#record">Record as sent</a> (the date and time, the addresses actually used, optionally the sent message saved from Outlook).</li>
+  </ol>
+  <div class="mail-manual-alt">
+    {% if can_send %}<a class="btn" href="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/draft.eml" title="opens in Outlook or Apple Mail as an editable, unsent message (X-Unsent: 1); audited">⬇ Download as Outlook draft (.eml)</a>{% endif %}
+    {% if checklist.mailto %}<a class="btn" href="{{ checklist.mailto }}" id="mail-mailto" title="text only: no attachments, no formatting">✉ Open in mail app (mailto:)</a>{% endif %}
+  </div>
+  <div class="muted mail-note">{% if can_send %}The Outlook draft has no Date and no Message-ID: the mail server sets both when you send it. From is {{ mm.mailbox if mm.mailbox and mm.mailbox != 'upload' else 'your default account' }}; switch it to the investigations mailbox if Outlook shows another. {% endif %}{% if checklist.mailto %}The mailto: link carries the To, Cc, subject and plain text only — add the attachments yourself.{% else %}No mailto: link: this letter is too long for one (mail apps cut links of about 2,000 characters); use the copy buttons or the draft.{% endif %}</div>
+</div>

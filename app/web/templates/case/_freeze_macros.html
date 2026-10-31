@@ -1,0 +1,54 @@
+{# On-chain freeze macros (app/web/routes_freeze.py; app/freeze/service.case_status rows). #}
+{% macro state_tag(state) -%}
+<span class="tag fz-{{ state }}">{% if state == 'frozen' %}<i class="fz-oc-mark" aria-hidden="true"></i>frozen on-chain{% elif state == 'unfrozen' %}freeze lifted: funds can move{% elif state == 'failing' %}transfers failing{% elif state == 'clear' %}not blacklisted{% elif state == 'error' %}check failed{% else %}not checked yet{% endif %}</span>
+{%- endmacro %}
+
+{% macro tx_link(st, chain, h) -%}
+{% if h %}{% set base = st.explorer_tx.get(chain) %}<code class="fz-hash" title="{{ h }}">{{ h[:10] }}…{{ h[-6:] }}</code>{% if base %} <a href="{{ base }}{{ h }}" target="_blank" rel="noopener noreferrer" title="open in the explorer (reveals the tx to it)">↗</a>{% endif %}{% endif %}
+{%- endmacro %}
+
+{# an ISO time from service._check_dict (UTC) in the app's "%d %b %Y %H:%M UTC" form (the dt filter) #}
+{% macro when(v) -%}
+{%- if v and v | length >= 16 -%}
+{%- set months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] -%}
+{{ v[8:10] }} {{ months[(v[5:7] | int) - 1] }} {{ v[:4] }} {{ v[11:16] }} UTC
+{%- else %}{{ v or '—' }}{% endif -%}
+{%- endmacro %}
+
+{% macro check_detail(st, w, c) -%}
+<div class="fz-line">
+  <b>{{ c.issuer }} {{ c.symbol }}</b>
+  {% if c.status == 'error' %}<span class="tag fz-error">check failed: {{ c.error }}</span> <span class="muted fz-small">{{ when(c.checked_at) }}</span>
+  {% elif c.blacklisted %}<span class="tag fz-frozen"><i class="fz-oc-mark" aria-hidden="true"></i>{{ c.label }}</span>
+  {% elif c.unfrozen %}<span class="tag fz-unfrozen">removed from the blacklist: funds can move</span> <span class="muted fz-small">balance {{ c.balance_label }} {{ c.symbol }}</span>
+  {% else %}<span class="tag fz-clear">not blacklisted</span> <span class="muted fz-small">balance {{ c.balance_label }} {{ c.symbol }}</span>{% endif %}
+</div>
+{% if c.status == 'ok' %}
+<div class="fz-line muted fz-small">checked {{ when(c.checked_at) }}{% if c.block_number %} · block {{ c.block_number }}{% endif %} · {{ c.method }}{% if c.trigger %} ({{ c.trigger }}){% endif %}{% if c.raw_sha256 %} · response sha256 <span class="fz-hash" title="{{ c.raw_sha256 }}">{{ c.raw_sha256[:12] }}…</span>{% endif %}</div>
+{% if c.blacklisted %}
+<div class="fz-line fz-small">{% if c.frozen_at_basis == 'event' %}Blacklisted {{ when(c.frozen_at) }} · freeze tx {{ tx_link(st, w.chain, c.freeze_tx_hash) }}
+  {% else %}Frozen at or before {{ when(c.frozen_at) }} <span class="muted">({{ c.frozen_at_note or 'the check time' }})</span>{% endif %}</div>
+{% if c.balance_destroyed %}{% set d = c.balance_destroyed %}
+<div class="fz-line fz-small fz-warn-line">Balance fell from {{ d.balance_before_label }} {{ c.symbol }} to 0 while blacklisted{% if d.basis == 'event' %} on {{ when(d.at) }} (DestroyedBlackFunds, tx {{ tx_link(st, w.chain, d.tx) }}){% else %}, at or before {{ when(d.at) }}{% endif %}: the issuer may have destroyed the frozen funds (ask {{ c.issuer }}).</div>
+{% endif %}
+{% elif c.unfrozen %}{% set u = c.unfrozen %}
+<div class="fz-line fz-small fz-warn-line"><b>Freeze lifted.</b> Was blacklisted {% if u.was_frozen_at_basis == 'event' %}{{ when(u.was_frozen_at) }}{% if u.was_freeze_tx %} (tx {{ tx_link(st, w.chain, u.was_freeze_tx) }}){% endif %}{% else %}at or before {{ when(u.was_frozen_at) }}{% endif %}{% if u.last_blacklisted_balance_label %} holding {{ u.last_blacklisted_balance_label }} {{ c.symbol }}{% endif %};
+  removed {% if u.removed_at_basis == 'event' %}{{ when(u.removed_at) }} ({{ u.event_name or 'removal' }}, tx {{ tx_link(st, w.chain, u.removed_tx) }}){% else %}at or before {{ when(u.removed_at) }} <span class="muted">({{ u.removed_note }})</span>{% endif %}: the funds can move again.</div>
+{% endif %}
+{% if c.funds_left %}{% set f = c.funds_left %}
+<div class="fz-line fz-small fz-warn-line"><b>Funds left this wallet.</b> {{ c.symbol }} balance fell from {{ f.from_label }} ({{ when(f.from_at) }}) to {{ f.to_label }} ({{ when(f.at) }}): re-trace now and ask the next custodian or issuer.</div>
+{% endif %}
+{% if c.swept %}{% set f = c.swept %}
+<div class="fz-line fz-small">Swept into {{ f.owner }} (expected for a deposit address): {{ c.symbol }} balance fell from {{ f.from_label }} ({{ when(f.from_at) }}) to {{ f.to_label }} ({{ when(f.at) }}); the depositor's account was credited: ask {{ f.owner }} to freeze it.</div>
+{% elif c.float_moved %}{% set f = c.float_moved %}
+<div class="fz-line fz-small muted">{{ f.owner or 'The service' }}'s float moved (a service's pooled wallet paying out, not the case's funds leaving): {{ c.symbol }} balance fell from {{ f.from_label }} to {{ f.to_label }} ({{ when(f.at) }}); ask {{ f.owner or 'the service' }} where the case's funds were credited or paid out.</div>
+{% elif c.left_before_trace %}{% set f = c.left_before_trace %}
+<div class="fz-line fz-small muted">Balance fell from {{ f.from_label }} to {{ f.to_label }} {{ c.symbol }} ({{ when(f.at) }}), before the latest trace: the re-trace shows where the funds went.</div>
+{% endif %}
+{% if c.stale_note %}<div class="fz-line fz-small muted">{{ c.stale_note }}: the next run retries.</div>{% endif %}
+{% if c.failed_count %}
+<div class="fz-line fz-small">Transfer attempts failing since {{ when(c.first_failed_at) }} ({{ c.failed_count }} attempt{{ 's' if c.failed_count != 1 }}):
+  {% for t in c.failed_txs[:5] %}{{ tx_link(st, w.chain, t.hash) }} <span class="muted">{{ t.method }}</span>{{ ',' if not loop.last }} {% endfor %}</div>
+{% endif %}
+{% endif %}
+{%- endmacro %}

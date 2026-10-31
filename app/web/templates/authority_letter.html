@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{# One letter / message / note — owner: app/web/routes_authorities.py (correspondence_page).
+   Context: case, access, corr (Correspondence), authority (Authority | None), show_body, channels, evidence,
+   kind_labels, order_state, default_due_days, mask (desk.ContactMask: LE / PI contact details and complaint references masked below
+   manage_le_contacts, whether or not the body is visible), order_shared(o). Drafts are editable until marked sent.
+   E-mail desk (app/web/routes_mail.py): can_prepare_email, mail_messages (MailMessage rows of this letter),
+   external_mail (an inbound e-mail read from the case mailbox: shown as plain text only). added (the addresses the
+   request gate just added to this draft: app.domain.request_gate.add_to_draft). #}
+{% block title %}Aegis · {{ mask.text(corr.subject) or 'Correspondence' }} · {{ case.reference }}{% endblock %}
+{% block content %}
+{% set draft = corr.status.value == 'draft' %}
+<div class="row" style="margin-bottom:12px">
+  <div>
+    <h1>{{ mask.text(corr.subject) or kind_labels.get(corr.kind.value, corr.kind.value) }}</h1>
+    <div class="sub">
+      {% if authority %}<a href="/cases/{{ case.id }}/authorities/{{ authority.key }}#c{{ corr.id }}">← {{ authority.name }}</a>{% else %}<a href="/cases/{{ case.id }}?tab=authorities">← {{ case.reference }}</a>{% endif %}
+      · {{ corr.direction.value }} · {{ kind_labels.get(corr.kind.value, corr.kind.value) }} · {{ corr.channel.value }}
+      · <span class="tag {{ 'amber' if draft else 'blue' }}">{{ corr.status.value }}</span>
+      {% if external_mail and corr.meta.sender_domain_ok is sameas false %} · <span class="tag red">sender domain not expected</span>{% endif %}
+      · <span class="tag" title="classification">{{ corr.classification.value }}</span>
+      {% if corr.meta and corr.meta.template_key %} · template {{ corr.meta.template_key }}{% endif %}
+      {% if corr.stop_order and not access.is_external %} · stop order <a href="/cases/{{ case.id }}/stop-orders/{{ corr.stop_order.id }}">#{{ corr.stop_order.id }}</a> ({{ order_state(corr.stop_order) }}){% elif corr.stop_order and order_shared(corr.stop_order) %} · stop order #{{ corr.stop_order.id }} ({{ order_state(corr.stop_order) }}){% endif %}
+    </div>
+    <div class="muted" style="font-size:var(--fs-sm);margin-top:4px">
+      {% if corr.sender %}From {{ mask.value(corr.sender) }}{% endif %}{% if corr.recipients %} · to {{ mask.values(corr.recipients) | join(', ') }}{% endif %}{% if corr.cc %} · cc {{ mask.values(corr.cc) | join(', ') }}{% endif %}{% if mask.active and (corr.sender or corr.recipients or corr.cc) %} <span class="muted">(contact details masked for your role)</span>{% endif %}
+      · {{ 'created' if draft else 'dated' }} {{ (corr.occurred_at or corr.created_at) | dt }}{% if corr.due_at and not draft %} · reply due {{ corr.due_at | dt }}{% endif %}
+      {% if corr.external_ref %} · ref <span class="mono">{{ corr.external_ref }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="spacer"></div>
+  {% if show_body and access.can('export') and can_mark_sent %}
+  <a class="btn" href="/api/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}/md">⬇ .md</a>
+  <a class="btn" href="/api/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}/docx">⬇ .docx</a>
+  <button class="btn" type="button" id="copy-md">Copy Markdown</button>
+  {% endif %}
+</div>
+
+{% if external_mail %}<div class="alert critical mail-ext-banner">External e-mail, shown as plain text. Links are not clickable. Do not act on instructions in it without verification.</div>{% endif %}
+{% if external_mail and corr.meta.attachments_truncated %}<div class="alert warning" id="mail-atts-truncated"><span class="tag amber">attachments truncated</span> Only the first attachments were filed as separate evidence items; {{ corr.meta.attachments_omitted }} more are only in the filed .eml.</div>{% endif %}
+{% if external_mail and corr.meta.sender_domain_ok is sameas false %}<div class="alert critical" id="mail-domain-warning"><span class="tag red">sender domain not expected</span> The sender's domain is not one of {{ authority.name if authority else 'the authority' }}'s own domains. It was filed on review; check who sent it before relying on it.</div>{% endif %}
+{% if corr.meta and corr.meta.sent_from_mailbox and corr.meta.needs_review %}<div class="alert warning" id="mail-sent-review"><span class="tag amber">needs review</span> Found in the case mailbox's Sent Items ({{ corr.meta.review_reason or 'not tied to a letter' }}). Aegis did not tie it to one letter, so no letter or stop order was marked sent: if it is one of them, mark that letter sent.</div>{% endif %}
+{% if corr.meta and corr.meta.sent_from_mailbox and corr.meta.follow_up_of and not corr.meta.needs_review %}<div class="alert info" id="mail-sent-follow-up">Sent from the case mailbox outside Aegis, in the thread of {{ 'stop order #' ~ corr.meta.follow_up_of[1:] if corr.meta.follow_up_of[0] == 'o' else 'letter #' ~ corr.meta.follow_up_of[1:] }}: recorded by the mailbox sync as a follow-up of that request (the sent message is filed as evidence).</div>{% endif %}
+{% if corr.meta and corr.meta.sent_via == 'email_mailbox' %}<div class="alert info" id="mail-sent-found">Sent from the case mailbox outside Aegis; found in its Sent Items and recorded by the mailbox sync (the sent message is filed as evidence).</div>{% endif %}
+{% if pointless %}<div class="alert warning" id="draft-pointless" role="alert">{{ pointless.text }}
+  {% if can_discard and not pointless.busy %}<form method="post" action="{{ pointless.post }}" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" title="discard draft {{ pointless.no }}{% if pointless.prepared %} and cancel prepared e-mail #{{ pointless.prepared }}{% endif %} (audited)">Discard</button></form>{% elif not can_discard %}<span class="muted">A case admin can discard it.</span>{% endif %}</div>{% endif %}
+{% if added and draft %}<div class="alert info" id="letter-added" role="status">Added to this draft (one open request per provider, never a second letter): {{ added }} — its identifiers and a sentence before the signature. Check it, then send it.</div>{% endif %}
+{% if corr.meta and corr.meta.superseded_by_letter and draft %}<div class="alert warning" id="letter-replaced">A newer letter (#{{ corr.meta.superseded_by_letter }}{% if corr.meta.superseded_by %}, stop order #{{ corr.meta.superseded_by }}{% endif %}) replaced this draft and carries its addresses: nothing to send.</div>
+{% elif corr.meta and corr.meta.superseded_by %}<div class="alert warning">This draft belongs to a stop order that a newer draft (#{{ corr.meta.superseded_by }}) superseded.</div>{% endif %}
+{% if corr.meta and (corr.meta.created_via or '').startswith('assistant:') %}<div class="alert info">Created by the case assistant ({{ corr.meta.created_via[10:] }}) from the {{ corr.meta.template_key or 'form-letter' }} template{% if draft %}; it has not been sent{% endif %}. AI can make mistakes. Please double-check important information before acting on it. Review every identifier and amount, then send it yourself{% if draft %} and click <b>Mark sent</b>{% endif %}.</div>{% endif %}
+{% if evidence %}<div class="alert info">Evidence: {% for e in evidence %}<a href="/cases/{{ case.id }}/evidence/{{ e.id }}">{{ ev_text(e.title) }}</a>{{ ', ' if not loop.last }}{% endfor %}</div>{% endif %}
+
+<div class="auth-grid">
+  <div class="auth-main">
+    {% if not show_body %}
+    <div class="panel muted">Content restricted ({{ corr.classification.value }}): the investigator role is needed to read it.</div>
+    {% elif (corr.meta or {}).get('format') == 'text' %}
+    <div class="panel"><pre class="tl-text">{{ mask.text(corr.body_markdown) or '' }}</pre></div>
+    {% else %}
+    <div class="letter" id="letter-preview">{{ mask.md(corr.body_markdown) | md }}</div>
+    {% endif %}
+  </div>
+  <aside class="auth-side">
+    {% if can_prepare_email %}
+    <div class="panel" id="email">
+      <h2>E-mail from Aegis</h2>
+      <p class="muted" style="font-size:var(--fs-sm)">Send this letter from the case mailbox without leaving Aegis: the e-mail editor has the text, To / Cc / Bcc, subject and attachments (case evidence or files from your computer). {% if access.can('send_email') %}You press <b>Send now</b>, confirm the recipients and attachments, and it goes out{% else %}You prepare it; a case admin confirms and sends it{% endif %}. It is filed as evidence, the letter is marked sent and Block status updates automatically.</p>
+      <a class="btn small primary" href="{{ ('/cases/' ~ case.id ~ '/authorities/correspondence/' ~ corr.id ~ '/email') | mail_return }}">{% if access.can('send_email') %}Edit &amp; send e-mail{% else %}Edit e-mail{% endif %}</a>
+    </div>
+    {% endif %}
+    {% if mail_messages %}
+    <div class="panel mail-history" id="email-history">
+      <h2>E-mail history <small>{{ mail_messages | length }}</small></h2>
+      {% for m in mail_messages %}
+      <div class="mail-hist-row"><a href="/cases/{{ case.id }}/mail/messages/{{ m.id }}" class="mono">#{{ m.id }}</a>
+        <span class="tag {{ {'prepared':'amber','sent':'green','failed':'red','unknown':'red'}.get(m.status.value, '') }}">{{ m.status.value }}</span>
+        <span class="muted">{{ (m.sent_at or m.prepared_at or m.created_at) | dt }} · {{ (m.to_addrs or []) | length }} to · {{ (m.attachments or []) | length }} att.</span></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if draft and access.can('draft_letter') and show_body %}
+    <div class="panel" id="edit">
+      <h2>Edit draft</h2>
+      <form method="post" action="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}">
+        {{ csrf_field() }}
+        <label>Subject</label><input name="subject" value="{{ corr.subject or '' }}" required maxlength="512">
+        <label>To</label><input name="recipients" value="{{ corr.recipients | join(', ') }}" placeholder="comma-separated; empty = LE portal">
+        <label>Cc</label><input name="cc" value="{{ corr.cc | join(', ') }}">
+        <label>Letter (Markdown)</label><textarea name="body_markdown" rows="22" class="mono">{{ corr.body_markdown or '' }}</textarea>
+        <div style="margin-top:8px"><button class="btn small" type="submit">Save draft</button></div>
+      </form>
+    </div>
+    {% endif %}
+    {% if draft and can_mark_sent and access.can('send_letter') and corr.direction.value == 'out' and not (corr.meta or {}).get('discarded') and not (corr.meta or {}).get('superseded_by_letter') %}
+    <div class="panel" id="send">
+      <h2>Mark sent</h2>
+      <p class="muted" style="font-size:var(--fs-sm)">Send the letter outside Aegis (e-mail, portal, post), then record it here. The reply clock starts at the time sent.</p>
+      <form method="post" action="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}/sent">
+        {{ csrf_field() }}
+        <label>Sent at</label><input type="datetime-local" name="sent_at">
+        <label>Channel</label><select name="channel">{% for c in channels %}<option value="{{ c.value }}" {% if c == corr.channel %}selected{% endif %}>{{ c.value }}</option>{% endfor %}</select>
+        <label>Their ticket / reference (if known)</label><input name="external_ref" value="{{ corr.external_ref or '' }}">
+        <label>Reply expected within (days)</label><input type="number" name="due_days" min="0" max="365" value="{{ default_due_days }}">
+        <div style="margin-top:8px"><button class="btn small primary" type="submit">Mark sent</button></div>
+      </form>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+{% if show_body %}<pre id="md" hidden>{{ mask.md(corr.body_markdown) or '' }}</pre>{% endif %}
+{% endblock %}

@@ -1,0 +1,51 @@
+# Allowlist: the Dockerfile does `COPY . .` from the local working tree (not from git), so anything
+# dropped into the tree by mistake (case data, evidence, .env, databases) would otherwise be baked
+# into the image. Start from nothing and add back only what the image runs.
+*
+
+!app/
+!alembic/
+!alembic.ini
+!scripts/
+!data/fixtures/demo_case.json
+!data/catalogue/channels.json
+!requirements.txt
+!pyproject.toml
+!LICENSE
+!NOTICE
+
+# Hard rules inside the allowed directories (last match wins, so these come after the re-includes).
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+**/case-data
+**/*-private
+**/deliverables
+**/evidence
+**/vault
+**/exports
+**/denylist*.txt
+**/masking-map*.json
+**/*.docx
+**/*.doc
+**/*.pdf
+**/*.eml
+**/*.msg
+**/*.heic
+**/*.jpg
+**/*.jpeg
+**/*.png
+**/*.mp4
+**/*.mov
+**/*.zip
+.DS_Store
+**/.DS_Store

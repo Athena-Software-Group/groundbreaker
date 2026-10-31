@@ -1,0 +1,55 @@
+{
+  "_comment": "I0 law-enforcement playbook (schema: app/domain/playbook.py). What the US Secret Service accepts from a victim or PI (a report to the nearest field office, by telephone; no e-mail or web form), what it can then send to whom, and the evidence it wants. A report is never a freeze; only the agent's request through the provider's LE channel, then a seizure warrant, moves the funds.",
+  "key": "usss",
+  "version": 1,
+  "side": "le",
+  "le_role": "police",
+  "jurisdiction": "US",
+  "issuer_jurisdictions": [],
+  "notes": "USSS also points victims to IC3 (ic3.gov) and local police. Investigators may contact the victim for more information; a substantive reply comes from an agent naming a field office and a case number. Operation Atlantic (Washington Field Office) covers victims of crypto confidence scams, with UK and Canadian victims sent to their own national resources; its victim form is hosted off the USSS domain, so it is not catalogued.",
+  "domains": {"own": ["secretservice.gov"], "sibling": [], "vendor_portals": []},
+  "channels_ext": {
+    "usss.field-offices": {
+      "who": "any",
+      "notes": "Report a financial crime or scam to the nearest field office; by telephone for immediate assistance. Time-sensitive information should not be sent by e-mail.",
+      "source_ids": ["u1", "u2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "report", "kind": "complaint", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["usss.field-offices"],
+      "instrument": {"type": "none", "notes": "A report, not legal process."},
+      "evidence": ["incident_narrative", "tx_list_copyable", "receiving_account", "comms_export", "trace_report_run",
+                   "ic3_ref"],
+      "produces": ["complaint_ref"],
+      "notes": "Give the investment websites, phone numbers, e-mails and social-media profiles, every crypto address, the transaction hashes and dates, and the trace report; file at IC3 too and quote its ID.",
+      "source_ids": ["u1", "u3", "u4"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "issues": [
+    {"instrument": "le_request", "jurisdiction": "US", "by": "the USSS case agent (field office)",
+     "to": ["tether"],
+     "notes": "Freeze request through Tether's law-enforcement platform (USSS onboarded Dec 2023); many USSS seizures of crypto-confidence-scam proceeds were made with Tether's assistance.",
+     "source_ids": ["u5", "u6"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"instrument": "seizure_warrant", "jurisdiction": "US", "by": "a federal magistrate on the agent's / AUSA's application",
+     "to": [], "notes": "Then a civil forfeiture complaint and return to victims (months).",
+     "source_ids": ["u3", "u4"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "u1", "title": "USSS - Contact us", "url": "https://www.secretservice.gov/contact", "retrieved_at": "2026-10-20"},
+    {"id": "u2", "title": "USSS - Financial Investigations", "url": "https://www.secretservice.gov/investigations/financial",
+     "retrieved_at": "2026-10-20"},
+    {"id": "u3", "title": "USSS - Largest ever seizure of funds related to crypto confidence scams (2025)",
+     "url": "https://www.secretservice.gov/newsroom/releases/2025/06/largest-ever-seizure-funds-related-crypto-confidence-scams",
+     "retrieved_at": "2026-10-20"},
+    {"id": "u4", "title": "USSS - Operation Atlantic", "url": "https://www.secretservice.gov/OperationAtlantic",
+     "retrieved_at": "2026-10-20"},
+    {"id": "u5", "title": "The Block: Tether onboarded FBI, Secret Service to its platform",
+     "url": "https://www.theblock.co/post/267973/tether-weve-onboarded-fbi-secret-service-to-our-platform",
+     "retrieved_at": "2026-10-20"},
+    {"id": "u6", "title": "Tether assists the US DOJ and US Secret Service in criminal investigations and victim recovery",
+     "url": "https://tether.io/news/tether-assists-the-us-doj-and-us-secret-service-in-criminal-investigations-and-victim-recovery/",
+     "retrieved_at": "2026-10-20"}
+  ]
+}

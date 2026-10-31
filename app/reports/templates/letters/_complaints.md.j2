@@ -1,0 +1,4 @@
+{# Law-enforcement references. Context: complaints #}
+{% if complaints %}
+The matter has been reported to law enforcement: {% for c in complaints %}{{ c.authority }}{% if c.reference %}, reference {{ c.reference | bold }}{% endif %}{% if c.filed_at %} (filed {{ c.filed_at | fmt_date }}){% endif %}{{ '; ' if not loop.last else '.' }}{% endfor %}{{ '' }}
+{% endif %}

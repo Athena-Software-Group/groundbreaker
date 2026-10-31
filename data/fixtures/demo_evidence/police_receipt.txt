@@ -1,0 +1,8 @@
+SYNTHETIC DEMO ARTIFACT - fictional police complaint receipt (case DEMO-2026-001).
+
+Carabinieri - Demo City station (demo)
+Receipt of complaint no. DEMO-IT-0000000000, 2026-10-14 09:30 CEST
+Complainant represented by Kestrel Ridge Investigations GmbH (Mara Lindqvist, Director)
+under a power of attorney.
+Subject: fraud by impersonation of Exempla Holding AG; cryptocurrency transfer of 399,247.92 USDC.
+This receipt is not a real police record.

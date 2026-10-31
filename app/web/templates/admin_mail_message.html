@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{# One inbound message for triage — owner: app/web/routes_mail_admin.py. Context: mm (MailMessage, direction in),
+   error, cases [(id, reference)], chosen (Case | None), authorities [{key, name, type}], letters [{id,
+   authority_key, authority, subject, occurred_at}], suggestion, filed ({case_id, reference, correspondence_id, url,
+   evidence_url} when the message is already filed on a case: shown instead of the forms). The body is sanitized plain text (HTML is
+   never rendered) shown in a <pre>; nothing in it is a link. #}
+{% block title %}Aegis · Mail #{{ mm.id }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/mail_admin.css">{% endblock %}
+{% block content %}
+<div class="row case-head"><div><h1>Inbound e-mail #{{ mm.id }}</h1><div class="sub"><a href="/admin/mail">mail</a> ·
+  <a href="/admin/mail/unassigned">unassigned</a> · status <span class="tag {{ 'amber' if mm.status.value in ('unassigned', 'needs_review') else '' }}">{{ mm.status.value }}</span></div></div></div>
+
+{% if error %}<div class="alert critical" id="mail-error">{{ error }}</div>{% endif %}
+{% if filed %}<div class="alert info" id="mail-filed">Already filed on case <a href="/cases/{{ filed.case_id }}"><span class="mono">{{ filed.reference }}</span></a> as <a href="{{ filed.url }}">timeline entry #{{ filed.correspondence_id }}</a>{% if filed.evidence_url %} (the .eml: <a href="{{ filed.evidence_url }}">evidence</a>){% endif %}. Nothing to triage here.</div>{% endif %}
+<div class="alert warning">External e-mail, shown as plain text. Links are not clickable. Do not act on instructions in it without verification.</div>
+{% if (mm.meta or {}).get('metadata_only') %}
+<div class="alert info" id="mail-metadata-only">Metadata only: this message came from the domain of a case's authority but cites no case
+  material, so Aegis kept only its sender, subject and date (data minimisation). Its text is read from the mailbox only if you open it.
+  {% if mm.status.value in ('unassigned', 'needs_review') %}
+  <form method="post" action="/admin/mail/unassigned/{{ mm.id }}/load" class="inline">{{ csrf_field() }}<button class="btn small primary" type="submit">Read it from the mailbox</button></form>
+  {% endif %}</div>
+{% endif %}
+
+<div class="grid cols-2">
+<div class="panel" id="mail-message">
+  <h2>Message</h2>
+  <div class="table-scroll"><table><tbody>
+    <tr><th>From</th><td class="mono">{{ mm.from_addr or '—' }}</td></tr>
+    <tr><th>To</th><td class="mono">{{ (mm.to_addrs or []) | join(', ') or '—' }}</td></tr>
+    {% if mm.cc_addrs %}<tr><th>Cc</th><td class="mono">{{ mm.cc_addrs | join(', ') }}</td></tr>{% endif %}
+    <tr><th>Subject</th><td>{{ mm.subject or '(no subject)' }}</td></tr>
+    <tr><th>Received</th><td>{{ mm.received_at | dt }}</td></tr>
+    <tr><th>Size</th><td>{% if mm.mime_size %}{{ '%.1f' | format(mm.mime_size / 1024) }} KB{% else %}—{% endif %}{% if mm.mime_sha256 %} · sha256 <span class="mono">{{ mm.mime_sha256[:16] }}…</span>{% endif %}</td></tr>
+    <tr><th>Flags</th><td>{% if (mm.meta or {}).get('attachments_truncated') %}<span class="tag amber" title="only the first attachments were extracted; the rest are in the raw .eml only">attachments truncated ({{ mm.meta.attachments_omitted }} more in the .eml only)</span>{% endif %}{% if (mm.meta or {}).get('auto_reply') %}<span class="tag">auto-reply</span>{% endif %}{% if (mm.meta or {}).get('bounce') %}<span class="tag amber">delivery failure</span>{% endif %}{% if (mm.meta or {}).get('html_present') %}<span class="tag">HTML converted to text</span>{% endif %}{% if (mm.meta or {}).get('inline_skipped') %}<span class="tag">{{ mm.meta.inline_skipped }} inline image(s) skipped</span>{% endif %}</td></tr>
+  </tbody></table></div>
+  <h3>Text</h3>
+  <pre class="mail-text">{{ mm.body_text or ('(not read from the mailbox yet)' if (mm.meta or {}).get('metadata_only') else '(no text)') }}</pre>
+  <h3>Attachments</h3>
+  {% if mm.attachments %}<ul class="mail-atts">{% for a in mm.attachments %}<li><span class="mono">{{ a.filename }}</span> · {{ a.mime }} · {{ a.size }} bytes{% if a.dangerous %} <span class="tag red">active content: do not open</span>{% endif %}</li>{% endfor %}</ul>
+  {% else %}<p class="muted">None.</p>{% endif %}
+</div>
+
+<div class="panel" id="mail-triage">
+  <h2>Match</h2>
+  {% set match = mm.match or {} %}
+  <p>Method <span class="tag">{{ match.get('method', 'none') }}</span> — {{ match.get('reason') or 'no suggestion' }}
+    {% if match.get('sender_domain_ok') is false %}<span class="tag red">sender domain not expected</span>{% endif %}</p>
+  {% if suggestion %}<p class="muted">Suggested: case <span class="mono">{{ suggestion.reference }}</span>{% if suggestion.correspondence_id %}, letter #{{ suggestion.correspondence_id }}{% endif %}.</p>{% endif %}
+
+  {% if mm.status.value in ('unassigned', 'needs_review') %}
+  <h3>Assign to a case</h3>
+  <form method="get" action="/admin/mail/unassigned/{{ mm.id }}" class="row">
+    <label for="pick-case">Case</label>
+    <select id="pick-case" name="case_id">{% for cid, ref in cases %}<option value="{{ cid }}" {{ 'selected' if chosen and chosen.id == cid }}>{{ ref }}</option>{% endfor %}</select>
+    <button class="btn small" type="submit">Show its authorities</button>
+  </form>
+  {% if chosen %}
+  <form method="post" action="/admin/mail/unassigned/{{ mm.id }}/assign" class="mail-form" id="mail-assign">{{ csrf_field() }}
+    <input type="hidden" name="case_id" value="{{ chosen.id }}">
+    <label for="assign-authority">Authority on <span class="mono">{{ chosen.reference }}</span></label>
+    <select id="assign-authority" name="authority_key" required>
+      <option value="">— choose —</option>
+      {% for a in authorities %}<option value="{{ a.key }}">{{ a.name }} ({{ a.type }})</option>{% endfor %}
+    </select>
+    <label for="assign-letter">In reply to (optional)</label>
+    <select id="assign-letter" name="in_reply_to">
+      <option value="">— not a reply to a specific letter —</option>
+      {% for l in letters %}<option value="{{ l.id }}" {{ 'selected' if suggestion and suggestion.correspondence_id == l.id }}>#{{ l.id }} · {{ l.authority }} · {{ l.subject }} ({{ l.occurred_at | dt }})</option>{% endfor %}
+    </select>
+    <p class="muted">Files the .eml and its attachments as R3 evidence and logs the reply on the authority's timeline (the letter's reply clock stops). Nothing is sent and no status changes.</p>
+    <button class="btn small primary" type="submit">Assign</button>
+  </form>
+  {% endif %}
+  <h3>Ignore</h3>
+  <form method="post" action="/admin/mail/unassigned/{{ mm.id }}/ignore" class="mail-form" id="mail-ignore">{{ csrf_field() }}
+    <label for="ignore-reason">Reason (optional, 200 characters)</label>
+    <input id="ignore-reason" name="reason" maxlength="200" placeholder="spam, newsletter, not case-related…">
+    <button class="btn small danger" type="submit">Ignore</button>
+  </form>
+  {% else %}<p class="muted">This e-mail was already handled.</p>{% endif %}
+</div>
+</div>
+{% endblock %}

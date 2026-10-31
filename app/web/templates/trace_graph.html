@@ -1,0 +1,89 @@
+{# Fund-flow graph view (included by case/_tab_fund_flow.html). Context: run, graph, stats, recommendations
+   (annotate.annotate_elements: one per entity to send a stop order to; `url` only for members who may draft
+   letters; on the latest run aligned with the Recovery plan by hover.hover_data: `plan` = the plan's move for that
+   authority, its value / next step / rank; `nothing_held` = the funds moved on, no ring on the graph),
+   freeze_counts {status: nodes}, freeze_labels, graph_labels (hover.display_labels). Drawn by static/graph.js. #}
+<div class="ff-graph" id="ff-graph">
+  {% if recommendations %}
+  {% set held_recs = recommendations | rejectattr('nothing_held') | list %}
+  <details class="ff-recs" id="ff-recs" open>
+    <summary title="Freeze candidates with no stop order sent yet, in the Recovery plan's order">Recommended actions <span class="ff-recs-n">{{ held_recs | length }}</span></summary>
+    <ol class="ff-recs-list">
+      {% for r in recommendations %}
+      {% set p = r.plan %}
+      <li class="ff-rec ff-rec-{{ r.kind }}{% if r.nothing_held %} ff-rec-none{% endif %}">
+        <button type="button" class="ff-rec-focus" data-ff-focus="{{ r.node_ids | join(',') }}" title="Show {{ r.addresses | length }} address{{ 'es' if r.addresses | length != 1 }} in the graph">
+          {% if r.nothing_held %}<span class="ff-rec-t">{{ r.short }}: nothing held to {{ 'blacklist' if r.kind == 'issuer_blacklist' else 'freeze' }}</span>
+          <span class="ff-rec-v" title="nothing at stake: the funds moved on">—</span>
+          {% else %}<span class="ff-rec-t">Stop order → {{ r.short }}</span>
+          <span class="ff-rec-v" title="{{ p.basis if p and p.basis else 'traced to these addresses (upper bound)' }}">{{ p.value_fmt if p and p.value is not none and p.value_fmt else r.value_usd | usd }}</span>{% endif %}
+        </button>
+        <div class="ff-rec-why">{{ r.reason }}{% if r.draft_id %} <b>Stop order #{{ r.draft_id }} is drafted, not sent yet.</b>{% elif r.drafted %} <b>A stop order is drafted, not sent yet.</b>{% endif %}</div>
+        {% if p and p.title %}<div class="ff-rec-next"><span class="muted">Next{% if p.rank %} (Recovery plan #{{ p.rank }}){% endif %}:</span> {{ p.title }}</div>{% endif %}
+        <div class="ff-rec-meta"><span class="tag">{{ graph_labels.rec_kind.get(r.kind, r.kind) if graph_labels else r.kind }}</span> <span class="muted">{{ r.addresses | length }} address{{ 'es' if r.addresses | length != 1 }}</span></div>
+        {% if (r.url and not r.nothing_held) or (p and p.url) %}<div class="ff-rec-acts">
+          {% if r.url and not r.nothing_held %}<a class="btn small primary ff-rec-go" href="{{ r.url }}">{{ 'Review draft' if r.draft_id else 'Generate letter' }} →</a>{% endif %}
+          {% if p and p.url %}<a class="btn small ff-rec-go" href="{{ p.url }}">Recovery plan →</a>{% endif %}
+        </div>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% if not can('draft_letter') %}<p class="ff-rec-note muted">Investigators can generate these letters from the Authorities tab.</p>{% endif %}
+  </details>
+  {% endif %}
+  <div id="cy" aria-label="Fund-flow graph of trace #{{ run.id }}"></div>
+  <p class="ff-timeline-note" id="ff-timeline-note" hidden></p>
+  <div class="ff-tools" role="toolbar" aria-label="Graph controls">
+    <button type="button" class="ff-tool" data-ff-cmd="zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
+    <button type="button" class="ff-tool" data-ff-cmd="zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
+    <button type="button" class="ff-tool" data-ff-cmd="fit" title="Fit the graph" aria-label="Fit">⤢</button>
+    <button type="button" class="ff-tool" data-ff-cmd="labels" title="Edge labels on / off" aria-label="Edge labels" aria-pressed="true">Aa</button>
+    <button type="button" class="ff-tool" data-ff-cmd="panel" title="Details panel" aria-label="Details panel" aria-pressed="false">☰</button>
+    <button type="button" class="ff-tool ff-tool-wide" data-ff-cmd="timeline" title="Timeline view: the same graph laid out over time (day 0 = the victim's transaction)" aria-label="Timeline view" aria-pressed="false">⏱ Timeline</button>
+    <button type="button" class="ff-tool" data-ff-cmd="fullscreen" title="Fullscreen" aria-label="Fullscreen">⛶</button>
+    <input type="search" class="ff-find" data-ff-find placeholder="find address / label" aria-label="Find address">
+  </div>
+  <details class="ff-legend" id="ff-legend" open>
+    <summary>Legend &amp; filters</summary>
+    <div class="ff-lg">
+      <div class="ff-lg-row"><span class="ff-lg-h">Coin</span>
+        <span><i class="ff-sw usdc"></i>USDC</span><span><i class="ff-sw usdt"></i>USDT</span><span><i class="ff-sw eth"></i>ETH</span>
+        <span><i class="ff-sw btc"></i>BTC</span><span><i class="ff-sw trx"></i>TRX</span><span><i class="ff-sw other"></i>other</span>
+        <span class="muted" title="a node takes the asset of its largest tainted inflow; an edge its own asset">(node: largest tainted inflow)</span></div>
+      <div class="ff-lg-row"><span class="ff-lg-h">Chain</span>
+        <span><i class="ff-shape ellipse"></i>Ethereum / EVM</span><span><i class="ff-shape diamond"></i>TRON</span><span><i class="ff-shape hexagon"></i>Bitcoin</span>
+        <span class="muted" title="node diameter grows with the square root of the tainted USD the node received (not the balance it still holds); a node with a stop order keeps a minimum on-screen size so its lock badge stays readable">size = tainted $ received (√)</span></div>
+      <div class="ff-lg-row"><span class="ff-lg-h">Border</span>
+        <span><i class="ff-bd ff-bd-victim"></i>victim</span><span title="the walk stopped here (service / end point)"><i class="ff-bd ff-bd-terminal"></i>terminal</span>
+        <span title="freeze priority 50 or more (when no stop order covers the node)"><i class="ff-bd ff-bd-risk"></i>priority ≥ 50</span>
+        <span class="muted">(a stop-order status below replaces these)</span></div>
+      <div class="ff-lg-row"><span class="ff-lg-h">Stop order</span>
+        {% for key in ('requested', 'acknowledged', 'frozen', 'declined', 'released', 'draft') %}<span title="{{ freeze_labels[key] }}"><i class="ff-fz {{ key }}"></i>{{ key }}{% if freeze_counts and freeze_counts.get(key) %} <b>{{ freeze_counts[key] }}</b>{% endif %}</span>{% endfor %}
+        <span class="muted" title="{{ freeze_labels['cited'] }}"><i class="ff-fz cited"></i>only cited{% if freeze_counts and freeze_counts.get('cited') %} {{ freeze_counts['cited'] }}{% endif %}</span>
+        <span title="freeze candidate with no stop order sent to that entity yet"><i class="ff-ring"></i>recommended</span></div>
+      <div class="ff-lg-row"><span class="ff-lg-h">Edges</span>
+        <span title="solid = observed on-chain, dashed = asserted (an investigator's report or a statement, not yet confirmed on-chain; its amount may be unknown), dotted = cross-chain swap leg">— observed ┄ asserted (unconfirmed) ┈ swap leg</span>
+        <span title="a value marked ≤ reached the address only over asserted links with no on-chain amount: an upper bound, shared with the sender's other asserted destinations">≤ upper bound</span>
+        <span title="edge colour = its asset; width = tainted USD; grey = pre-fraud context">colour = asset, width = taint</span></div>
+      <div class="ff-lg-row ff-lg-filters" role="group" aria-label="Graph filters"><span class="ff-lg-h">Show</span>
+        <label><input type="checkbox" data-ff-show="recommended"> only recommended</label>
+        <label title="requested, acknowledged, frozen, declined or released (drafts excluded)"><input type="checkbox" data-ff-show="freeze"> only freeze-requested</label>
+        <label><input type="checkbox" data-ff-show="nodust"> hide dust (&lt; $50)</label></div>
+    </div>
+  </details>
+  <aside class="ff-panel" id="ff-panel" hidden>
+    <div class="ff-panel-head"><b>Details</b><button type="button" class="ff-tool" data-ff-cmd="panel" title="Collapse" aria-label="Collapse details">×</button></div>
+    <div id="node-info"><p class="muted">Click a node for its details. Double-click opens the explorer.</p></div>
+  </aside>
+</div>
+{% if stats %}<div class="ff-foot muted">{{ stats.nodes }} addresses · {{ stats.edges }} links{% if run_summary and run_summary.edges and run_summary.edges != stats.edges %} <span title="parallel movements between the same two addresses are drawn as one link (cross-chain swap legs are drawn as links of their own)">({{ run_summary.edges }} movements)</span>{% endif %} · chains {{ stats.chains | join(', ') }} · deepest hop {{ stats.max_hop }}{% if stats.services %} · <span title="services the funds reached: accounts or order records to ask about">services: {{ stats.services | join(', ') }}</span>{% endif %}{% if stats.non_custodial %} · <span title="non-custodial: no account to freeze; the trace follows the swap output">non-custodial: {{ stats.non_custodial | join(', ') }}</span>{% endif %}</div>{% endif %}
+{% if graph %}
+<script id="graph-data" type="application/json">{{ graph | tojson }}</script>
+<script id="flag-text" type="application/json">{{ FLAG_TEXT | tojson }}</script>
+<script id="graph-labels" type="application/json">{{ (graph_labels or {}) | tojson }}</script>
+{# vendored so the UI works offline and behind a strict egress policy (no CDN dependency) #}
+<script src="/static/vendor/cytoscape.min.js"></script>
+<script src="/static/vendor/dagre.min.js"></script>
+<script src="/static/vendor/cytoscape-dagre.js"></script>
+<script src="/static/graph.js"></script>
+{% endif %}

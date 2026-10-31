@@ -1,0 +1,91 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. Gate's LE guidelines exclude 'private parties whether engaged in private investigations or civil litigations': the LE address is LE-only (official government domain, English, stamped or signed instrument, explicit freeze duration). Victims and, at Gate's discretion, third parties may report stolen assets, but the guidance names no victim channel: confirm one before use.",
+  "key": "gate",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": null,
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "Discretionary risk controls on a victim report (restrictions, monitoring) 'may be modified or lifted at any time' without valid legal process: hold_placed, never frozen. Gate does not tell the user a freeze came from an LE request, asks permission before disclosing the reason, and warns it may not keep a voluntary freeze for long without it. gate.io is Gate's former domain (moved to gate.com).",
+  "entities": [],
+  "domains": {
+    "own": ["gate.com"],
+    "sibling": [
+      {"domain": "gate.io", "purpose": "former domain (migrated to gate.com); still in official links",
+       "source_ids": ["gt3"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"}
+    ],
+    "vendor_portals": []
+  },
+  "channels": [
+    {
+      "key": "gate.support", "kind": "webform", "value": null, "purpose": "freeze", "role_default": "to",
+      "label": "Gate support ticket (stolen-asset report)",
+      "notes": "Gate's stolen-asset guidance accepts reports from victims and, at its discretion, from third parties, but names no submission channel; the site's 'Submit a Request' ticket is the likely route (not confirmed). Confirm before use.",
+      "who": "victim_or_rep", "source_ids": ["gt2"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "gate.le": {
+      "who": "le_only",
+      "notes": "LE and government officials only, from an official government domain, in English. Private investigators and civil litigants are expressly excluded. The guidelines name no portal.",
+      "source_ids": ["gt1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "victim_report", "kind": "victim_report", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["gate.support"],
+      "instrument": {"type": "none", "notes": "A police report or case reference 'may support' the assessment."},
+      "evidence": ["incident_narrative", "tx_list_copyable", "trace_report_run", "receiving_account", "complaint_ref",
+                   "victim_id", "loa"],
+      "produces": ["prior_ticket_ref"],
+      "expected_replies": ["acknowledged", "info_requested", "hold_placed", "le_process_required"],
+      "outcomes": ["hold_placed"],
+      "on_refusal": "le_freeze",
+      "conflict": "An older version of Gate's stolen-currency guidance (reported) asked for a police report within 24 hours or the suspect could ask for the freeze to be lifted; the current guidance sets no deadline. File with the police the same day anyway.",
+      "notes": "Gate may apply account restrictions, enhanced monitoring or further review at its sole discretion; reports lacking detail may not be actionable. It discloses no investigation details to reporters: updates come from the authorities. KYC of the reporter may be required. Reports 'may be submitted by direct victims'; a representative's report is reviewed at Gate's discretion: submit it with the victim (their details, their police report) and a letter of authority.",
+      "source_ids": ["gt2", "gt3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_freeze", "kind": "le_request", "requester": ["le"], "channel_keys": ["gate.le"],
+      "instrument": {"type": "le_request", "language": ["en"],
+                     "notes": "A stamped and/or signed court order, subpoena, warrant and/or official agency letter stating the legal authority, sent from an official government domain."},
+      "evidence": ["le_agency_identity", "le_letterhead_request", "tx_list_copyable", "trace_report_run",
+                   "receiving_account", "provider_ids", "freeze_duration_stmt", "english_version", "prior_ticket_ref"],
+      "timing": {"deadlines": [
+        {"key": "investigation", "what": "reply_by", "working_days": 15, "starts": "provider_ack", "by": null,
+         "action": "Gate usually completes its internal investigation in 5-15 working days (longer if complex): chase after that.",
+         "source_ids": ["gt1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+      ]},
+      "expected_replies": ["acknowledged", "info_requested", "frozen"], "outcomes": ["frozen"],
+      "notes": "State the scope and duration of the freeze. Proof of personal authority (badge photo or appointment letter), the flow of funds with addresses and TxIDs, the total amount and the user's identifiers. Gate may ask for permission to disclose the reason for the freeze and does not disclose without it: answer that request promptly. Expired or incomplete documents are a reported refusal reason: resubmit fresh ones.",
+      "source_ids": ["gt1", "gt4"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "private investigations or civil litigations", "means": "le_process_required", "instrument": "le_request",
+     "channel_key": "gate.le", "path": "le_freeze",
+     "source_ids": ["gt1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "official government domain", "means": "le_process_required", "instrument": "le_request",
+     "channel_key": "gate.le", "path": "le_freeze",
+     "source_ids": ["gt1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "may not be actionable", "means": "info_requested", "path": "victim_report",
+     "source_ids": ["gt2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "modified or lifted at any time", "means": "hold_placed", "path": "victim_report",
+     "source_ids": ["gt2"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"},
+    {"phrase": "permission to disclose", "means": "info_requested", "path": "le_freeze",
+     "source_ids": ["gt1"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "tickets": [],
+  "sources": [
+    {"id": "gt1", "title": "Gate Law Enforcement Request Guidelines", "url": "https://www.gate.com/legal/law-enforcement",
+     "retrieved_at": "2026-10-20"},
+    {"id": "gt2", "title": "Gate: Guidelines for Reporting Stolen or Illicit Virtual Assets Entering Gate",
+     "url": "https://www.gate.com/help/guide/safe_question/16479", "retrieved_at": "2026-10-20"},
+    {"id": "gt3", "title": "Gate: Solutions for Stolen Currencies Entering Gate (older version; access refused when re-checked)",
+     "url": "https://www.gate.com/help/guide/security/16479/solutions-for-stolen-currencies-entering-gate.io",
+     "retrieved_at": "2026-10-20"},
+    {"id": "gt4", "title": "Protos: Gate.io denies withholding evidence in a theft case",
+     "url": "https://protos.com/gate-io-denies-withholding-evidence-in-1-7m-theft-case/", "retrieved_at": "2026-10-20"}
+  ]
+}

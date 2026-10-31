@@ -1,0 +1,122 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. OKX takes freeze / disclosure requests from government and law-enforcement agencies only, through its Kodex portal (an exceptional LE-only e-mail route exists, not catalogued). A victim's only published route is OKX support (Help Center / 24/7 chat); a PI or counsel has no published intake (an inferred Help Center notice only flags the account): brief the case officer with the pack.",
+  "key": "okx",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": null,
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "Address requests to 'OKX', not a specific entity. OKX TR (Turkey) is a separate entity with its own guide (requests in Turkish, a formal request through diplomatic channels may be required). app.kodexglobal.com is a shared vendor host: only the /okx/ tenant is OKX's, and it is LE-only.",
+  "entities": [
+    {"key": "okx", "name": "OKX (requests addressed to the brand)", "source_ids": ["okx1"]},
+    {"key": "okx-tr", "name": "OKX TR Kripto Varlik Alim Satim Platformu A.S. (Istanbul)", "jurisdiction": "TR",
+     "separate": true, "notes": "Turkish authorities serve it by registered e-mail (KEP); foreign LE writes from an official government domain, in Turkish.",
+     "source_ids": ["okx4"]}
+  ],
+  "domains": {
+    "own": ["okx.com"],
+    "sibling": [],
+    "vendor_portals": [
+      {"host": "app.kodexglobal.com", "path_prefix": "/okx/", "tenant": "okx", "le_only": true,
+       "source_ids": ["okx1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"}
+    ]
+  },
+  "channels": [
+    {
+      "key": "okx.enforcement", "kind": "email", "value": null, "purpose": "le_request", "role_default": "to",
+      "label": "OKX LE e-mail (extraordinary circumstances only)",
+      "notes": "Named in the OKX LE guide for agencies that cannot onboard to Kodex or face an emergency, with an explanation of why the portal could not be used. LE only; the alias is not on the reviewed list, so it is not catalogued: the officer takes it from the guide.",
+      "source_url": "https://www.okx.com/en-eu/help/okx-law-enforcement-request-guide",
+      "who": "le_only", "source_ids": ["okx1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "okx.support", "kind": "webform", "value": "https://www.okx.com/help", "purpose": "general",
+      "role_default": "to", "label": "OKX Help Center / 24/7 chat",
+      "notes": "OKX's own advice to a hacked or scammed user: visit the Help Center or use the 24/7 chat for immediate intervention. Case updates come through the Ticket Center. Not an LE channel and no freeze commitment.",
+      "source_url": "https://www.okx.com/en-us/learn/crypto/crypto-account-hacked",
+      "who": "any", "source_ids": ["okx3", "okx2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "okx.le": {
+      "who": "le_only",
+      "notes": "OKX's LE request channel is its Kodex portal (app.kodexglobal.com/okx/signin): 'For Government and Law Enforcement Agencies only'. Agencies register first. Aegis never registers or submits there; it prepares the pack the officer uploads.",
+      "source_ids": ["okx1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "victim_report", "kind": "victim_report", "requester": ["victim"], "channel_keys": ["okx.support"],
+      "instrument": {"type": "none", "notes": "File a police report at once: OKX offers documentation to help with police reports."},
+      "evidence": ["incident_narrative", "tx_list_copyable", "ownership_proof", "receiving_account", "complaint_ref"],
+      "produces": ["prior_ticket_ref"],
+      "expected_replies": ["acknowledged", "le_process_required"],
+      "on_refusal": "le_freeze",
+      "notes": "The victim contacts OKX support straight away; no source says this alone gets a hold. Hand off to LE (Kodex) as soon as a police reference exists, quoting the support ticket.",
+      "source_ids": ["okx3", "okx2"], "basis": "D", "confidence": "L", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "private_notice", "kind": "private_notice", "requester": ["pi", "counsel"],
+      "channel_keys": ["okx.support"],
+      "instrument": {"type": "none", "notes": "A police / complaint reference strengthens the notice; it is not an instrument."},
+      "evidence": ["incident_narrative", "tx_list_copyable", "receiving_account", "complaint_ref", "loa"],
+      "produces": ["prior_ticket_ref"],
+      "expected_replies": ["acknowledged", "le_process_required"],
+      "on_refusal": "le_freeze",
+      "notes": "Inferred: OKX publishes no intake for a victim's representative; a notice to the Help Center flags the account and gets a ticket the officer quotes in the Kodex request. Expect a redirect to law enforcement; file it with the victim where possible.",
+      "source_ids": ["okx3"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_freeze", "kind": "le_request", "requester": ["le"], "entity": "okx",
+      "channel_keys": ["okx.le", "okx.enforcement"],
+      "instrument": {"type": "le_request", "language": ["en"],
+                     "notes": "A signed court order and/or an official request letter on agency letterhead, with proof of authority (a signed letter naming the requester, signed by someone else, or a supervisor's confirmation e-mail)."},
+      "evidence": ["le_agency_identity", "le_letterhead_request", "tx_list_copyable", "trace_report_run", "provider_ids",
+                   "english_version", "prior_ticket_ref", "balance_reading"],
+      "expected_replies": ["acknowledged", "info_requested", "frozen"], "outcomes": ["frozen"],
+      "on_refusal": "data_disclosure",
+      "notes": "On a freezing request OKX restricts part or all account functions and freezes assets as requested. List every address and TxID from the victim's first transaction to OKX, in copyable form (CSV). No SLA ('every effort to promptly respond'); a substantive response comes only once all documents are in. Officers should check their spam folder for OKX replies.",
+      "source_ids": ["okx1", "okx2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "data_disclosure", "kind": "data_disclosure", "requester": ["le", "court"], "channel_keys": ["okx.le"],
+      "instrument": {"type": "le_request", "language": ["en"],
+                     "notes": "The same court order and/or letterhead request; state the specific records sought."},
+      "evidence": ["le_agency_identity", "le_letterhead_request", "tx_list_copyable", "provider_ids", "english_version"],
+      "notes": "Handled case by case; the user may learn of it once OKX shares contact details 'if the agency permits', so ask for non-disclosure.",
+      "source_ids": ["okx1", "okx2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "release", "kind": "release", "requester": ["le", "court"], "channel_keys": ["okx.le"],
+      "instrument": {"type": "le_request", "notes": "An official request to lift, from the authority that asked for the restriction."},
+      "notes": "OKX processes the lift 'as soon as practicable'; it gives no estimate for judicial restrictions.",
+      "source_ids": ["okx2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "Government and Law Enforcement Agencies only", "means": "le_process_required", "instrument": "le_request",
+     "channel_key": "okx.le", "path": "le_freeze",
+     "source_ids": ["okx1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "Kodex", "means": "le_process_required", "instrument": "le_request", "channel_key": "okx.le",
+     "path": "le_freeze", "source_ids": ["okx1"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "substantive response", "means": "info_requested", "path": "le_freeze",
+     "source_ids": ["okx1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "official request", "means": "le_process_required", "instrument": "le_request", "path": "le_freeze",
+     "source_ids": ["okx2"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"}
+  ],
+  "tickets": [
+    {"system": "okx_ticket_center", "regex": null, "source_ids": ["okx2"], "basis": "D", "confidence": "M",
+     "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "okx1", "title": "OKX Law Enforcement Request Guide (EU help centre, last updated Aug 2026)",
+     "url": "https://www.okx.com/en-eu/help/okx-law-enforcement-request-guide", "retrieved_at": "2026-10-20"},
+    {"id": "okx2", "title": "OKX: How do I handle account restrictions?",
+     "url": "https://www.okx.com/en-us/help/regarding-the-restriction-of-the-okx-account-of-the-okx-account",
+     "retrieved_at": "2026-10-20"},
+    {"id": "okx3", "title": "OKX Learn: What to do if your wallet or account is hacked",
+     "url": "https://www.okx.com/en-us/learn/crypto/crypto-account-hacked", "retrieved_at": "2026-10-20"},
+    {"id": "okx4", "title": "OKX TR Law Enforcement Request Guide",
+     "url": "https://tr.okx.com/en/help/okx-tr-law-enforcement-request-guide", "retrieved_at": "2026-10-20"}
+  ]
+}

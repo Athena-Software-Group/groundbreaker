@@ -1,0 +1,92 @@
+{# Brief to the case's LE authority (or, `counsel`, to counsel) after a provider said it acts only on LE process / a
+   court order: what it said, its ticket, the instrument and channel it requires, the route (cross-border when it does
+   not act on this authority's jurisdiction), what is at stake and the clocks. Context: app.domain.correspondence
+   ._context_brief (`p`: the provider request) #}
+**Subject:** {{ subject }}
+
+Dear {{ salutation }},
+
+{% include "letters/_intro.md.j2" %}
+
+{% if own_reference %}Further to your reference {{ own_reference | bold }}, we{% else %}We{% endif %} write about our request to **{{ p.name }}**{% if p.sent_fmt %} of {{ p.sent_fmt }}{% endif %}{% if p.ticket %} (their ticket {{ p.ticket | code }}){% endif %}. {% if p.required is sameas false %}{{ p.name }} has not acted on it yet: {{ p.instrument or 'law-enforcement process' }}{% if p.jur_intro %} ({{ p.jur_intro }}){% endif %} from you is the formal route to keep the funds where they are.{% else %}{% if p.instrument %}{{ p.name }} acts only on {{ p.instrument }}{% if p.jur_intro %} ({{ p.jur_intro }}){% endif %}{% else %}{{ p.name }} acts only on law-enforcement process{% endif %}: {% if counsel %}a court order is the route to keep the funds where they are{% else %}a request from you is the route to keep the funds where they are{% endif %}.{% endif %}{{ '' }}
+
+### 1. What {{ p.name }} said
+
+{% if p.reply_fmt %}
+- Reply of {{ p.reply_fmt }}{% if p.status %} ({{ p.status }}){% endif %}{% if p.ticket %}, ticket {{ p.ticket | code }}{% endif %}{{ '' }}
+{% else %}
+- No substantive reply yet{% if p.ticket %}; ticket {{ p.ticket | code }}{% endif %}.{% if p.required is not sameas false %} Their published process reserves the step below to {{ 'courts and law enforcement' if counsel else 'law enforcement' }}.{% endif %}{{ '' }}
+{% endif %}
+{% if p.quote %}
+{{ '' }}
+> {{ p.quote | one_line }}
+{% endif %}
+
+### 2. {{ 'The formal route' if p.required is sameas false else 'What it requires' }}
+
+- Instrument: {{ p.instrument or 'law-enforcement process' }}{% if p.jur %}, from an authority or court of {{ p.jur }}{% endif %}{% if p.signing %}; {{ p.signing }}{% endif %}{% if p.language %}; in {{ p.language }}{% endif %}{{ '' }}
+{% if p.channels %}
+- Channel: {{ p.channels | join('; ') }}{% if p.le_only %} (reserved for law enforcement: we cannot submit there){% endif %}{{ '' }}
+{% endif %}
+{% for e in p.evidence %}
+- {{ e }}
+{% endfor %}
+{% for x in p.statements %}
+- {{ x }}
+{% endfor %}
+{% if p.route %}
+
+### 3. Route
+
+{{ p.route }}
+{% for o in p.options %}
+- {{ o }}
+{% endfor %}
+{% endif %}
+
+### {{ 4 if p.route else 3 }}. What is at stake
+
+{% for i in p.addresses %}
+- {{ i.address | code }}{{ (' (' ~ i.chain | title ~ ')') if i.chain else '' }}{{ (' — ' ~ i.label) if i.label else '' }}
+{% else %}
+- The identifiers of our request (attached).
+{% endfor %}
+{% for t in p.tx_hashes %}
+- Transaction {{ t | code }}
+{% endfor %}
+{% for a in p.amounts %}
+- {{ a }}
+{% endfor %}
+{% if loss_fmt %}
+- The victim's loss: {{ loss_fmt }}{{ (' (approximately ' ~ loss_usd_fmt ~ ')') if loss_usd_fmt else '' }}
+{% endif %}
+{% if p.clocks %}
+
+### {{ 5 if p.route else 4 }}. Clock
+
+{% for c in p.clocks %}
+- {{ c }}
+{% endfor %}
+{% endif %}
+
+### Request
+
+{% if counsel %}
+We ask you to advise on and, if instructed, apply for an order {{ p.name }} acts on{% if p.jur %} ({{ p.jur }}){% endif %}, naming the addresses above with particularity{% if p.ticket %} and quoting their ticket {{ p.ticket | code }}{% endif %}. We can supply a tracing declaration, the forensic report and our correspondence with {{ p.name }}.
+{% else %}
+{{ p.request }}
+{% endif %}
+
+Attached / to follow:
+
+- {{ sender.instrument }}
+- Our request to {{ p.name }} and their reply
+- Forensic report on the fund flow{{ (' (Aegis trace #' ~ run_ref ~ ')') if run_ref else '' }}
+
+{% if extra_note %}
+{{ extra_note }}
+
+{% endif %}
+{% include "letters/_signature.md.j2" %}
+
+{% include "letters/_footer.md.j2" %}

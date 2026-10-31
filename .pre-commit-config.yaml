@@ -1,0 +1,20 @@
+# Install: pip install pre-commit && pre-commit install
+# The PII scan adds a private denylist when AEGIS_DENYLIST names one (a file kept OUTSIDE the repo):
+#   export AEGIS_DENYLIST=/path/outside/repo/denylist.txt
+# Without it the generic rules run. Maintainers who hold case data should set it (or pass
+# --require-denylist locally) so a missing denylist fails the commit instead of passing quietly.
+repos:
+  - repo: local
+    hooks:
+      - id: aegis-pii-scan
+        name: Aegis PII / secret scan (scripts/pii_scan.py)
+        entry: python3 scripts/pii_scan.py
+        language: system
+        pass_filenames: false   # scan everything that would be committed, not just the diff
+        always_run: true
+        stages: [pre-commit, pre-push]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks   # uses .gitleaks.toml at the repo root

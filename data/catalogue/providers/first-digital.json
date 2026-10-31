@@ -1,0 +1,59 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. No public law-enforcement or freeze-request channel was found for FDUSD (the issuer's legal pages refuse automated reads): no channel is declared and none may be guessed. FD121 freezes on a formal directive from a recognised authority with jurisdiction over FDUSD, or at its own discretion for compliance / risk.",
+  "key": "first-digital",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": null,
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "Issuer FD121 Limited: described as a Hong Kong company (Dec 2024 review); the issuer announced a move to a BVI-based issuance structure in Aug 2025 (page not machine-readable when checked), so which authority has jurisdiction is unsettled: no issuer jurisdiction is set. The contract has a single owner account that can freeze and pause transfers; the freeze function and event names are not verified, and app/freeze does not read FDUSD, so a person confirms a freeze on the explorer. FDUSD liquidity sits mostly on large exchanges: pursue the off-ramp exchange in parallel.",
+  "entities": [
+    {"key": "fd121", "name": "FD121 Limited (FDUSD issuer)",
+     "notes": "Hong Kong per the Dec 2024 review; BVI-based issuance structure announced for Aug 2025 (unconfirmed here).",
+     "source_ids": ["fd1", "fd4"]}
+  ],
+  "domains": {"own": ["firstdigitallabs.com"], "sibling": [], "vendor_portals": []},
+  "paths": [
+    {
+      "key": "private_notice", "kind": "private_notice", "requester": ["victim", "pi", "counsel"],
+      "instrument": {"type": "none", "notes": "A police / IC3 reference strengthens the notice; it is not an instrument."},
+      "evidence": ["tx_list_copyable", "balance_reading", "trace_report_run", "complaint_ref", "loa", "non_disclosure_stmt"],
+      "expected_replies": ["auto_reply", "acknowledged", "le_process_required", "unclear"],
+      "on_refusal": "formal_directive",
+      "notes": "No channel published: confirm one on the issuer's own site before sending. FD121 may freeze in limited cases where its own policies call for it (compliance or risk); low expectation. Brief LE in parallel.",
+      "source_ids": ["fd1", "fd3"], "basis": "R", "confidence": "L", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "formal_directive", "kind": "le_request", "requester": ["le", "court", "regulator"],
+      "instrument": {"type": "formal_directive",
+                     "notes": "A formal directive from a recognised authority (judicial body, law-enforcement agency or other governmental entity) with jurisdiction over FDUSD."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "balance_reading", "complaint_ref"],
+      "expected_replies": ["acknowledged", "frozen"], "outcomes": ["frozen"],
+      "on_refusal": "mlat",
+      "notes": "Issuer's own wording, quoted by a third-party review. No published channel, reply format or response time.",
+      "source_ids": ["fd1"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "mlat", "kind": "cross_border", "requester": ["le", "court"], "entity": "fd121",
+      "instrument": {"type": "mlat", "issuer_jurisdictions": ["HK", "VG"],
+                     "notes": "To Hong Kong or the BVI, depending on where the issuer now sits."},
+      "evidence": ["domestic_order", "mlat_bundle", "tx_list_copyable", "balance_reading"],
+      "outcomes": ["frozen"],
+      "notes": "Inferred: a foreign authority without jurisdiction over FDUSD goes through mutual legal assistance (months).",
+      "source_ids": ["fd1", "fd4"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "formal directive", "means": "le_process_required", "instrument": "formal_directive", "path": "formal_directive",
+     "source_ids": ["fd1"], "basis": "R", "confidence": "L", "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "fd1", "title": "LlamaRisk: Pegkeeper onboarding review, FDUSD (Dec 2024)",
+     "url": "https://llamarisk.com/research/pegkeeper-onboarding-fdusd", "retrieved_at": "2026-10-20"},
+    {"id": "fd3", "title": "FD121 Account User Agreement (refused automated reads)",
+     "url": "https://www.firstdigitallabs.com/legal/fd121-account-user-agreement", "retrieved_at": "2026-10-20"},
+    {"id": "fd4", "title": "First Digital Labs: FDUSD transitions to BVI-based issuance structure (refused automated reads)",
+     "url": "https://firstdigitallabs.com/news-and-insights/fdusd-transitions-to-bvi-based-issuance-structure",
+     "retrieved_at": "2026-10-20"}
+  ]
+}

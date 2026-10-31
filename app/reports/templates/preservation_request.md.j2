@@ -1,0 +1,168 @@
+**Subject:** {{ subject }}
+
+Dear {{ recipient_salutation }},
+
+{% if sender_kind == "athena" %}
+We write as {{ sender.firm | mdx }}, on behalf of {{ sender.on_behalf_of | mdx }}{% if case.victim_jurisdiction %}, {{ case.victim_jurisdiction }}{% endif %}, acting under the victim's {{ sender.instrument | mdx }} (attached). The victim lost approximately {{ loss_usd_fmt }} ({{ loss_fmt }}) in a cryptocurrency investment fraud on {{ fraud_date_fmt }}{% if facts.impersonated_entity %} that impersonated {{ facts.impersonated_entity }}{% endif %}.{% if facts.persona %} The perpetrators operated under the persona "{{ facts.persona }}"{% if facts.domains %} via {{ facts.domains | join(', ') }}{% endif %}.{% endif %}
+{% else %}
+{{ investigator.firm }} is a private investigations and intelligence firm{% if investigator.address %} based in {{ investigator.address.split(',')[-1].strip() }}{% endif %}. We act on the instructions of {{ case.victim_name }}{% if facts.victim_contact and facts.victim_contact.role %} ({{ facts.victim_contact.role }}){% elif case.victim_entity %} ({{ case.victim_entity }}){% endif %}{% if case.victim_jurisdiction %}, {{ case.victim_jurisdiction }}{% endif %}, who lost approximately {{ loss_usd_fmt }} ({{ loss_fmt }}) in a cryptocurrency investment fraud on {{ fraud_date_fmt }}{% if facts.impersonated_entity %} that impersonated {{ facts.impersonated_entity }}{% endif %}.{% if facts.persona %} The perpetrators operated under the persona "{{ facts.persona }}"{% if facts.domains %} via {{ facts.domains | join(', ') }}{% endif %}.{% endif %}
+{% endif %}
+
+
+{% if origin.first_recipient or origin.perpetrator_wallet %}
+According to the victim's own transaction records, the funds left the victim's wallet{% if origin.victim_wallet %} `{{ origin.victim_wallet }}`{% endif %}{% if origin.tx_hash %} in transaction `{{ origin.tx_hash }}`{% endif %}{% if origin.timestamp %} on {{ origin.timestamp | fmt_ts }}{% endif %}{% if origin.amount %} (**{{ origin.amount | fmt_amt }} {{ origin.asset }}**){% endif %} and went to `{{ origin.first_recipient or origin.perpetrator_wallet }}`, {{ "the perpetrators' first-recipient wallet" if origin.first_recipient else "a wallet controlled by the perpetrators" }}. From there the funds were moved on through further wallets. The transaction hashes of some intermediate hops are still being verified on-chain and will be supplied in the forensic report; anything marked *asserted* below is not yet observed on-chain and is described, not cited.
+
+{% endif %}
+{% if facts.complaints %}
+The matter has been reported to law enforcement: {% for c in facts.complaints %}{{ c.authority }}{% if c.reference and 'enter here' not in c.reference %}, reference **{{ c.reference }}**{% endif %}{% if c.filed_at %} (filed {{ c.filed_at | fmt_date }}){% endif %}{{ '; ' if not loop.last else '.' }}{% endfor %}
+
+
+{% endif %}
+{% if orders %}
+We enclose {% for o in orders %}the {{ o.type }} "{{ o.title }}"{{ '; ' if not loop.last else '' }}{% endfor %}, which {{ 'names' if orders | length == 1 else 'name' }} your service: we ask you to act on {{ 'it' if orders | length == 1 else 'them' }} and to confirm the hold in writing.
+
+{% endif %}
+A formal law-enforcement request will follow. Until then we ask you to **{{ 'freeze or place a risk-control hold on' if kind == 'freeze' else 'preserve' }}** the records and assets described below. We are not asking for disclosure; any disclosure should follow formal legal process.
+
+### 1. Identifiers linked to your service
+
+{% for ident in identifiers %}
+- **{{ ident.address_type | addr_kind }} address:** `{{ ident.address }}` ({{ ident.chain | title }}){% if ident.label %} — {{ ident.label }}{% endif %}
+
+{% set observed_in = ident.inbound | rejectattr('asserted') | list %}
+{% set asserted_in = ident.inbound | selectattr('asserted') | list %}
+{% for tx in observed_in %}
+  - Inbound: `{{ tx.tx_hash }}`, {{ tx.timestamp | fmt_ts }}, **{{ tx.amount | fmt_amt }} {{ tx.asset }}**{% if tx.amount_usd %} (≈ USD {{ tx.amount_usd | fmt_usd }}){% endif %}, from `{{ tx.from }}`
+{% endfor %}
+{% for tx in asserted_in %}
+{% if tx.amount is not none %}
+  - *Asserted* inbound (transaction hash pending on-chain verification): {{ tx.amount | fmt_amt }} {{ tx.asset }} from `{{ tx.from }}`{% if tx.from_label %} ({{ tx.from_label }}){% endif %}.
+{% else %}
+  - *Asserted*, not yet observed on-chain: proceeds reached this address via an intermediate path from `{{ tx.from }}`{% if tx.from_label %} ({{ tx.from_label }}){% endif %}; the specific transaction(s) and amount are being verified and will be supplied in the forensic report.
+{% endif %}
+{% endfor %}
+{% if ident.address in unverified and observed_in %}
+  - The transactions above are observed on-chain, but the path connecting them to the victim's funds includes *asserted* hops not yet verified on-chain; the amounts are full transaction values, not a confirmed share of the loss.
+{% endif %}
+{% for tx in ident.outbound | rejectattr('asserted') %}
+  - Onward: `{{ tx.tx_hash }}`, {{ tx.timestamp | fmt_ts }}, {{ tx.amount | fmt_amt }} {{ tx.asset }} to `{{ tx.to }}` {{ ('(' ~ tx.to_label ~ ')') if tx.to_label else '' }}
+{% endfor %}
+{% set asserted_out = ident.outbound | selectattr('asserted') | rejectattr('amount', 'none') | list %}
+{% for tx in asserted_out %}
+  - *Asserted* onward (transaction hash pending on-chain verification): {{ tx.amount | fmt_amt }} {{ tx.asset }} to `{{ tx.to }}`{% if tx.to_label %} ({{ tx.to_label }}){% endif %}. Please check the current balance.
+{% endfor %}
+{% if ident.address_type == 'hot_wallet' %}
+  - Omnibus wallet: funds are commingled; please locate the customer account via the deposit address and transaction cited above.
+{% elif ident.dwell_minutes is not none %}
+  - Funds were forwarded {{ ident.dwell_minutes | round(0) | int }} minutes after arrival.
+{% elif observed_in and not asserted_out %}
+  - No onward movement observed as of {{ generated_at }}.
+{% endif %}
+{% if ident.context_inbound %}
+{% set ctx_dates = ident.context_inbound | map(attribute='timestamp') | map('fmt_date') | unique | join(', ') %}
+{% if ident.context_inbound | rejectattr('asserted') | list %}
+  - The same address also received deposits on {{ ctx_dates }} — i.e. **before** the theft{% if fraud_ts_fmt %} ({{ fraud_ts_fmt }}){% endif %}. This points to one account in regular use; please preserve the **full account history**, including where the account withdrew to.
+{% else %}
+  - According to our analysis (*asserted*; transactions being verified), the same address also received deposits on {{ ctx_dates }} — i.e. **before** the theft{% if fraud_ts_fmt %} ({{ fraud_ts_fmt }}){% endif %}. If confirmed, this points to one account in regular use; please preserve the **full account history**, including where the account withdrew to.
+{% endif %}
+{% elif 'pre_fraud_activity' in ident.flags %}
+  - This address was in use before the fraud date; please preserve the **full account history**, not only the transactions cited.
+{% endif %}
+{% endfor %}
+{% if order_ids %}
+- **Swap order reference{{ 's' if order_ids | length > 1 else '' }} on your platform:** {% for o in order_ids %}`{{ o }}`{{ ', ' if not loop.last else '' }}{% endfor %}. Please preserve the full order record{{ 's' if order_ids | length > 1 else '' }} (deposit, payout, refund address, IP and device data).
+{% endif %}
+
+All of the above comes from passive public blockchain observation and from the victim's own transaction records{% if has_asserted %}; items marked *asserted* come from our investigative analysis and are pending on-chain confirmation{% endif %}. We have not logged into, queried or otherwise accessed any account, wallet or API.
+
+### 2. Records requested to be {{ 'frozen / ' if kind == 'freeze' else '' }}preserved for a minimum of 180 days or until legal process is received
+
+{% for line in records %}
+- {{ line }}
+{% endfor %}
+- Any linked accounts sharing the same KYC, device, IP, phone, email or withdrawal address.
+- For every account, project or service linked to the identifiers above.
+
+### 3. Requested action
+
+{% if kind == 'freeze' %}
+We ask that the balances associated with the identifiers above be placed under an immediate risk-control hold pending formal process, and that the account holder **not be notified**, as this could lead to the movement of funds and the destruction of evidence.
+{% else %}
+We ask that the subjects of this report **not be notified**, as this could lead to the movement of funds and the destruction of evidence.
+{% endif %}
+
+We are a private party and cannot compel disclosure. Formal legal process, or a request through the competent criminal authorities, will follow. Please tell us your preferred channel and requirements for the formal law-enforcement request.
+
+{% if sender_kind == "athena" %}
+We can supply supporting evidence on request. Please contact the undersigned{% if sender.email %} at {{ sender.email | mdx }}{% endif %}, the single point of contact for this matter.
+{% else %}
+We can supply supporting evidence on request. Please contact the undersigned (single point of contact) or the victim's case manager, {{ facts.victim_contact.name if facts.victim_contact else case.victim_name }}{% if facts.victim_contact and facts.victim_contact.email %} ({{ facts.victim_contact.email }}){% endif %}.
+{% endif %}
+
+Attached / to follow:
+
+{% if sender_kind == "athena" %}
+- {{ sender.instrument | mdx }} (the victim's authorisation of {{ sender.firm | mdx }})
+{% else %}
+- {{ investigator.authority_instrument or "Letter of Authority" }}
+{% endif %}
+- Forensic report on the fund flow (Aegis trace #{{ run_ref }})
+- Law-enforcement complaint references
+
+{% if sender_kind == "athena" %}
+Yours faithfully,
+
+{% if sender.signature_block %}
+{% for line in sender.signature_block.splitlines() if line.strip() %}
+{{ line.strip() | mdx }}
+
+{% endfor %}
+{% else %}
+{% if sender.signatory_name %}
+{{ sender.signatory_name | mdx }}
+
+{% endif %}
+{% if sender.signatory_title %}
+{{ sender.signatory_title | mdx }}
+
+{% endif %}
+{{ sender.firm | mdx }}, on behalf of {{ sender.on_behalf_of | mdx }}
+
+{% if sender.email %}
+{{ sender.email | mdx }}
+
+{% endif %}
+{% if sender.phone %}
+T. {{ sender.phone | mdx }}
+
+{% endif %}
+{% endif %}
+{% if sender.cc %}
+Cc: {% for c in sender.cc %}{{ c | mdx }}{{ ', ' if not loop.last }}{% endfor %}
+
+
+{% endif %}
+{% else %}
+Yours respectfully,
+
+{{ investigator.contact }}
+
+{{ investigator.firm }}
+
+{% if investigator.address %}{{ investigator.address }}
+
+{% endif %}
+{% if investigator.phone %}T. {{ investigator.phone }}
+
+{% endif %}
+{% if investigator.email %}{{ investigator.email }}
+
+{% endif %}
+{% if investigator.cc %}Cc: {{ investigator.cc | join(', ') }}
+
+{% endif %}
+{% endif %}
+
+* * *
+
+*Generated by Aegis on {{ generated_at }} from trace run #{{ run_ref }} for case {{ case.reference }}. USD figures marked ≈ use reference prices. Links that are asserted but not yet observed on-chain are described, not cited.*

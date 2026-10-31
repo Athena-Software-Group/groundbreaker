@@ -1,0 +1,56 @@
+/* Recovery plan (app/blocks/recovery; owner app/web/routes_recovery.py): the page, its sub-tabs (shared with Block
+   status) and the Overview card. Uses the aegis.css tokens only. */
+
+.rp-subnav { display: flex; gap: 4px; margin: 0 0 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.rp-subnav a { padding: 6px 12px; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0;
+  color: var(--muted); text-decoration: none; font-size: var(--fs-sm); }
+.rp-subnav a.active { color: var(--text); border-color: var(--border); background: var(--panel); font-weight: 600; }
+
+.rp-moves { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.rp-move { display: grid; grid-template-columns: 2.2em 1fr; gap: 10px; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--panel-2); }
+.rp-move.rp-hot { box-shadow: inset 3px 0 0 var(--warn); }
+.rp-move:target { border-color: var(--accent); }
+.rp-rank { font-size: var(--fs-xl); font-weight: 700; color: var(--accent); text-align: center; }
+.rp-body { min-width: 0; }
+.rp-title { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.rp-reason { margin-top: 4px; font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.rp-text { margin-top: 4px; font-size: var(--fs-sm); color: var(--muted); overflow-wrap: anywhere; }
+.rp-metrics { margin-top: 4px; }
+.rp-actions { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.rp-actions form { margin: 0; }
+.rp-evidence { margin-top: 6px; font-size: var(--fs-sm); }
+.rp-evidence summary { cursor: pointer; color: var(--muted); }
+.rp-ev-table { width: 100%; margin-top: 4px; }
+.rp-ev-table td { vertical-align: top; padding: 3px 6px; }
+.rp-state { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: var(--fs-xs); font-weight: 600;
+  border: 1px solid var(--border); }
+.rp-state-have, .rp-state-waived { border-color: var(--ok); color: var(--ok); }
+.rp-state-letter { border-color: var(--accent-2); color: var(--accent-2); }
+.rp-state-missing, .rp-state-unusable { border-color: var(--danger); color: var(--danger); }
+.rp-state-le { border-color: var(--warn); color: var(--warn); }
+.rp-waive { display: inline-flex; gap: 4px; margin: 0; }
+.rp-waive input { width: 14em; max-width: 40vw; padding: 2px 6px; font-size: var(--fs-xs); }
+.rp-clock-kpi { font-size: var(--fs-md) !important; }
+.rp-method p { font-size: var(--fs-sm); }
+.rp-card-moves { margin: 6px 0 0; padding-left: 1.4em; display: grid; gap: 6px; }
+/* "Who owns these wallets" (#owners): the money compact (figure + one-word basis; the full basis in its tooltip and
+   under details), the next step takes the width. Narrow screens scroll inside .table-wrap. */
+.own-table { width: 100%; }
+.own-table .own-wallet { width: 9.5em; }
+.own-table .own-wallet .mono { white-space: nowrap; }
+.own-table .own-money { width: 6.5em; white-space: nowrap; }
+.own-table td.own-money b { font-variant-numeric: tabular-nums; }
+.own-basis { display: inline-block; padding: 0 5px; border-radius: 6px; border: 1px solid var(--border);
+  color: var(--muted); font-size: var(--fs-xs); }
+.own-table .own-owner { width: 24%; min-width: 12em; }
+.own-table .own-next { width: 42%; min-width: 16em; overflow-wrap: anywhere; }
+.own-table td.own-next .btn { margin: 0 6px 4px 0; white-space: nowrap; }
+.own-table .own-mark { width: 7em; }
+.own-details summary { cursor: pointer; color: var(--accent-2); margin-top: 4px; }
+.own-details > div { margin-top: 3px; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .own-table .own-wallet { width: auto; }
+  .own-table .own-owner { min-width: 9em; }
+  .own-table .own-next { min-width: 13em; }
+}

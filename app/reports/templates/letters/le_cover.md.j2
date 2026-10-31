@@ -1,0 +1,81 @@
+{# Cover letter to law enforcement (police / IC3). Context: see app.domain.correspondence._context_le_cover #}
+**Subject:** {{ subject }}
+
+Dear {{ salutation }},
+
+{% include "letters/_intro.md.j2" %}
+
+We write in connection with {% if own_reference %}your reference {{ own_reference | bold }}{% else %}the complaint filed by the victim{% endif %} to summarise the identifiers traced so far and where the funds sit, so that formal requests can be addressed to the services concerned.
+
+### 1. The fraud
+
+{% if fraud_date_fmt %}
+- Date: {{ fraud_date_fmt }}
+{% endif %}
+{% if loss_fmt %}
+- Loss: {{ loss_fmt }}{{ (' (approximately ' ~ loss_usd_fmt ~ ')') if loss_usd_fmt else '' }}
+{% endif %}
+{% if case.fraud_type %}
+- Type: {{ case.fraud_type }}{{ ('; impersonation of ' ~ facts.impersonated_entity) if facts.impersonated_entity else '' }}{{ (', persona "' ~ facts.persona ~ '"') if facts.persona else '' }}{{ (', via ' ~ facts.domains | join(', ')) if facts.domains else '' }}
+{% endif %}
+{% if origin.tx_hash %}
+- Origin transaction (from the victim's records): {{ origin.tx_hash | code }}{% if origin.victim_wallet %}, from {{ origin.victim_wallet | code }}{% endif %}{% if origin.first_recipient %} to {{ origin.first_recipient | code }}, the perpetrators' first-recipient wallet{% endif %}{{ (', ' ~ origin.timestamp | fmt_ts) if origin.timestamp else '' }}
+{% endif %}
+{% for c in other_complaints %}
+- Also reported to: {{ c.authority }}{% if c.reference %}, reference {{ c.reference | code }}{% endif %}{{ '' }}
+{% endfor %}
+
+### 2. Where the funds sit{{ (' (trace run #' ~ run_ref ~ ((', ' ~ run_date) if run_date else '') ~ ')') if run_ref else '' }}
+
+{% for s in services %}
+- **{{ s.name }}** ({{ s.type_label }}{% if s.jurisdiction %}, {{ s.jurisdiction }}{% endif %}): {{ s.amount or ('up to USD ' ~ s.taint_usd ~ ' traced (upper bound)') }}{% if s.suspected %}, reached only through links that are *asserted* and not yet observed on-chain{% endif %}. Our request: {{ s.status }}.
+{% for i in s.identifiers %}
+  - {{ i.address | code }}{{ (' (' ~ i.chain | title ~ ')') if i.chain else '' }}{{ (' — ' ~ i.label) if i.label else '' }}
+{% endfor %}
+{% if s.order_ids %}
+  - Swap order reference{{ 's' if s.order_ids | length > 1 else '' }}: {% for o in s.order_ids %}{{ o | code }}{{ ', ' if not loop.last else '' }}{% endfor %}{{ '' }}
+{% endif %}
+{% else %}
+- No service holding traced funds has been identified yet.
+{% endfor %}
+{% if in_play %}
+
+Counting each traced dollar once (where one service received the funds through another, they count once), the services above account for up to USD {{ in_play }}; every traced figure is an upper bound.
+{% endif %}
+{% if dormant %}
+
+Wallets that still held traced funds without observed onward movement in that run (no service behind them; a freeze needs the issuer or a court order):
+
+{% for w in dormant %}
+- {{ w.address | code }} ({{ w.chain | title }}), up to USD {{ w.taint_usd }}
+{% endfor %}
+{% endif %}
+
+{% if iocs %}
+### 3. Attacker infrastructure
+
+{% for line in iocs %}
+- {{ line | one_line }}
+{% endfor %}
+
+{% endif %}
+### {{ 4 if iocs else 3 }}. Request
+
+We respectfully ask you to consider formal preservation or freeze requests to the services listed above; several of them act only on law-enforcement process. We can supply the forensic report, transaction exports and copies of our correspondence with each service.
+
+Attached / to follow:
+
+- {{ sender.instrument }}
+- Forensic report on the fund flow{{ (' (Aegis trace #' ~ run_ref ~ ')') if run_ref else '' }}
+- Copies of the preservation requests sent and the replies received
+
+All on-chain data comes from passive observation of public blockchains and from the victim's own records; links marked *asserted* come from our analysis and are not yet observed on-chain.
+
+{% if extra_note %}
+{{ extra_note }}
+
+{% endif %}
+{% include "letters/_signature.md.j2" %}
+
+{% include "letters/_footer.md.j2" %}
+

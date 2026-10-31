@@ -1,0 +1,39 @@
+# Local development stack. Credentials come from .env (copy .env.example and replace every
+# CHANGE_ME); the only fallbacks are local-dev placeholders. Ports bind to 127.0.0.1 only.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: aegis-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aegis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-aegis}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - aegis-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    container_name: aegis-app
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aegis}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-aegis}
+      APP_ENV: ${APP_ENV:-local}
+    ports:
+      - "127.0.0.1:8000:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             python -m scripts.seed_case &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  aegis-pgdata:

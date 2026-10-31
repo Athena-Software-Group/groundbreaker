@@ -1,0 +1,41 @@
+{# The Send form of a prepared e-mail — owner: app/web/routes_mail.py. Included by mail_preview.html (the Send panel)
+   and mail_compose.html (the "Send now" confirmation). Context: case, mm, authority, confirm_rows, att_evidence,
+   ev_text, sender_check (one tick when it needs_ack; sender_help: what the sender of record is), visible_atts, n_restricted, default_due_days, bcc (meta.bcc: hidden
+   recipients). Posts to the one Send route (POST /cases/{id}/mail/messages/{mid}/send: case admins, CSRF) with
+   return_to (the guided flow: the "Sending…" screen, then back to that page; mail_flow.safe_return). While the Send
+   request is on its way js/mail.js shows the hourglass (#mail-send-wait). #}
+<form method="post" action="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/send" id="mail-send-form" data-mail-wait="mail-send-wait">
+  {{ csrf_field() }}
+  <input type="hidden" name="prepare_token" value="{{ mm.prepare_token }}">
+  <input type="hidden" name="return_to" value="{{ return_to or '' }}">
+  {% if confirm_rows %}
+  <div class="mail-confirm-group"><div class="mail-group-h">Unverified addresses</div>
+    {% for r in confirm_rows %}
+    <label class="auth-check mail-confirm-item"><input type="checkbox" name="confirm_unverified" value="{{ r.address }}" data-mail-confirm> <span>I confirmed <span class="mono">{{ r.address }}</span> is an intended {% if r.bcc %}hidden (Bcc) {% endif %}recipient of this letter to {{ r.org }} (source: {{ r.source }})</span></label>
+    {% endfor %}</div>
+  {% endif %}
+  {% set ev_atts = (mm.attachments or []) | selectattr('kind', 'equalto', 'evidence') | list %}
+  {% if ev_atts %}
+  <div class="mail-confirm-group"><div class="mail-group-h">Evidence attachments</div>
+    {% for a in ev_atts %}{% set item = att_evidence.get(a.evidence_id) %}{% if item %}
+    <label class="auth-check mail-confirm-item"><input type="checkbox" name="confirm_attachment" value="{{ a.evidence_id }}" data-mail-confirm> <span>{{ authority.name if authority else 'The recipient' }} may receive evidence #{{ a.evidence_id }}{% if item %} ({{ ev_text(item.title) }}){% endif %} as <span class="mono">{{ a.filename }}</span></span></label>
+    {% else %}<label class="auth-check mail-confirm-item"><input type="checkbox" name="confirm_attachment" value="{{ a.evidence_id }}" data-mail-confirm> <span>{{ authority.name if authority else 'The recipient' }} may receive 1 restricted attachment</span></label>{% endif %}
+    {% endfor %}</div>
+  {% endif %}
+  {% if sender_check and sender_check.needs_ack %}
+  <div class="mail-confirm-group mail-sender-ack"><div class="mail-group-h">Sender of record <span class="mail-help-tip" title="{{ sender_help }}">?</span></div>
+    <label class="auth-check mail-confirm-item"><input type="checkbox" name="ack_sender" value="1" data-mail-confirm> <span>Send it as it is: the letter is not signed as {{ sender_check.expected or 'the sender of record' }}, and it goes out from {{ mm.mailbox }}.</span></label>
+  </div>
+  {% endif %}
+  <label class="auth-check mail-confirm-item mail-confirm-all"><input type="checkbox" name="confirm_send" value="1" data-mail-confirm>
+    <span>Send to <b class="mono">{{ (mm.to_addrs or []) | join(', ') }}</b>{% if mm.cc_addrs %}, cc <b class="mono">{{ mm.cc_addrs | join(', ') }}</b>{% endif %}{% if bcc %}, bcc (hidden from the other recipients) <b class="mono">{{ bcc | join(', ') }}</b>{% endif %}
+    with {{ (mm.attachments or []) | length }} attachment{{ 's' if (mm.attachments or []) | length != 1 }}{% if visible_atts %} ({{ visible_atts | map(attribute='filename') | join(', ') }}{% if n_restricted %}, {{ n_restricted }} restricted{% endif %}){% elif n_restricted %} ({{ n_restricted }} restricted){% endif %}, from {{ mm.mailbox }}.</span></label>
+  <label>Reply expected within (days)</label><input type="number" name="due_days" min="0" max="365" value="{{ default_due_days }}">
+  <div style="margin-top:10px"><button class="btn primary" type="submit" id="mail-send-btn" data-sending="Sending…">Send e-mail</button></div>
+  <div class="muted mail-note">Sends once: a second click or tab does nothing. The message is filed as R3 evidence and the letter marked sent.</div>
+</form>
+<div class="mail-wait" id="mail-send-wait" hidden role="status" aria-live="polite">
+  <div class="mail-wait-box"><div class="mail-hourglass" aria-hidden="true"><span>⌛</span></div>
+    <div class="mail-wait-h">Sending…</div>
+    <div class="muted">Handing e-mail #{{ mm.id }} to the mailbox{% if mm.mailbox %} (<span class="mono">{{ mm.mailbox }}</span>){% endif %}. Keep this page open: it goes on by itself.</div></div>
+</div>

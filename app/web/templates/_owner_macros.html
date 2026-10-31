@@ -1,0 +1,11 @@
+{# Wallet owner badge (app.attribution.service Attribution.as_dict, or a recovery move's owner line: short, owner,
+   kind_label, confidence, source / source_label). Shown wherever a wallet is listed. #}
+{% macro badge(o, with_short=false) -%}
+{% if o %}<span class="own-badge {{ '' if o.owner and o.owner != 'unknown' else 'own-unknown' }}" title="who owns this wallet{% if o.source_label %} · source: {{ o.source_label }}{% endif %}">
+  {% if with_short %}<span class="mono">{{ o.short }}</span> →{% endif %} Owner: <b>{{ o.owner_label or o.owner or 'unknown' }}</b> · {{ o.kind_label }}
+  <span class="own-conf own-conf-{{ o.confidence }}" title="confidence: H high, M medium, L low">{{ o.confidence }}</span></span>{% endif %}
+{%- endmacro %}
+
+{% macro line(o) -%}
+{% if o %}<div class="own-line">{{ badge(o) }}{% if o.ask and o.ask.text %}<span class="muted">{{ o.ask.text }}</span>{% endif %}</div>{% endif %}
+{%- endmacro %}

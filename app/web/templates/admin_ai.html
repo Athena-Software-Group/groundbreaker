@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{# AI settings — owner: app/web/routes_admin_ai.py. Context: info (app.ai.providers.describe: never the token),
+   ready, unavailable, test_prompt, test (connection-test result or None), health (/models result or None). #}
+{% block title %}Aegis · AI settings{% endblock %}
+{% block content %}
+<div class="row case-head"><div><h1>AI settings</h1><div class="sub">System administration · case assistant model access
+  · <a href="/admin/users">users</a> · <a href="/admin/audit">global audit log</a></div></div></div>
+
+{% if info.kill_switch %}<div class="alert warning">Kill switch <b>AEGIS_AI_DISABLED</b> is on: every summary and answer is rule-based.</div>
+{% elif not ready %}<div class="alert info">{{ unavailable }} Summaries and answers are rule-based.</div>{% endif %}
+
+<div class="grid cols-2">
+<div class="panel" id="ai-config">
+  <h2>Configuration <small>read-only; set through the environment (README "Case assistant")</small></h2>
+  <div class="table-scroll">
+  <table>
+    <tbody>
+      <tr><th>Provider</th><td><span class="mono">{{ info.provider }}</span> <span class="muted">AEGIS_LLM_PROVIDER</span></td></tr>
+      <tr><th>Data path</th><td>Aegis → {{ info.label }}</td></tr>
+      <tr><th>Base URL host</th><td>{% if info.base_url_host %}<span class="mono">{{ info.base_url_host }}</span>{% else %}—{% endif %}
+        {% if info.host_allowed %}<span class="tag green">allowed</span>{% else %}<span class="tag red">refused</span> <span class="muted">{{ info.host_error }}</span>{% endif %}
+        {% if info.allow_any_host %}<span class="tag amber">AEGIS_LLM_ALLOW_ANY_HOST</span>{% endif %}</td></tr>
+      <tr><th>Configured model</th><td>{% if info.model %}<span class="mono">{{ info.model }}</span>{% else %}—{% endif %} <span class="muted">AEGIS_LLM_MODEL</span></td></tr>
+      <tr><th>Bill-to organisation</th><td>{% if info.bill_to %}<span class="mono">{{ info.bill_to }}</span>{% else %}— <span class="muted">(the token owner's account)</span>{% endif %} <span class="muted">AEGIS_HF_BILL_TO</span></td></tr>
+      <tr><th>Token configured</th><td>{% if info.token_configured %}<span class="tag green">yes</span>{% if info.token_source %} <span class="muted">from {{ info.token_source }}</span>{% endif %}{% else %}<span class="tag amber">no</span>{% endif %}</td></tr>
+      <tr><th>Kill switch</th><td>{% if info.kill_switch %}<span class="tag red">on</span>{% else %}<span class="tag">off</span>{% endif %} <span class="muted">AEGIS_AI_DISABLED</span></td></tr>
+      <tr><th>Limits</th><td>timeout {{ info.timeout | int }} s · max_tokens {{ info.max_tokens }} (+ reasoning headroom)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  {% if info.third_party %}<p class="muted">The Hugging Face router forwards requests to a third-party inference provider (pinned by the model id's suffix). Cases stay in <b>redacted</b> mode by default; <b>full</b> mode needs an explicit confirmation per case. For strict privacy use a dedicated Inference Endpoint (<span class="mono">AEGIS_LLM_PROVIDER=hf_endpoint</span>).</p>{% endif %}
+</div>
+
+<div class="panel" id="ai-test">
+  <h2>Test connection <small>sends a fixed, non-case prompt</small></h2>
+  <p class="muted">Prompt: <span class="mono">{{ test_prompt }}</span></p>
+  <div class="row">
+    <form method="post" action="/admin/ai/test" class="inline">{{ csrf_field() }}<button class="btn small primary" type="submit" {{ '' if ready else 'disabled' }}>Test connection</button></form>
+    <form method="post" action="/admin/ai/health" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" {{ '' if ready else 'disabled' }}>Health check (/models)</button></form>
+  </div>
+  {% if test %}
+  <div class="panel tight" id="ai-test-result">
+    {% if test.ok %}
+      <div><span class="tag green">OK</span> reply: <span class="mono">{{ test.reply }}</span></div>
+      <div>Served model: <span class="mono">{{ test.served_model or '—' }}</span></div>
+      <div>Latency: {{ test.latency_ms }} ms{% if test.attempts and test.attempts > 1 %} ({{ test.attempts }} attempts){% endif %}</div>
+      <div>Tokens: {{ test.usage.input_tokens or '—' }} in / {{ test.usage.output_tokens or '—' }} out
+        · cost: {% if test.usage.estimated_cost is not none %}${{ '%.6f' | format(test.usage.estimated_cost) }}{% else %}not reported{% endif %}</div>
+    {% else %}
+      <div><span class="tag red">failed</span> {{ test.error }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% if health %}
+  <div class="panel tight" id="ai-health-result">
+    {% if health.ok %}
+      <div>Model <span class="mono">{{ health.model_id }}</span>:
+        {% if health.listed %}<span class="tag green">listed</span>{% else %}<span class="tag red">not listed</span>{% endif %}
+        <span class="muted">({{ health.models_count }} models, {{ health.latency_ms }} ms)</span></div>
+      {% if health.pinned_provider %}<div>Pinned provider <span class="mono">{{ health.pinned_provider }}</span>:
+        {% if health.pinned_provider_listed %}<span class="tag green">serves it</span>{% else %}<span class="tag red">not among the providers</span>{% endif %}</div>{% endif %}
+      {% if health.providers %}<div>Served by: {% for p in health.providers %}<span class="tag {{ 'green' if p.status == 'live' else '' }}">{{ p.provider }}{% if p.status %} · {{ p.status }}{% endif %}</span> {% endfor %}</div>{% endif %}
+    {% else %}
+      <div><span class="tag red">failed</span> {{ health.error }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

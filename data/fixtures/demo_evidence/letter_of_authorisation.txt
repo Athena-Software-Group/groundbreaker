@@ -1,0 +1,17 @@
+SYNTHETIC DEMO ARTIFACT - fictional letter of authorisation (case DEMO-2026-001). Not a real document.
+
+LETTER OF AUTHORISATION
+
+Northbridge Analytics, Inc. (the Client), represented by its CEO, Jordan Avery, authorises
+Athena Software Group, Inc. to act on the Client's behalf in the matter of the cryptocurrency
+fraud of 12 October 2026 (loss of 399,247.92 USDC), and in particular to:
+
+- contact virtual-asset service providers, stablecoin issuers, infrastructure providers and
+  law-enforcement agencies about the matter;
+- request the preservation of records and a hold on assets linked to the fraud;
+- receive correspondence about the matter and share it with the Client.
+
+This authorisation does not include the right to receive funds on the Client's behalf.
+
+Signed for the Client: Jordan Avery, CEO (synthetic signature)
+Date: 2026-10-16

@@ -1,0 +1,51 @@
+/* team feature styles — owned by the team feature (app/web/routes_team.py). Linked from base.html on every page.
+   Also styles the notifications tab / inbox and the audit log (same owner). */
+
+/* header inbox badge (js/team.js inserts #nav-inbox when base.html has none) */
+.badge { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--danger); color: #fff;
+  font-size: var(--fs-xs); line-height: 18px; text-align: center; font-weight: 600; vertical-align: middle; }
+.badge[hidden] { display: none; }
+
+/* team tab */
+.team-table td { vertical-align: middle; }
+.team-member-form { display: inline-flex; gap: 6px; align-items: center; }
+.team-member-form select, .team-member-form input { width: auto; padding: 4px 6px; font-size: var(--fs-sm); }
+.team-expired td { opacity: .6; }
+#team-add { margin-top: 14px; }
+.team-add { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; }
+.small-print { font-size: var(--fs-sm); margin: 8px 0; }
+.otp-panel { border-color: var(--accent); margin-bottom: 14px; }
+.otp { font-size: var(--fs-lg-up); padding: 6px 10px; background: var(--bg); border: 1px dashed var(--accent); border-radius: 6px; user-select: all; }
+.table-scroll { overflow-x: auto; }
+
+/* user administration */
+.team-admin { grid-template-columns: minmax(240px, 1fr) 3fr; }
+.team-user-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.team-user-actions input[name="display_name"] { width: 160px; padding: 4px 6px; font-size: var(--fs-sm); }
+label.check { display: inline-flex; gap: 4px; align-items: center; text-transform: none; letter-spacing: 0; font-size: var(--fs-sm);
+  color: var(--text); margin: 0 8px 0 0; }
+label.check input { width: auto; }
+
+/* notifications tab + inbox */
+.notify-item.is-unread { box-shadow: inset 2px 0 0 var(--accent); }
+.notify-item.is-read { opacity: .72; }
+.notify-body { margin: 4px 0; font-size: var(--fs-md); overflow-wrap: anywhere; }
+.notify-meta { font-size: var(--fs-sm); margin-top: 4px; }
+.rule-card { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: var(--panel-2); }
+.rule-card.is-off { opacity: .7; }
+.rule-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; margin-top: 6px; }
+.rule-fields fieldset { border: 0; padding: 0; margin: 0; }
+.rule-fields legend { color: var(--muted); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; margin: 10px 0 4px; }
+
+/* audit log */
+.audit-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; align-items: end; margin-bottom: 14px; }
+.audit-filter-buttons { display: flex; gap: 6px; }
+.audit-table td { font-size: var(--fs-sm-up); }
+.audit-detail span { display: inline-block; margin-right: 6px; overflow-wrap: anywhere; }
+.audit-denied td { background: rgba(255, 92, 92, .06); }
+.audit-pages { margin-top: 10px; }
+
+@media (max-width: 760px) {
+  .team-admin, .notify-grid { grid-template-columns: 1fr; }
+  .team-member-form { flex-wrap: wrap; }
+}

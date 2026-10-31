@@ -1,0 +1,55 @@
+{# Information / preservation request without a freeze. Context: see app.domain.correspondence._context_info_request #}
+**Subject:** {{ subject }}
+
+Dear {{ salutation }},
+
+{% include "letters/_intro.md.j2" %}
+
+{% if freeze %}
+{% if follow_up %}Further to our letter of {{ follow_up.date_fmt }}{{ (' (your reference ' ~ (follow_up.external_ref | one_line) ~ ')') if follow_up.external_ref else '' }}: we have learned of a **new deposit** at {{ entity_name }}. {% endif %}The proceeds of the fraud described here were moved on to the deposit address {{ freeze.address | code }}{{ (' (' ~ freeze.chain | title ~ ')') if freeze.chain else '' }}, which we understand to be held at {{ entity_name }}. **We urgently ask you to freeze the account it credits** at once, pending formal process, and to preserve its records: the funds can be withdrawn again at any moment.
+
+{% elif non_custodial %}
+We understand that {{ entity_name }} is a non-custodial protocol: it does not hold user funds and cannot freeze or reverse transactions. **We are not asking for a freeze.** We ask only for information that may help identify the persons behind the transactions below, where your organisation holds any.
+{% else %}
+In the course of our investigation we identified the items below in connection with {{ entity_name }}. We ask you to **preserve** the related records and, where your policies and the applicable law permit, to provide the information requested below, or to tell us which legal process you require to do so.
+{% endif %}
+
+{% set n = namespace(i=0) %}
+{% if iocs %}
+{% set n.i = n.i + 1 %}
+### {{ n.i }}. Resources linked to your service
+
+{% for line in iocs %}
+- {{ line | one_line }}
+{% endfor %}
+
+{% endif %}
+{% if identifiers %}
+{% set n.i = n.i + 1 %}
+### {{ n.i }}. On-chain identifiers
+
+{% include "letters/_identifiers.md.j2" %}
+
+{% endif %}
+{% set n.i = n.i + 1 %}
+### {{ n.i }}. Information requested
+
+{% for line in records %}
+- {{ line }}
+{% endfor %}
+- Any linked accounts sharing the same identity, device, IP, phone, e-mail or payment details.
+
+Please preserve these records for at least 180 days or until legal process is received, and do **not notify** the account holder.
+
+{% include "letters/_complaints.md.j2" %}
+
+We are a private party and cannot compel disclosure; any disclosure should follow your legal process. A formal request through the competent authorities can follow. All on-chain data above comes from passive observation of public blockchains and from the victim's own records.
+
+{% if extra_note %}
+{{ extra_note }}
+
+{% endif %}
+{% include "letters/_signature.md.j2" %}
+
+{% include "letters/_footer.md.j2" %}
+

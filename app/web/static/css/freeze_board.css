@@ -1,0 +1,42 @@
+/* Freeze & stop-order actions (app/blocks/freeze_board.py; the Authorities tab, owner app/web/routes_authorities.py).
+   Uses the aegis.css tokens and the blocks.css status badges (bk-<tone>). */
+.fb h2 { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.fb h2 small { flex: 1 1 260px; }
+.fb-generate { margin-left: auto; }
+.fb-flash ul { margin: 4px 0 0; padding-left: 18px; }
+.fb-group { margin: 14px 0 6px; font-size: var(--fs-md, 1rem); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.fb-group span { font-weight: 400; font-size: var(--fs-xs); }
+.fb-g-act { color: var(--warn); }
+.fb-g-secured { color: var(--ok); }
+.fb-g-le { color: #c9adff; }
+.fb-table { width: 100%; }
+.fb-table td { vertical-align: top; }
+.fb-table tr.fb-act td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+.fb-table tr.fb-secured td:first-child { box-shadow: inset 3px 0 0 var(--ok); }
+.fb-table tr:target td { background: rgba(201, 162, 39, .08); }
+.fb-who { min-width: 170px; max-width: 260px; }
+.fb-sub, .fb-req, .fb-detail, .fb-oc, .fb-ident, .fb-owner { font-size: var(--fs-xs); }
+.fb-owner { overflow-wrap: anywhere; }
+.fb-detail { margin-top: 3px; font-weight: 600; overflow-wrap: anywhere; }
+.fb-money { min-width: 130px; white-space: nowrap; }
+.fb-money .fb-oc { white-space: normal; }
+.fb-status { min-width: 140px; max-width: 210px; }
+.fb-next { min-width: 240px; max-width: 420px; }
+.fb-next .btn { margin: 0 0 4px; white-space: nowrap; }
+.fb-text { font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.fb-extra { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+.fb-dup { margin: 6px 0 0; font-size: var(--fs-sm); padding: 6px 8px; }
+.fb-dup form { margin-left: 6px; }
+.fb-ok { color: var(--ok); }
+.fb-details summary { cursor: pointer; color: var(--accent-2); font-size: var(--fs-xs); margin-top: 4px; }
+.fb-details > div { margin-top: 3px; font-size: var(--fs-xs-up); overflow-wrap: anywhere; }
+.fb-earlier-head { margin-top: 6px; }
+.so-earlier summary { cursor: pointer; color: var(--muted); font-size: var(--fs-xs); margin-top: 3px; }
+.so-earlier div { font-size: var(--fs-xs); }
+.fb-more summary { cursor: pointer; color: var(--accent-2); font-size: var(--fs-xs); }
+.fb-more { font-size: var(--fs-xs-up); }
+.fb-g-claim { color: var(--ok); }
+.fb-table tr.fb-claim td:first-child { box-shadow: inset 3px 0 0 var(--ok); }
+.fb-records { margin-top: 6px; }
+.fb-records > summary { cursor: pointer; color: var(--accent-2); font-size: var(--fs-sm); margin: 4px 0; }
+.so-dup { white-space: nowrap; }

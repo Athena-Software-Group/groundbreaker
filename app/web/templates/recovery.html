@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{# Recovery plan page — owner: app/web/routes_recovery.py (recovery_page). Context: case, access, v (app.blocks.recovery
+   .view: moves, waiting, secured, done, totals (in play, replies_overdue, unknown_owner, …), run, requester /
+   requester_label, notes, generated_fmt, can_waive, can_pack),
+   can_refresh (investigators+), done (flash). The "Who owns these wallets" panel (#owners): v.owners / owners_other
+   (app.attribution rows), v.owner_lookups (consent status, hosts), can_mark / can_lookup / can_manage_lookups. #}
+{% block title %}Aegis · Recovery plan · {{ case.reference }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/blocks.css"><link rel="stylesheet" href="/static/css/recovery.css">{% endblock %}
+{% import "_owner_macros.html" as own %}
+{% macro action(a) %}{% if a.post %}<form method="post" action="{{ a.post }}" class="inline">{{ csrf_field() }}
+  {% for k, val in a.fields.items() %}{% if val is iterable and val is not string %}{% for x in val %}<input type="hidden" name="{{ k }}" value="{{ x }}">{% endfor %}{% else %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endif %}{% endfor %}
+  <button class="btn small {{ 'primary' if a.primary }}" type="submit">{{ a.label }}</button></form>{% else %}<a class="btn small {{ 'primary' if a.primary }}" href="{{ a.href | mail_return }}">{{ a.label }}</a>{% endif %}{% endmacro %}
+{% macro evidence(m) %}{% set c = m.evidence_counts %}
+  {% if m.evidence %}<details class="rp-evidence" {{ 'open' if c.open and m.rank and m.rank <= 3 }}>
+    <summary>Evidence for this move: <b>{{ c.have + c.letter + c.waived }}</b> ready{% if c.open %} · <span class="bk-hot">{{ c.open }} to obtain</span>{% endif %}</summary>
+    <table class="rp-ev-table"><tbody>
+    {% for e in m.evidence %}<tr class="rp-ev-{{ e.state }}">
+      <td class="nowrap"><span class="rp-state rp-state-{{ e.state }}">{{ e.state_label }}</span></td>
+      <td><b>{{ e.label }}</b>{% if e.source %} <span class="muted">· {{ e.source }}</span>{% endif %}{% if e.how %} <span class="muted">· {{ e.how }}</span>{% endif %}
+        {% if e.waiver %}<div class="muted bk-small">waived {{ (e.waiver.at or '')[:10] }}: {{ e.waiver.reason }}</div>{% endif %}</td>
+      <td class="right">{% if v.can_waive and e.state in ('missing', 'le', 'unusable') %}<form method="post" action="/cases/{{ case.id }}/recovery-plan/waive" class="rp-waive">{{ csrf_field() }}
+          <input type="hidden" name="key" value="{{ e.key }}"><input type="hidden" name="move" value="{{ m.key }}">
+          <input name="reason" placeholder="why it is not needed" maxlength="300" required aria-label="waiver reason"><button class="btn small" type="submit">Waive</button></form>
+        {% if not e.instrument and e.key not in ('balance_reading', 'freeze_check', 'tx_list_copyable', 'receiving_account', 'provider_ids', 'prior_ticket_ref', 'incident_narrative') %}<form method="post" action="/cases/{{ case.id }}/recovery-plan/use-evidence" class="rp-waive">{{ csrf_field() }}
+          <input type="hidden" name="key" value="{{ e.key }}"><input type="hidden" name="move" value="{{ m.key }}">
+          <input name="evidence_id" inputmode="numeric" pattern="#?[0-9]{1,12}" size="5" placeholder="#N" required aria-label="evidence item number"><button class="btn small" type="submit" title="tags the item with this requirement (audited)">Use evidence</button></form>{% endif %}
+        {% elif v.can_waive and e.matched and e.ids and not e.instrument %}<form method="post" action="/cases/{{ case.id }}/recovery-plan/use-evidence" class="inline">{{ csrf_field() }}
+          <input type="hidden" name="key" value="{{ e.key }}"><input type="hidden" name="move" value="{{ m.key }}"><input type="hidden" name="evidence_id" value="{{ e.ids[0] }}"><button class="btn small" type="submit" title="tags the item with this requirement (audited)">Use evidence #{{ e.ids[0] }} for {{ e.label }}</button></form>
+        {% elif v.can_waive and e.state == 'waived' %}<form method="post" action="/cases/{{ case.id }}/recovery-plan/waive" class="inline">{{ csrf_field() }}
+          <input type="hidden" name="key" value="{{ e.key }}"><input type="hidden" name="move" value="{{ m.key }}"><input type="hidden" name="undo" value="1"><button class="btn small" type="submit">Undo waiver</button></form>{% endif %}</td>
+    </tr>{% endfor %}
+    </tbody></table>
+  </details>{% endif %}{% endmacro %}
+{% block content %}
+<div class="row case-head bk-head">
+  <div><h1>Recovery plan</h1>
+    <div class="sub"><a href="/cases/{{ case.id }}">← {{ case.reference }} · Overview</a> · the moves that trap the most money fastest, best first — rebuilt from the case every time this page loads</div></div>
+  <div class="spacer"></div>
+  <div class="bk-head-actions">
+    {% if can_refresh %}<form method="post" action="/cases/{{ case.id }}/blocks/refresh" class="inline">{{ csrf_field() }}<input type="hidden" name="next" value="/cases/{{ case.id }}/recovery-plan">
+      <button class="btn small" type="submit" title="classify new replies (rules; AI when the case allows it), then rebuild the plan">⟳ Read new replies</button></form>{% endif %}
+  </div>
+</div>
+{% include "case/_tabs_nav.html" %}
+<section class="case-tab-panel" id="tab-recovery" data-case-id="{{ case.id }}">
+{% include "_plan_subnav.html" %}
+
+{% if done %}<div class="alert info" role="status">{{ done }}</div>{% endif %}
+{% for n in v.notes %}<div class="alert warning">{{ n }}</div>{% endfor %}
+
+{% set t = v.totals %}
+<div class="panel bk-summary">
+  <div class="bk-kpis">
+    <div class="bk-kpi"><b>{{ '$' ~ '{:,.0f}'.format(t.in_play_usd) }}</b><span>in play across the moves, each traced dollar once (traced values are upper bounds{{ '; capped at the traced loss' if t.in_play_capped }}{% if t.untraced_usd %}; incl. {{ '$' ~ '{:,.0f}'.format(t.untraced_usd) }} untraced finds{% endif %})</span></div>
+    <div class="bk-kpi"><b>{{ '$' ~ '{:,.0f}'.format(t.expected_usd) }}</b><span>expected (value × likelihood)</span></div>
+    <div class="bk-kpi {{ 'bk-kpi-hot' if t.untouched }}"><b>{{ '$' ~ '{:,.0f}'.format(t.untouched_usd) }}</b><span>not asked yet ({{ t.untouched }} target{{ 's' if t.untouched != 1 }})</span></div>
+    <div class="bk-kpi bk-kpi-ok"><b>{{ '$' ~ '{:,.0f}'.format(t.secured_usd) if t.secured_usd else '—' }}</b><span>secured (frozen on-chain / held, confirmed by a person)</span></div>
+    <div class="bk-kpi"><b>{{ t.moves }}</b><span>moves to make · {{ t.waiting }} waiting on others</span></div>
+    {% set uo = t.unknown_owner %}{% set n_unknown = v.owners | selectattr('owner', 'none') | list | length %}
+    <div class="bk-kpi {{ 'bk-kpi-hot' if uo and uo.usd }}"><b><a href="#owners">{{ '$' ~ '{:,.0f}'.format(uo.usd) if uo and uo.usd else '—' }}</a></b><span>owner unknown{% if uo and uo.n %}: {{ uo.n }} wallet{{ 's' if uo.n != 1 }} holding {{ '$' ~ '{:,.0f}'.format(uo.threshold_usd) }} or more{% endif %} ({{ n_unknown }} of {{ v.owners | length }} wallets with money have no known owner)</span></div>
+    <div class="bk-kpi {{ 'bk-kpi-hot' if t.next_clock or t.replies_overdue }}">{% if t.next_clock %}<b class="rp-clock-kpi">{{ t.next_clock.due_fmt }}</b><span>{{ t.next_clock.label }}{% if t.replies_overdue %} · {{ t.replies_overdue }} repl{{ 'y' if t.replies_overdue == 1 else 'ies' }} overdue{% endif %}</span>
+      {% elif t.replies_overdue %}<b class="rp-clock-kpi">{{ t.replies_overdue }} overdue</b><span>repl{{ 'y' if t.replies_overdue == 1 else 'ies' }} past due: their clock ran out, chase {{ 'it' if t.replies_overdue == 1 else 'them' }} (the moves below)</span>
+      {% else %}<b class="rp-clock-kpi">—</b><span>no clock running</span>{% endif %}</div>
+  </div>
+  <div class="muted bk-small">Built {{ v.generated_fmt }}{% if v.run %} from trace run #{{ v.run.id }}{% if v.run.label %} ({{ v.run.label }}){% endif %}{% else %} without a trace run{% endif %} · letters from us count as <b>{{ v.requester_label }}</b> in the providers' playbooks · <a href="#method">how moves are ranked</a></div>
+</div>
+
+<div class="panel" id="moves">
+  <h2>Moves, best first <small>{{ v.moves | length }}</small></h2>
+  {% if v.moves %}
+  <ol class="rp-moves">
+  {% for m in v.moves %}
+    <li class="rp-move {{ 'rp-hot' if m.clock and (m.clock.passed or m.urgency >= 2) }}" id="m-{{ m.key }}">
+      <div class="rp-rank">{{ m.rank }}</div>
+      <div class="rp-body">
+        <div class="rp-title"><b>{{ m.title }}</b>
+          <span class="tag">{{ m.kind_label }}</span>
+          {% if m.untouched %}<span class="tag amber">not asked yet</span>{% endif %}
+          {% if m.status_text %}<span class="bk-badge bk-{{ m.status_tone }}"{% if m.step_label %} title="in the provider's process: {{ m.step_label }}"{% endif %}>{{ m.status_text }}</span>{% elif m.step_label %}<span class="tag blue">{{ m.step_label }}</span>{% endif %}
+          {% if m.route == 'cross_border' and m.kind != 'cross_border' %}<span class="tag amber">cross-border</span>{% endif %}
+          {% if m.clock %}<span class="tag {{ 'red' if m.clock.passed or m.urgency >= 2 else 'amber' }}">{{ m.clock.label }} {{ m.clock.due_fmt }}</span>{% endif %}</div>
+        {% if m.owners %}<div class="own-line">{% for o in m.owners %}{{ own.badge(o, true) }}{% endfor %}</div>{% endif %}
+        <div class="rp-reason">{{ m.reason }}</div>
+        {% if m.text %}<div class="rp-text">{{ m.text }}</div>{% endif %}
+        {% if m.related_line %}<div class="muted bk-small">Also: {{ m.related_line | join(', ') }}</div>{% endif %}
+        <div class="rp-metrics muted bk-small">
+          at stake <b>{{ m.value_fmt }}</b> · <a href="#method" class="rp-rank-why" title="urgency ×{{ m.urgency }} · likelihood {{ m.likelihood_pct }}% · effort {{ m.effort }} · score {{ '{:,.0f}'.format(m.score) }} (score = value × urgency × likelihood ÷ effort)">why this rank</a></div>
+        {{ evidence(m) }}
+        {% if m.actions %}<div class="rp-actions">{% for a in m.actions %}{{ action(a) }}{% endfor %}</div>{% endif %}
+      </div>
+    </li>
+  {% endfor %}
+  </ol>
+  {% else %}<p class="muted">No move to make now: every target is waiting on someone else (below), secured or closed.</p>{% endif %}
+</div>
+
+{# one wallet: the money compact (the figure, a one-word basis; the full basis in the tooltip and under details), the
+   owner with its evidence behind details, and the next step (most of the width) with its button #}
+{% macro owner_row(o) %}{% set other_money = o.money_usd and o.money_usd != o.share_usd %}<tr id="own-{{ o.chain }}-{{ o.address }}">
+      <td class="own-wallet"><span class="tag">{{ o.chain }}</span> <span class="mono" title="{{ o.address }}">{{ o.short }}</span>{% if o.label %}<div class="muted bk-small">{{ o.label }}</div>{% endif %}</td>
+      <td class="own-money" title="{{ ('$' ~ '{:,.0f}'.format(o.share_usd) ~ ': ') if o.share_usd }}{{ o.share_basis }}{% if other_money %} · {{ '$' ~ '{:,.0f}'.format(o.money_usd) }} {{ o.money_basis }}{% endif %}"><b>{{ o.share_usd | usd_short if o.share_usd else '—' }}</b>{% if o.share_tag %} <span class="own-basis">{{ o.share_tag }}</span>{% endif %}</td>
+      <td class="own-owner">{{ own.badge(o) }}
+        <details class="own-details"><summary class="bk-small">details{% if o.lines %} ({{ o.lines | length }}){% endif %}</summary>
+          <div class="bk-small"><b>Money:</b> {{ '$' ~ '{:,.0f}'.format(o.share_usd) if o.share_usd else '—' }} · {{ o.share_basis }}{% if other_money %}<br>{{ '$' ~ '{:,.0f}'.format(o.money_usd) }} {{ o.money_basis }}{% endif %}</div>
+          <div class="muted bk-small"><b>Source:</b> {{ o.source_label }}{% if o.looked_up_at %} · looked up {{ o.looked_up_at[:10] }}{% endif %}</div>
+          {% if o.lines %}<ul class="own-lines">{% for l in o.lines %}<li>{{ l }}</li>{% endfor %}</ul>{% endif %}</details></td>
+      <td class="own-next">{% if o.step and o.step.button %}<a class="btn small" href="{{ o.ask.href | mail_return('owners') }}">{{ o.step.button }}</a> {% endif %}<span class="bk-small">{{ o.step.lead if o.step else o.ask.text }}</span>{% if o.ask.gated %} <span class="tag amber">LE only</span>{% endif %}</td>
+      <td class="own-mark">{% if v.can_mark %}<details><summary class="bk-small">{{ 'Change' if o.manual else 'Mark owner' }}</summary>
+        <form method="post" action="/cases/{{ case.id }}/owners/mark" class="own-form">{{ csrf_field() }}
+          <input type="hidden" name="chain" value="{{ o.chain }}"><input type="hidden" name="address" value="{{ o.address }}">
+          <input name="owner" maxlength="255" placeholder="owned by (entity)" value="{{ o.owner if o.manual and o.owner else '' }}" aria-label="owner">
+          <select name="kind" aria-label="kind">{% for k, lbl in v.owner_kinds.items() %}<option value="{{ k }}" {{ 'selected' if k == o.kind }}>{{ lbl }}</option>{% endfor %}</select>
+          <input name="note" maxlength="1000" placeholder="note (source, why)" aria-label="note">
+          <button class="btn small" type="submit" title="a person's attribution wins over every other source (audited)">Save</button></form>
+        {% if o.manual %}<form method="post" action="/cases/{{ case.id }}/owners/mark" class="inline">{{ csrf_field() }}
+          <input type="hidden" name="chain" value="{{ o.chain }}"><input type="hidden" name="address" value="{{ o.address }}"><input type="hidden" name="clear" value="1">
+          <button class="btn small" type="submit">Withdraw my attribution</button></form>{% endif %}</details>{% endif %}</td>
+    </tr>{% endmacro %}
+{% set ol = v.owner_lookups %}
+<div class="panel" id="owners">
+  <div class="row"><h2>Who owns these wallets <small>{{ v.owners | length }} with money · owner, kind, confidence (H / M / L) and the next step; the evidence under details</small></h2>
+    <div class="spacer"></div>
+    {% if v.can_lookup and ol.enabled and not ol.consent_outdated and not ol.deployment_disabled %}<form method="post" action="/cases/{{ case.id }}/owners/lookup" class="inline">{{ csrf_field() }}
+      <input type="hidden" name="next" value="/cases/{{ case.id }}/recovery-plan">
+      <button class="btn small" type="submit" title="sends the wallet addresses to the public explorers listed below (audited)">⟳ Run the owner lookups now</button></form>{% endif %}</div>
+  {% if v.owners %}
+  <div class="table-wrap"><table class="bk-table own-table">
+    <thead><tr><th class="own-wallet">Wallet</th><th class="own-money" title="the case's money at the wallet; hover a figure (or open details) for what it rests on">Money</th><th class="own-owner">Owner</th><th class="own-next">Next step</th><th class="own-mark"></th></tr></thead>
+    <tbody>{% for o in v.owners %}{{ owner_row(o) }}{% endfor %}</tbody></table></div>
+  {% else %}<p class="muted">No wallet of the case holds money now (on-chain or traced).</p>{% endif %}
+  {% if v.owners_other %}<details><summary class="bk-small">{{ v.owners_other | length }} more wallet{{ 's' if v.owners_other | length != 1 }} the funds passed through</summary>
+    <div class="table-wrap"><table class="bk-table own-table"><tbody>{% for o in v.owners_other %}{{ owner_row(o) }}{% endfor %}</tbody></table></div></details>{% endif %}
+  <p class="muted bk-small">Sources: a person's attribution (always wins), the trace's entity map, the catalogue (the providers' own published wallets, the issuers' contracts), public explorer tags (with the case's consent) and the behaviour profile (balance vs what was traced in, activity, the forwarding pattern). Advisory: a person decides.</p>
+  <div id="owner-lookups" class="bk-small">
+    <b>Owner lookups</b> (public explorer tags): {% if ol.deployment_disabled %}switched off for this deployment (AEGIS_OWNER_LOOKUPS_DISABLED){% elif ol.enabled and ol.consent_outdated %}endpoints changed: a case admin must re-confirm ({{ ol.consent_outdated | join(', ') }}){% elif ol.enabled %}on for this case · consented endpoints {{ ol.consent_hosts | join(', ') }}{% if ol.last_run %} · last run {{ ol.last_run.at[:16] | replace('T', ' ') }} UTC ({{ ol.last_run.looked_up }} looked up, {{ ol.last_run.tagged }} tagged, {{ ol.last_run.errors }} failed){% endif %}{% else %}off for this case: nothing is sent{% endif %}.
+    <details {{ 'open' if not ol.enabled and v.can_manage_lookups }}><summary>What each endpoint receives</summary>
+      <table class="bk-table"><tbody>{% for r in ol.plan %}<tr><td><code>{{ r.host }}</code>{% if r.auth %} <span class="muted">({{ r.auth }})</span>{% endif %}</td><td>{{ r.chains }}</td><td>{{ r.sends }}{% if r.note %} <span class="muted">· {{ r.note }}</span>{% endif %}</td></tr>{% endfor %}</tbody></table>
+      {% if v.can_manage_lookups and not ol.deployment_disabled %}
+      <form method="post" action="/cases/{{ case.id }}/owners/settings">{{ csrf_field() }}
+        {% if ol.enabled and not ol.consent_outdated %}<input type="hidden" name="enabled" value=""><button class="btn small danger" type="submit">Turn owner lookups off</button>
+        {% else %}<input type="hidden" name="enabled" value="1"><input type="hidden" name="hosts" value="{{ ol.plan | selectattr('configured') | map(attribute='host') | select | unique | sort | join(',') }}">
+        <label class="fz-consent"><input type="checkbox" name="consent" value="1" required>
+          <span>I confirm, as case admin, that this case's wallet addresses may be sent to the public explorers listed above to read their public tags. The decision is recorded in the audit log.</span></label>
+        <button class="btn small primary" type="submit">{{ 'Confirm the new endpoints' if ol.enabled else 'Turn owner lookups on' }}</button>{% endif %}
+      </form>{% elif not v.can_manage_lookups %}<p class="muted">A case admin turns owner lookups on or off.</p>{% endif %}
+    </details>
+  </div>
+</div>
+
+{% if v.waiting %}
+<div class="panel" id="waiting">
+  <h2>Waiting on others <small>{{ v.waiting | length }} · the clock each runs on</small></h2>
+  <div class="table-wrap"><table class="bk-table">
+    <thead><tr><th>Target</th><th>Where it stands</th><th>Clock</th><th>At stake</th><th>Next</th></tr></thead>
+    <tbody>
+    {% for m in v.waiting %}<tr id="m-{{ m.key }}">
+      <td>{% if m.authority %}<a href="/cases/{{ case.id }}/authorities/{{ m.authority.key }}"><b>{{ m.authority.name }}</b></a>{% endif %}
+        {% for o in m.owners %}<div>{{ own.badge(o, true) }}</div>{% endfor %}</td>
+      <td>{% if m.status_text %}<span class="bk-badge bk-{{ m.status_tone }}"{% if m.step_label %} title="in the provider's process: {{ m.step_label }}"{% endif %}>{{ m.status_text }}</span> {% elif m.step_label %}<span class="tag blue">{{ m.step_label }}</span> {% endif %}<span class="muted bk-small">{{ m.reason }}</span></td>
+      <td class="nowrap">{% if m.clock %}<span class="tag {{ 'red' if m.clock.passed else 'amber' }}">{{ m.clock.label }}</span><br><span class="bk-small">{{ m.clock.due_fmt }}</span>{% else %}—{% endif %}</td>
+      <td class="nowrap">{{ m.value_fmt }}</td>
+      <td class="bk-small">{% if m.href %}<a href="{{ m.href }}">{{ m.text }}</a>{% else %}{{ m.text }}{% endif %}{{ evidence(m) }}</td>
+    </tr>{% endfor %}
+    </tbody></table></div>
+</div>
+{% endif %}
+
+{% if v.secured or v.done %}
+<div class="panel" id="secured">
+  <h2>Secured and closed</h2>
+  {% for s in v.secured %}<div class="ov-step"><span class="tag green">secured</span> <b>{{ s.authority }}</b>: {{ s.text }}</div>{% endfor %}
+  {% for d in v.done %}<div class="ov-step"><span class="tag">closed</span> <b>{{ d.authority }}</b>: {{ d.text }}</div>{% endfor %}
+</div>
+{% endif %}
+
+<details class="panel rp-method" id="method">
+  <summary><b>How the moves are ranked</b></summary>
+  <p><b>score = value × urgency × likelihood ÷ effort.</b> Value: the USD at stake — the balance an issuer could still freeze (read on-chain), else the amount traced to the target (an upper bound until a reading or a reply confirms it), or what a person confirmed held. Urgency (×1–4): a clock close to its end (a provider deadline, a hold's expiry, an overdue reply), funds observed moving (a movement alert after the trace, an issuer lifting its freeze), a recent arrival, nobody asked yet. Likelihood: what the target can do (an issuer's blacklist, an exchange account, records only) × the provider's playbook for a letter from us (a voluntary hold, LE process only, no playbook) × the route (the case's LE authority can ask directly, or cross-border) × how far the request got (a hold in place, LE filed, an order). Effort: the kind of move, plus the evidence still to obtain. Hover “why this rank” on a move for its own urgency, likelihood, effort and score.</p>
+  <p><b>The figures above.</b> In play: the moves' values, each traced dollar once (one service's funds that came through another count once), capped at the traced loss. Owner unknown: the wallets holding {{ '$' ~ '{:,.0f}'.format(t.unknown_owner.threshold_usd) if t.unknown_owner else '$1,000' }} or more (the larger of $1,000 and 1% of the loss) whose owner no source names — the "Identify the owner" move and the Overview tile use the same figure. Overdue: the replies Block status counts as overdue. The Overview's tiles show these same figures.</p>
+  <p class="muted">Advisory: Aegis's own ranking from rules, no AI. A hold, freeze or return counts only once a person confirms it; a person drafts, reviews and sends every letter. LE-only channels are never offered to us: those moves brief the case officer with the pack. Details: docs/recovery-plan.md.</p>
+</details>
+</section>
+{% endblock %}

@@ -1,0 +1,48 @@
+/* On-chain freeze detection (app/freeze; templates case/_freeze_*.html). Linked from those partials.
+   The lock-and-chain mark (magenta) = frozen on-chain by the issuer (Tether / Circle blacklist), distinct
+   from the stop-order "frozen" status (confirmed by an exchange's reply); keep in step with ONCHAIN in
+   static/graph.js. */
+:root { --fz-oc: #ff4fd0; }  /* magenta: no other border uses it (green = victim / stop-order frozen) */
+.fz-oc-mark { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px;
+  background: no-repeat center / contain url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='11' fill='%230b0f14' stroke='%23ff4fd0' stroke-width='2'/%3E%3Cpath d='M8.5 10.5V8.2a3.5 3.5 0 0 1 7 0v2.3' fill='none' stroke='%23ff4fd0' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='6.5' y='10.5' width='11' height='7.5' rx='1.5' fill='%23ff4fd0'/%3E%3Cpath d='M10 14.2h4' stroke='%230b0f14' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='9.6' cy='14.2' r='1.3' fill='none' stroke='%230b0f14' stroke-width='1.1'/%3E%3Ccircle cx='14.4' cy='14.2' r='1.3' fill='none' stroke='%230b0f14' stroke-width='1.1'/%3E%3C/svg%3E"); }
+.ff-fz.onchain { border: 4px double var(--fz-oc); }
+.ff-fz.onchain-lifted { border: 2px dashed var(--fz-oc); }
+.ff-lg-row .fz-oc-mark { width: 12px; height: 12px; margin-right: 2px; }
+
+.tag.fz-frozen { border-color: var(--fz-oc); color: var(--fz-oc); }
+.tag.fz-unfrozen { border-color: var(--danger); color: var(--danger); font-weight: 600; }
+.tag.fz-failing { border-color: var(--warn); color: var(--warn); }
+.tag.fz-error { border-color: var(--danger); color: var(--danger); }
+.tag.fz-clear, .tag.fz-unchecked { color: var(--muted); }
+
+.fz-head { margin-bottom: 12px; }
+.fz-block { margin-top: 16px; }
+.fz-small { font-size: var(--fs-xs); }
+.fz-note { font-size: var(--fs-sm); color: var(--muted); margin: 6px 0 0; }
+.fz-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.fz-table th, .fz-table td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.fz-table th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; }
+.fz-addr { font-family: var(--mono); font-size: var(--fs-xs); word-break: break-all; }
+.fz-line { margin: 2px 0; }
+.fz-warn-line { color: var(--danger); }
+.fz-hash { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--muted); }
+.fz-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 12px; align-items: end; }
+.fz-form .fz-wide { grid-column: 1 / -1; }
+.fz-form label { display: block; font-size: var(--fs-xs); color: var(--muted); margin-bottom: 2px; }
+.fz-form input, .fz-form select { width: 100%; }
+.fz-consent { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; font-size: var(--fs-sm);
+  text-transform: none; letter-spacing: 0; color: var(--text); font-weight: 400; }
+.fz-consent input { margin-top: 3px; width: auto; flex: none; }
+.fz-ov { margin-top: 0; }
+.fz-ov .fz-list { margin: 6px 0 0; padding: 0; list-style: none; }
+.fz-ov .fz-list li { margin: 3px 0; font-size: var(--fs-sm); }
+.fz-kpi-sub { display: block; text-transform: none; letter-spacing: 0; margin-top: 2px; }
+/* graph details panel (static/graph.js) */
+.ff-panel #node-info .flag.ff-oc-box { border-left: 3px solid var(--fz-oc); padding-left: 6px; }
+.ff-panel #node-info .flag.ff-oc-box > b, .ff-panel #node-info b.ff-oc-t { color: var(--fz-oc); }
+.ff-panel #node-info .flag.ff-oc-lifted { border-left: 3px dashed var(--danger); padding-left: 6px; }
+.ff-panel #node-info .flag.ff-oc-lifted > b { color: var(--danger); }
+.ff-panel #node-info .flag.ff-oc-plain b { color: var(--text); }
+.ff-panel #node-info .flag.ff-oc-plain > b { color: var(--muted); }
+.ff-panel #node-info b.ff-oc-lift { color: var(--danger); }
+#funds-onchain .v.ok { color: var(--fz-oc); }  /* the on-chain colour, as on the graph (the green tile is confirmed holds) */

@@ -1,0 +1,28 @@
+{# Overview tab: Block status card (app/blocks; owner app/web/routes_blocks.py). Context: bkc
+   (routes_blocks.block_status_card: summary, attention rows, chips; or None). #}
+{% import "blocks_macros.html" as bk with context %}
+{% if bkc and (bkc.summary.total or bkc.summary.sent_review) %}
+<link rel="stylesheet" href="/static/css/blocks.css">
+<div class="panel ov-block bk-card" id="block-status">
+  <div class="row">
+    <h2>Block status <small>{{ bkc.summary.total }} request{{ 's' if bkc.summary.total != 1 }} across the authorities{% if bkc.summary.overdue %} · <span class="bk-hot">{{ bkc.summary.overdue }} overdue</span>{% endif %}{% if bkc.summary.needs_confirmation %} · <span class="bk-hot">{{ bkc.summary.needs_confirmation }} to confirm</span>{% endif %}{% if bkc.summary.to_review %} · <span class="bk-hot" title="{{ bkc.summary.needs_review }} replies / Outlook e-mails to review, {{ bkc.summary.our_action }} requests waiting on our action">{{ bkc.summary.to_review }} to review</span>{% endif %}{% if bkc.summary.sent_review %} · <span class="bk-hot">{{ bkc.summary.sent_review }} sent from Outlook to review</span>{% endif %}</small></h2>
+    <div class="spacer"></div>
+    <a class="btn small" href="/cases/{{ case.id }}/blocks">Block status report</a>
+  </div>
+  <div class="bk-chips">{% for st, label, tone, n in bkc.chips %}<a class="bk-chip" href="/cases/{{ case.id }}/blocks?status={{ st }}">{{ bk.badge(st, label, tone) }} <b>{{ n }}</b></a>{% endfor %}</div>
+  {% if bkc.attention %}
+  <div class="table-scroll"><table class="ov-table bk-card-table">
+    <thead><tr><th>Authority</th><th>Request</th><th>Status</th><th>Waiting</th><th>Next action</th></tr></thead>
+    <tbody>
+    {% for r in bkc.attention %}
+      <tr><td><a href="/cases/{{ case.id }}/authorities/{{ r.authority.key }}">{{ r.authority.name }}</a></td>
+        <td><a href="/cases/{{ case.id }}/blocks#{{ r.key }}">{{ r.request }}</a></td>
+        <td>{{ bk.badge('', r.status_text, r.tone) }}{% if r.confirm_tag %} <span class="tag amber">to confirm</span>{% endif %}{% if r.overdue %} <span class="tag red">overdue</span>{% endif %}</td>
+        <td class="nowrap">{{ (r.days_waiting ~ ' d') if r.days_waiting is not none else '—' }}</td>
+        <td class="bk-small">{% if r.next_action.href %}<a href="{{ r.next_action.href | mail_return }}">{{ r.next_action.text }}</a>{% else %}{{ r.next_action.text }}{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="muted bk-small">Nothing needs attention: every request is waiting within its reply time or resolved.</p>{% endif %}
+</div>
+{% endif %}

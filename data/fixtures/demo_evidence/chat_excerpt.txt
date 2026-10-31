@@ -1,0 +1,11 @@
+SYNTHETIC DEMO ARTIFACT - fictional chat excerpt (case DEMO-2026-001). No real person or message.
+
+[2026-10-10 09:12] Adrian Example, CFO: Good morning Jordan. Exempla Holding AG confirms the
+  allocation for Northbridge Analytics, Inc. The treasury desk needs the settlement in USDC.
+[2026-10-10 09:15] Jordan Avery: Understood. Which wallet should we use?
+[2026-10-10 09:16] Adrian Example, CFO: Our onboarding portal at exempla-holding.example shows the
+  settlement address. Please send the test amount first.
+[2026-10-12 10:41] Adrian Example, CFO: The window closes at 11:00 UTC today. Please release the
+  full 399,247.92 USDC now.
+[2026-10-12 10:50] Jordan Avery: Sent. Origin tx 0x70abbe14aa9080b572aa69881536e5c165097c0574c4791467e915b708bba814
+[2026-10-12 11:30] Adrian Example, CFO: (no reply; account deleted)

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{# Notification inbox — owner: app/web/routes_notifications.py (inbox_page: GET /notifications).
+   Context: notes, cases {id: Case}, unread_only, read_ids, unread_total, EVENT_LABELS #}
+{% block title %}Aegis · Inbox{% endblock %}
+{% block content %}
+<div class="row case-head">
+  <div><h1>Inbox <small class="muted">{{ unread_total }} unread</small></h1>
+    <div class="sub">Events from your cases that your notification rules route to you.</div></div>
+  <div class="spacer"></div>
+  {% if unread_only %}<a class="btn small" href="/notifications">Show all</a>{% else %}<a class="btn small" href="/notifications?unread=1">Unread only</a>{% endif %}
+  {% if unread_total %}<form method="post" action="/notifications/read-all" class="inline">{{ csrf_field() }}<button class="btn small" type="submit">Mark all read</button></form>{% endif %}
+</div>
+<div class="panel" id="inbox">
+  {% for n in notes %}
+  {% set c = cases.get(n.case_id) %}
+  <div class="alert {{ n.severity }} notify-item {{ 'is-read' if n.id in read_ids else 'is-unread' }}">
+    <div class="row">
+      {% if c %}<a class="tag blue" href="/cases/{{ c.id }}">{{ c.reference }}</a>{% endif %}
+      <b>{{ n.title }}</b>
+      <span class="tag">{{ EVENT_LABELS.get(n.event_type, n.event_type) }}</span>
+      {% if n.severity in ('high', 'critical') %}<span class="tag red">{{ n.severity }}</span>{% endif %}
+      {% if n.usd is not none %}<span class="mono">{{ n.usd | usd }}</span>{% endif %}
+      <div class="spacer"></div>
+      <span class="muted nowrap">{{ n.created_at | dt }}</span>
+    </div>
+    {% if n.body %}<div class="notify-body">{{ n.body }}</div>{% endif %}
+    <div class="row notify-meta">
+      {% if n.link %}
+      <form method="post" action="/notifications/{{ n.id }}/read" class="inline">{{ csrf_field() }}<input type="hidden" name="next" value="link"><button class="btn small" type="submit">Open</button></form>
+      {% endif %}
+      {% if n.id not in read_ids %}
+      <form method="post" action="/notifications/{{ n.id }}/read" class="inline">{{ csrf_field() }}<button class="btn small" type="submit">Mark read</button></form>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}<div class="muted">{{ 'No unread notifications.' if unread_only else 'Nothing here yet.' }}</div>{% endfor %}
+</div>
+{% endblock %}

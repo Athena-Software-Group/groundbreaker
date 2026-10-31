@@ -1,0 +1,60 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. AI inference provider: no funds, so the value is stopping abuse of its API (e.g. a scam bot or site) and preserving the account records. No law-enforcement channel or policy is published: groq.le stays null. Groq tells its customer about government data requests unless the law prohibits it.",
+  "key": "groq",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": "US",
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "Groq LLC (Mountain View, California); Groq Limited (Riyadh) for users domiciled in Saudi Arabia. Under the GroqCloud data processing addendum Groq notifies the customer of any government request for its data unless prohibited by law, and challenges requests it is barred from disclosing: an authority request needs a non-disclosure order or statement, or the scammer is warned.",
+  "entities": [
+    {"key": "groq-llc", "name": "Groq LLC", "jurisdiction": "US", "source_ids": ["s1"]},
+    {"key": "groq-ksa", "name": "Groq Limited (users domiciled in Saudi Arabia)", "jurisdiction": "SA", "separate": true,
+     "source_ids": ["s1"]}
+  ],
+  "domains": {"own": ["groq.com"], "sibling": [], "vendor_portals": []},
+  "channels": [
+    {
+      "key": "groq.trust_safety", "kind": "email", "value": null, "purpose": "abuse", "role_default": "to",
+      "label": "Trust & Safety team (Acceptable Use Policy violations)",
+      "notes": "The Acceptable Use & Responsible AI Policy says to report violations by e-mail to Groq's Trust & Safety team; the address sits behind a link on the page and was not readable: confirm it there before use.",
+      "source_url": "https://console.groq.com/docs/legal/ai-policy", "who": "any",
+      "source_ids": ["s2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "groq.le": {
+      "who": "le_only",
+      "notes": "No law-enforcement address, portal or policy is published; the privacy policy only says Groq responds to compulsory government requests and legal process. Leave null.",
+      "source_ids": ["s1"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "takedown", "kind": "takedown", "requester": ["victim", "pi", "counsel", "le"],
+      "channel_keys": ["groq.trust_safety"],
+      "instrument": {"type": "none"},
+      "evidence": ["incident_narrative", "comms_export", "provider_ids"],
+      "on_refusal": "data_disclosure",
+      "notes": "Groq may investigate and enforce any suspected violation; specific actions and timing are not stated. Ask for preservation of the account and API key records in the same report.",
+      "source_ids": ["s2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "data_disclosure", "kind": "data_disclosure", "requester": ["le", "court"], "entity": "groq-llc",
+      "instrument": {"type": "le_request",
+                     "notes": "Legal process or a compulsory government request; the privacy policy names no specific instrument (subpoena, order, warrant)."},
+      "evidence": ["le_agency_identity", "provider_ids", "non_disclosure_stmt"],
+      "notes": "Groq notifies the customer unless prohibited by law: include a non-disclosure order or statement.",
+      "source_ids": ["s1", "s3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [],
+  "tickets": [],
+  "sources": [
+    {"id": "s1", "title": "Groq Privacy Policy", "url": "https://groq.com/privacy-policy", "retrieved_at": "2026-10-20"},
+    {"id": "s2", "title": "Groq Acceptable Use & Responsible AI Policy", "url": "https://console.groq.com/docs/legal/ai-policy",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s3", "title": "Groq Data Processing Addendum for GroqCloud Services",
+     "url": "https://console.groq.com/docs/legal/customer-data-processing-addendum", "retrieved_at": "2026-10-20"}
+  ]
+}

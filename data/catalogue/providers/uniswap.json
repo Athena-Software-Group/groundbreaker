@@ -1,0 +1,55 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. Non-custodial: Uniswap cannot freeze, hold or return funds. Uniswap Labs' interface screens connected wallets and blocks those tied to hacked or stolen funds, but the block is interface-only. Never propose a freeze here: use the swap logs to follow the output token to the next custodian or issuer.",
+  "key": "uniswap",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": "US",
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "A screened (blocked) address can still hold and receive assets and can call the protocol contracts directly; only state-changing actions in the Uniswap Labs interface are disabled. Screening uses third-party blockchain analytics (TRM Labs). The privacy policy says it logs the connected wallet's public address and does not collect names or IP addresses, so little off-chain data exists to disclose. If the output was USDT or USDC, the issuer is the freeze route.",
+  "entities": [
+    {"key": "uniswap-labs", "name": "Universal Navigation Inc. (Uniswap Labs)", "jurisdiction": "US",
+     "notes": "A Delaware company based in New York (CFTC, Sep 2024).", "source_ids": ["s4"]}
+  ],
+  "domains": {"own": ["uniswap.org"], "sibling": [], "vendor_portals": []},
+  "channels": [
+    {
+      "key": "uniswap.compliance", "kind": "email", "value": null, "purpose": "compliance", "role_default": "to",
+      "label": "Compliance (address-screening questions)",
+      "notes": "The Address Screening Guide names a compliance alias on uniswap.org for blocks; the page refused automated reads, so it was seen in a search snippet only: confirm it there before use.",
+      "source_url": "https://support.uniswap.org/hc/en-us/articles/8671777747597-Address-Screening-Guide", "who": "any",
+      "source_ids": ["s2"], "basis": "D", "confidence": "L", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "paths": [
+    {
+      "key": "private_notice", "kind": "private_notice", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["uniswap.compliance"],
+      "instrument": {"type": "none"},
+      "evidence": ["incident_narrative", "tx_list_copyable", "trace_report_run"],
+      "notes": "At most an interface block of the addresses holding stolen funds: it traps nothing. Low priority: spend the time on the next custodian or issuer.",
+      "source_ids": ["s1", "s2", "s3"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "data_disclosure", "kind": "data_disclosure", "requester": ["le", "court"], "entity": "uniswap-labs",
+      "instrument": {"type": "subpoena", "notes": "The policy shares data in the course of litigation or regulatory proceedings; the exact clause was not readable."},
+      "evidence": ["le_agency_identity", "tx_list_copyable"],
+      "notes": "Only the logged wallet addresses and interface usage exist; no accounts, names or IP addresses (Apr 2024 policy version).",
+      "source_ids": ["s1"], "basis": "D", "confidence": "L", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [],
+  "tickets": [],
+  "sources": [
+    {"id": "s1", "title": "Uniswap Labs Privacy Policy (refused automated reads; search snippets)",
+     "url": "https://support.uniswap.org/hc/en-us/articles/30934457771405-Uniswap-Labs-Privacy-Policy",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s2", "title": "Uniswap Address Screening Guide (refused automated reads; search snippets)",
+     "url": "https://support.uniswap.org/hc/en-us/articles/8671777747597-Address-Screening-Guide",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s3", "title": "Uniswap Labs Address Screening Update (blog, Apr 2022)", "url": "https://blog.uniswap.org/trm",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s4", "title": "CFTC Issues Order Against Uniswap Labs (press release 8961-24)",
+     "url": "https://www.cftc.gov/PressRoom/PressReleases/8961-24", "retrieved_at": "2026-10-20"}
+  ]
+}

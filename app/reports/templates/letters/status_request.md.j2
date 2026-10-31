@@ -1,0 +1,45 @@
+{# Status request / follow-up to an earlier letter. Context: see app.domain.correspondence._context_status_request #}
+**Subject:** {{ subject }}
+
+Dear {{ salutation }},
+
+{% include "letters/_intro.md.j2" %}
+
+On {{ ref.date_fmt }} we sent you {{ ref.description }} under the subject "{{ ref.subject }}"{% if ref.external_ref %} (your reference {{ ref.external_ref | code }}){% endif %}{% if ref.channel %}, by {{ ref.channel }}{% endif %}. {{ days_elapsed }} {{ 'day has' if days_elapsed == 1 else 'days have' }} passed since then{% if ref.last_reply_fmt %}; your most recent message to us is dated {{ ref.last_reply_fmt }}{% else %} and we have not yet received a substantive reply{% endif %}.
+
+### 1. Identifiers concerned
+
+{% if identifiers %}
+{% include "letters/_identifiers.md.j2" %}
+
+{% if order_ids %}
+Swap order reference{{ 's' if order_ids | length > 1 else '' }} on your platform: {% for o in order_ids %}{{ o | code }}{{ ', ' if not loop.last else '.' }}{% endfor %}{{ '' }}
+
+{% endif %}
+{% if tx_hashes %}
+Transactions cited in that letter: {% for h in tx_hashes %}{{ h | code }}{{ ', ' if not loop.last else '.' }}{% endfor %}{{ '' }}
+
+{% endif %}
+{% else %}
+The identifiers are listed in our letter of {{ ref.date_fmt }}.
+{% endif %}
+
+### 2. Please confirm
+
+- whether the funds associated with these identifiers are under a hold or risk-control freeze and, if so, the **amount and asset held** and the date the hold was placed;
+- the **current status of the account(s)** concerned (active, restricted, frozen or closed) and whether any withdrawal or transfer has been made since {{ ref.date_fmt }};
+- that the records described in our earlier letter are preserved;
+- your internal ticket or case reference, and your requirements for the formal law-enforcement request.
+
+{% include "letters/_complaints.md.j2" %}
+
+{% if extra_note %}
+{{ extra_note }}
+
+{% endif %}
+Given the risk that the funds move further, we would be grateful for your reply within {{ reply_days }} days. Please do **not notify** the account holder, as this could lead to the movement of funds and the destruction of evidence.
+
+{% include "letters/_signature.md.j2" %}
+
+{% include "letters/_footer.md.j2" %}
+

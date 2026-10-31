@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{# One counterparty on the stop-order side — owner: app/web/routes_authorities.py (authority_page).
+   Context: case, access, authority (app.domain.correspondence.Authority), items (TimelineItem, filtered),
+   evidence {anchor: [EvidenceItem]}, filters, all_count, run (the run letters are built from), latest_run, now,
+   templates_, refs, frozen, enums, helpers, mask (desk.ContactMask: LE / PI contact details and complaint references masked below
+   manage_le_contacts), order_shared(o), complaint_ref (masked below view_restricted), card (the "How to contact"
+   card: app.domain.directory.channels_for; None for externals), ch_err (the last channel form's error).
+   Draft outbound letters get "E-mail…" (the e-mail editor) (app/web/routes_mail.py compose) for investigators and up,
+   except a draft the board says to discard (draft_flag(i): freeze_board.draft_flags — pointless or a duplicate): its
+   flag and the discard button instead, never an e-mail link nor an "awaiting Send" tag. #}
+{% block title %}Aegis · {{ authority.name }} · {{ case.reference }}{% endblock %}
+{% macro state_tag(st) -%}
+<span class="tag {{ {'draft':'amber','sent':'blue','received':'blue','logged':'','acknowledged':'blue','frozen':'green','declined':'red','released':'gold','superseded':''}.get(st, '') }}">{{ st }}</span>
+{%- endmacro %}
+{% block content %}
+{% set due = authority.next_due() %}
+<div class="row case-head" style="margin-bottom:12px">
+  <div>
+    <h1>{{ authority.name }} <span class="tag">{{ authority.type_label }}</span>{% if authority.trace_label %} <span class="tag {{ 'amber' if authority.in_trace else '' }}" title="{{ 'reached by the latest trace run' if authority.in_trace else 'engaged on this case, but the latest trace run does not reach it' }}">{{ authority.trace_label }}</span>{% endif %}{% if authority.non_custodial %} <span class="tag" title="holds no accounts or balances">non-custodial</span>{% endif %}</h1>
+    <div class="sub"><a href="/cases/{{ case.id }}?tab=authorities">← {{ case.reference }} · Authorities</a>
+      {% if authority.jurisdiction %} · {{ authority.jurisdiction }}{% endif %}
+      {% if not access.is_external %} · <span class="mono">{{ mask.value(authority.recipient_email) or 'LE portal / contact in case vault' }}</span>{% if mask.active and authority.recipient_email and authority.is_contact_party %} <span class="muted">(masked for your role)</span>{% endif %}{% endif %}</div>
+  </div>
+  <div class="spacer"></div>
+  <span class="tag" title="your role on this case">{{ access.role.value | replace('_', ' ') }}</span>
+</div>
+
+<div class="grid kpi" style="margin-bottom:14px">
+  <div class="panel kpi"><div class="v">{{ authority.last_contact | dt }}</div><div class="l">Last contact</div></div>
+  <div class="panel kpi"><div class="v">{{ authority.open_orders | length }}</div><div class="l">Open stop orders</div></div>
+  <div class="panel kpi"><div class="v {{ 'danger' if due and due < now else '' }}">{{ due | dt }}</div><div class="l">{{ 'Reply overdue since' if due and due < now else 'Reply due' }}</div></div>
+  {% set n = authority.counts %}
+  <div class="panel kpi"><div class="v mono">{{ n['in'] }} · {{ n['out'] }} · {{ n['note'] }}</div><div class="l">In · out · notes{% if n['draft'] %} ({{ n['draft'] }} draft){% endif %}</div></div>
+</div>
+
+<div class="auth-grid">
+<div class="auth-main">
+  {% include "case/_contact_card.html" %}
+  <div class="panel" id="timeline">
+    <h2>Communications <small>{{ items | length }} of {{ all_count }} · chronological{% if filters.order == 'desc' %}, newest first{% endif %}</small>
+      <button class="btn small" type="button" id="tl-toggle" data-expand="Expand all" data-collapse="Collapse all" style="float:right">Expand all</button></h2>
+    <form method="get" action="/cases/{{ case.id }}/authorities/{{ authority.key }}" class="row tl-filters">
+      <select name="direction" aria-label="Direction"><option value="">all directions</option>{% for d in directions %}<option value="{{ d.value }}" {% if filters.direction == d.value %}selected{% endif %}>{{ direction_labels[d.value] }}</option>{% endfor %}</select>
+      <select name="kind" aria-label="Kind"><option value="">all kinds</option>{% for k in kinds %}<option value="{{ k.value }}" {% if filters.kind == k.value %}selected{% endif %}>{{ kind_labels.get(k.value, k.value) }}</option>{% endfor %}</select>
+      <select name="channel" aria-label="Channel"><option value="">all channels</option>{% for c in channels %}<option value="{{ c.value }}" {% if filters.channel == c.value %}selected{% endif %}>{{ c.value }}</option>{% endfor %}</select>
+      <select name="status" aria-label="Status"><option value="">any status</option>{% for s in statuses %}<option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+      <select name="order" aria-label="Order"><option value="asc">oldest first</option><option value="desc" {% if filters.order == 'desc' %}selected{% endif %}>newest first</option></select>
+      <button class="btn small" type="submit">Filter</button>
+      {% if filters.direction or filters.kind or filters.channel or filters.status %}<a class="btn small" href="/cases/{{ case.id }}/authorities/{{ authority.key }}">Clear</a>{% endif %}
+    </form>
+
+    <div class="timeline">
+    {% for i in items %}
+      {% set c = i.corr %}{% set flag = draft_flag(i) %}
+      <article class="tl-item tl-{{ i.direction }}{{ ' tl-draft' if i.is_draft else '' }}" id="{{ i.anchor }}">
+        <div class="tl-meta">
+          <span class="tl-dir">{{ direction_labels[i.direction] }}</span>
+          <span>{{ kind_labels.get(i.kind, i.kind) }}</span>
+          {% if i.channel %}<span class="muted">{{ i.channel }}</span>{% endif %}
+          {{ state_tag(i.status) }}
+          <span class="nowrap">{{ i.at | dt }}</span>
+          <span class="tag" title="classification">{{ i.classification }}</span>
+          {% if i.shared %}<span class="tag gold" title="shared with external members">shared</span>{% endif %}
+          {% if c and c.meta and c.meta.template_key %}<span class="tag" title="generated from a letter template">{{ c.meta.template_key }}</span>{% endif %}
+          {% if c and c.meta and c.meta.superseded_by %}<span class="tag">superseded by #{{ c.meta.superseded_by }}</span>{% endif %}
+          {% if c and c.meta and c.meta.source == 'mailbox' %}<span class="tag" title="received in the case mailbox: external content">from mailbox</span>{% endif %}
+          {% if c and c.meta and c.meta.source == 'mailbox' and c.meta.sender_domain_ok is sameas false %}<span class="tag red" title="the sender's domain is not one of this authority's own domains: check who sent it">sender domain not expected</span>{% endif %}
+          {% if c and awaiting_mail.get(c.id) and not flag %}{% set am = awaiting_mail[c.id][0] %}<a class="tag amber" href="{{ ('/cases/' ~ case.id ~ '/mail/messages/' ~ am.id) | mail_return }}" title="prepared e-mail #{{ am.id }}, valid until {{ am.expires_at | dt }}">{{ 'e-mail awaiting send from Outlook' if am.transport == 'manual' else 'e-mail awaiting Send' }}{% if awaiting_mail[c.id] | length > 1 %} ({{ awaiting_mail[c.id] | length }}){% endif %}</a>{% endif %}
+        </div>
+        <div class="tl-subject">{{ mask.text(i.subject) }}</div>
+        <div class="tl-sub muted">
+          {% if c and c.sender %}from {{ mask.value(c.sender) }}{% endif %}
+          {% if c and c.recipients %} to {{ mask.values(c.recipients) | join(', ') }}{% elif i.order and (i.order.identifiers or {}).get('recipient') %} to {{ mask.value(i.order.identifiers.recipient) }}{% endif %}
+          {% if c and c.cc %} · cc {{ mask.values(c.cc) | join(', ') }}{% endif %}
+          {% if c and c.external_ref %} · ref <span class="mono">{{ c.external_ref }}</span>{% elif not c and i.order.external_ref %} · ref <span class="mono">{{ i.order.external_ref }}</span>{% endif %}
+          {% if i.order and (not access.is_external or order_shared(i.order)) %} · stop order {% if access.is_external %}<span class="mono">#{{ i.order.id }}</span>{% else %}<a href="#o{{ i.order.id }}" class="mono">#{{ i.order.id }}</a>{% endif %} {{ state_tag(order_state(i.order)) }}{% endif %}
+          {% if c and c.in_reply_to_id %} · in reply to <a href="#c{{ c.in_reply_to_id }}" class="mono">#{{ c.in_reply_to_id }}</a>{% endif %}
+          {% if c and c.due_at and c.status.value == 'sent' %} · reply due {{ c.due_at | dt }}{% endif %}
+          {% if c and c.meta and c.meta.amount_held %} · <b>{{ c.meta.amount_held | amt }} {{ c.meta.asset or '' }} held</b>{% endif %}
+        </div>
+        {% if evidence[i.anchor] %}
+        <div class="tl-evidence">Evidence: {% for e in evidence[i.anchor] %}<a href="/cases/{{ case.id }}/evidence/{{ e.id }}">{{ ev_text(e.title) }}</a>{{ ', ' if not loop.last }}{% endfor %}</div>
+        {% endif %}
+        {% if i.body %}
+          {% if can_view_body(i) %}
+          <details class="tl-body"><summary>{{ 'Letter' if i.direction == 'out' else 'Message' }} ({{ i.body | length }} characters)</summary>
+            {% if i.body_format == 'text' %}<pre class="tl-text">{{ mask.text(i.body) }}</pre>{% else %}<div class="letter">{{ mask.md(i.body) | md }}</div>{% endif %}
+          </details>
+          {% else %}<div class="muted tl-restricted">Content restricted ({{ i.classification }}): the investigator role is needed to read it.</div>{% endif %}
+        {% endif %}
+        {% if flag and access.can('view_restricted') %}<div class="alert warning tl-flag" id="flag-{{ i.anchor }}" role="alert">{{ flag.text }}
+          {% if access.can('manage_case') and not flag.busy %}<form method="post" action="{{ flag.post }}" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" title="discard draft {{ flag.no }}{% if flag.prepared %} and cancel prepared e-mail #{{ flag.prepared }}{% endif %} (audited)">Discard</button></form>{% elif not access.can('manage_case') %}<span class="muted">A case admin can discard it.</span>{% endif %}</div>{% endif %}
+        <div class="tl-actions">
+          {% if c %}<a class="btn small" href="{{ ('/cases/' ~ case.id ~ '/authorities/correspondence/' ~ c.id) | mail_return }}">{{ 'Edit draft' if i.is_draft and access.can('draft_letter') else 'Open' }}</a>{% endif %}
+          {% if c and i.is_draft and not flag and i.direction == 'out' and access.can('prepare_email') and access.can('view_restricted') and can_view_body(i) %}<a class="btn small primary" href="{{ ('/cases/' ~ case.id ~ '/authorities/correspondence/' ~ c.id ~ '/email') | mail_return }}">{% if access.can('send_email') %}Edit &amp; send e-mail{% else %}E-mail…{% endif %}</a>{% endif %}
+          {% if i.order and not access.is_external %}<a class="btn small" href="/cases/{{ case.id }}/stop-orders/{{ i.order.id }}">Stop order #{{ i.order.id }}</a>{% endif %}
+        </div>
+      </article>
+    {% else %}
+      <div class="muted">{% if all_count %}No entries match the filter.{% else %}No communications with {{ authority.name }} yet.{% endif %}</div>
+    {% endfor %}
+    </div>
+  </div>
+</div>
+
+<aside class="auth-side">
+  {% if not access.is_external %}
+  <div class="panel" id="stop-orders">
+    <h2>Stop orders <small>{{ authority.stop_orders | length }}</small></h2>
+    {% for o in authority.stop_orders | sort(attribute='id', reverse=True) %}
+    {% set st = order_state(o) %}{% set h = hold_state(o) %}{% set odue = response_due(o) if o.status.value == 'sent' and not o.responded_at else None %}
+    <div class="auth-order" id="o{{ o.id }}">
+      <div><a class="mono" href="/cases/{{ case.id }}/stop-orders/{{ o.id }}">#{{ o.id }}</a> {{ state_tag(st) }} <span class="muted">{{ o.kind }} · {{ o.origin.value }}</span></div>
+      <div class="muted" style="font-size:var(--fs-sm)">{{ mask.text(o.subject) }}</div>
+      <div class="muted" style="font-size:var(--fs-sm)">{% if o.sent_at %}sent {{ o.sent_at | dt }}{% else %}not sent{% endif %}{% if odue %} · reply due {% if odue < now %}<span class="tag red">overdue</span> {% endif %}{{ odue | dt }}{% endif %}{% if o.responded_at %} · answered {{ o.responded_at | dt }}{% endif %}{% if o.external_ref %} · ref <span class="mono">{{ o.external_ref }}</span>{% endif %}</div>
+      {% if h.amount %}<div><b>{{ h.amount | amt }} {{ h.asset or '' }}</b> <span class="muted">{{ h.state }}{% if h.at %} · {{ h.at[:10] }}{% endif %}</span></div>{% endif %}
+      {% if not o.recipient_email and (o.identifiers or {}).get('recipient') %}<div class="muted" style="font-size:var(--fs-sm)">to {{ mask.value(o.identifiers.recipient) }}</div>{% endif %}
+      {% if o.notes and access.can('view_restricted') and ('KNOWN DEFECT' in o.notes or 'FOLLOW-UP' in o.notes) %}
+      <details class="so-notes defect"><summary>{{ 'Known defect' if 'KNOWN DEFECT' in o.notes else 'Follow-up' }} noted</summary>{{ o.notes }}</details>{% endif %}
+      {% if access.can('log_correspondence') and st not in ('superseded', 'released', 'declined') and o.sent_at %}
+      <details class="auth-status">
+        <summary>Record response / status</summary>
+        <form method="post" action="/cases/{{ case.id }}/stop-orders/{{ o.id }}/status">
+          {{ csrf_field() }}<input type="hidden" name="back" value="authority">
+          <label>Status</label>
+          <select name="status">{% for s in status_choices %}<option value="{{ s }}" {% if s == 'frozen' and st == 'acknowledged' %}selected{% endif %} {% if s == 'released' and st != 'frozen' %}disabled{% endif %}>{{ s }}</option>{% endfor %}</select>
+          <div class="row"><div style="flex:2"><label>Amount held</label><input name="amount_held" class="mono" inputmode="decimal" placeholder="e.g. 5.0416" value="{{ h.amount or '' }}"></div>
+            <div style="flex:1"><label>Asset</label><input name="asset" class="mono" placeholder="ETH" value="{{ h.asset or '' }}"></div></div>
+          <label>When</label><input type="datetime-local" name="occurred_at">
+          <label>Their ticket / reference</label><input name="external_ref" value="{{ o.external_ref or '' }}">
+          {% if case_evidence %}<label>Evidence (e.g. their confirmation)</label><select name="evidence_ids" multiple size="3">{% for e in case_evidence %}<option value="{{ e.id }}">{{ ev_text(e.title) }}</option>{% endfor %}</select>{% endif %}
+          <label>Note</label><textarea name="notes" rows="2"></textarea>
+          <div style="margin-top:8px"><button class="btn small primary" type="submit">Record</button></div>
+        </form>
+      </details>
+      {% elif not o.sent_at and o.status.value == 'draft' %}<div class="muted" style="font-size:var(--fs-sm)">Draft — open it to edit and mark it sent.</div>{% endif %}
+    </div>
+    {% else %}<div class="muted">No stop orders for this counterparty.</div>{% endfor %}
+    {% if authority.candidate %}
+    {% set crun = authority.candidate_run or run %}
+    <div class="muted" style="margin-top:8px;font-size:var(--fs-sm)">Freeze candidate in trace #{{ crun.id if crun else '—' }}{% if crun and latest_run and crun.id != latest_run.id %} (an earlier run: the latest, #{{ latest_run.id }}, no longer reaches this counterparty; stop orders are built from #{{ crun.id }}){% endif %}: priority {{ authority.candidate.priority }}, tainted up to {{ authority.candidate.total_taint_usd | usd }} (upper bound).</div>
+    {% endif %}
+  </div>
+
+  {% if access.can('draft_letter') %}
+  <div class="panel" id="generate">
+    <h2>Generate letter</h2>
+    {% if gate_notice %}<div class="alert {{ 'info' if gate_notice.kind in ('add_to_draft', 'follow_up') else 'warning' }}" id="request-gate" role="status">{{ mask.text(gate_notice.text) }}
+      {% if gate_notice.kind == 'add_to_draft' %}<form method="post" action="/cases/{{ case.id }}/authorities/{{ authority.key }}/letters" class="inline" id="request-gate-add">{{ csrf_field() }}<input type="hidden" name="template" value="info_request"><input type="hidden" name="about" value="{{ about }}">{% if return_to %}<input type="hidden" name="return_to" value="{{ return_to }}">{% endif %}{% if freeze_address %}<input type="hidden" name="freeze_address" value="{{ freeze_address }}">{% endif %}{% if brief_ref %}<input type="hidden" name="ref" value="{{ brief_ref }}">{% endif %}<button class="btn primary small" type="submit">{{ gate_notice.label }}</button></form>
+      {% elif gate_notice.href %}<a class="btn small" href="{{ gate_notice.href }}">{{ gate_notice.label }}</a>{% endif %}
+    </div>{% endif %}
+    <form method="post" action="/cases/{{ case.id }}/authorities/{{ authority.key }}/letters" class="auth-letter-form">
+      {{ csrf_field() }}
+      {% if return_to %}<input type="hidden" name="return_to" value="{{ return_to }}">{% endif %}
+      {% if about %}<input type="hidden" name="about" value="{{ about }}">{% endif %}
+      {% if replace_draft %}<input type="hidden" name="replace_draft" value="{{ replace_draft }}">{% endif %}
+      <label>Template</label>
+      <select name="template" id="letter-template">
+        {% for t in templates_ %}<option value="{{ t.key }}" {% if not t.available %}disabled{% endif %} {{ 'selected' if t.key == selected_template }} title="{{ t.reason or t.description }}">{{ t.label }}{% if not t.available %}{{ (' (one open request: see the message above)' if gate_notice and gate_notice.kind != 'follow_up' else ' (one open request: the follow-up only)') if t.gate else ' (not applicable)' }}{% endif %}</option>{% endfor %}
+      </select>
+      <div class="auth-ref" data-for="status_request">
+        <label>Follow up on</label>
+        <select name="ref">{% for r in refs %}<option value="{{ r.value }}" {{ 'selected' if r.value == brief_ref }}>{{ r.label }}</option>{% else %}<option value="">— nothing sent yet —</option>{% endfor %}</select>
+      </div>
+      <div class="auth-ref" data-for="info_response">
+        <label>Answer their reply to</label>
+        <select name="ref">{% if brief_ref and brief_ref not in refs | map(attribute='value') | list %}<option value="{{ brief_ref }}" selected>request {{ brief_ref }}</option>{% endif %}{% if refs and not brief_ref %}<option value="" selected>their latest reply</option>{% endif %}{% for r in refs %}<option value="{{ r.value }}" {{ 'selected' if r.value == brief_ref }}>{{ r.label }}</option>{% else %}{% if not brief_ref %}<option value="">— nothing sent yet —</option>{% endif %}{% endfor %}</select>
+      </div>
+      {% for tk in ('le_brief', 'counsel_brief') %}<div class="auth-ref" data-for="{{ tk }}">
+        <label>About the request</label>
+        <select name="brief_ref">{% for b in briefs %}<option value="{{ b.value }}" {{ 'selected' if b.value == brief_ref }}>{{ mask.text(b.label) }}</option>{% else %}<option value="">— no provider request yet —</option>{% endfor %}</select>
+      </div>{% endfor %}
+      <div class="auth-ref" data-for="release_request">
+        <label>Hold confirmed on</label>
+        <select name="hold_ref">{% for o in frozen %}<option value="o{{ o.id }}">#{{ o.id }} – {{ mask.text(o.subject or '')[:80] }}</option>{% else %}<option value="">— no confirmed hold —</option>{% endfor %}</select>
+      </div>
+      {% if freeze_address %}<div class="auth-ref" data-for="info_request">
+        <label>Freeze request for</label>
+        <input type="text" name="freeze_address" value="{{ freeze_address }}" readonly>
+        {% if brief_ref %}<input type="hidden" name="ref" value="{{ brief_ref }}">{% endif %}
+        <p class="muted">The letter asks {{ authority.name }} to freeze the account this deposit address credits (named in a reply){% if brief_ref %}, as a new deposit following up request {{ brief_ref }}{% endif %}.</p>
+      </div>{% endif %}
+      <label>Additional paragraph (optional)</label>
+      <textarea name="extra_note" rows="3" placeholder="Added before the signature, as plain text.">{{ note }}</textarea>
+      <div style="margin-top:8px"><button class="btn primary small" type="submit">Generate draft</button></div>
+      <ul class="auth-template-help muted">
+        {% for t in templates_ %}<li data-template="{{ t.key }}"><b>{{ t.label }}</b>: {{ t.description }}{% if t.reason %} <i>Not applicable: {{ t.reason }}</i>{% endif %}</li>{% endfor %}
+      </ul>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if access.can('log_correspondence') %}
+  <div class="panel" id="log">
+    <h2>Log correspondence</h2>
+    <form method="post" action="/cases/{{ case.id }}/authorities/{{ authority.key }}/log" class="auth-log-form">
+      {{ csrf_field() }}
+      <div class="row">
+        <div style="flex:1"><label>Direction</label><select name="direction" id="log-direction">{% for d in directions %}<option value="{{ d.value }}">{{ direction_labels[d.value] }}</option>{% endfor %}</select></div>
+        <div style="flex:1"><label>Channel</label><select name="channel">{% for c in channels %}<option value="{{ c.value }}">{{ c.value }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="row">
+        <div style="flex:1"><label>Kind</label><select name="kind">{% for k in kinds %}<option value="{{ k.value }}" {% if k.value == 'reply' %}selected{% endif %}>{{ kind_labels.get(k.value, k.value) }}</option>{% endfor %}</select></div>
+        <div style="flex:1"><label>When</label><input type="datetime-local" name="occurred_at"></div>
+      </div>
+      <label>Subject</label><input name="subject" required maxlength="512">
+      <label>Body</label><textarea name="body" rows="5"></textarea>
+      <div class="row">
+        <div style="flex:1"><label>Body format</label><select name="body_format"><option value="text">plain text (shown verbatim)</option><option value="markdown">Markdown</option></select></div>
+        <div style="flex:1"><label>Classification</label><select name="classification">{% for c in classifications %}<option value="{{ c.value }}" {% if c.value == 'R2' %}selected{% endif %}>{{ c.value }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="row">
+        <div style="flex:1"><label>From</label><input name="sender"></div>
+        <div style="flex:1"><label>To</label><input name="recipients" placeholder="comma-separated"></div>
+      </div>
+      <label>Their ticket / reference</label><input name="external_ref">
+      {% if authority.stop_orders %}<label>About stop order</label><select name="stop_order_id"><option value="">—</option>{% for o in authority.stop_orders %}<option value="{{ o.id }}">#{{ o.id }} – {{ mask.text(o.subject or '')[:70] }}</option>{% endfor %}</select>{% endif %}
+      {% if authority.correspondence %}<label>In reply to</label><select name="in_reply_to_id"><option value="">—</option>{% for c in authority.correspondence | sort(attribute='id', reverse=True) %}<option value="{{ c.id }}">#{{ c.id }} {{ c.direction.value }} – {{ mask.text(c.subject or '')[:70] }}</option>{% endfor %}</select>{% endif %}
+      {% if case_evidence %}<label>Linked evidence</label><select name="evidence_ids" multiple size="3">{% for e in case_evidence %}<option value="{{ e.id }}">{{ ev_text(e.title) }}</option>{% endfor %}</select>{% endif %}
+      <div class="auth-due" data-direction="out"><label>Reply expected within (days)</label><input name="due_days" type="number" min="0" max="365" value="{{ default_due_days }}"></div>
+      {% if access.can('share_external') %}<label class="auth-check"><input type="checkbox" name="shared_with_external" value="1"> Share with external members (e.g. the LE liaison)</label>{% endif %}
+      <div style="margin-top:8px"><button class="btn primary small" type="submit">Log</button></div>
+    </form>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  {% if authority.le_contacts and not access.is_external %}
+  <div class="panel">
+    <h2>Contacts on file</h2>
+    {% for le in authority.le_contacts %}
+    <div style="margin-bottom:8px"><b>{{ le.agency }}</b>{% if le.unit %} · {{ le.unit }}{% endif %}{% if le.role %} <span class="muted">({{ le.role }})</span>{% endif %}
+      {% if access.can('view_restricted') %}{% if le.reference %}<br><span class="muted">ref</span> <span class="mono">{{ le.reference }}</span>{% endif %}{% if le.email %}<br><span class="mono">{{ le.email }}</span>{% endif %}{% else %}<br><span class="muted">reference restricted ({{ le.classification.value }})</span>{% endif %}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if authority.virtual and not access.is_external %}
+  <div class="panel" id="on-file">
+    <h2>On file <small>from the case facts</small></h2>
+    {% if authority.key.startswith('complaint-') %}
+      <div>Complaint filed with <b>{{ authority.name }}</b>{% if authority.contact.filed_at %} on {{ authority.contact.filed_at[:10] }}{% endif %}</div>
+      {% if complaint_ref %}<div><span class="muted">ref</span> <span class="mono">{{ complaint_ref }}</span>{% if not access.can('view_restricted') %} <span class="muted">(masked for your role)</span>{% endif %}</div>{% endif %}
+      <div class="muted" style="font-size:var(--fs-sm)">No contact row yet: add one under Evidence › Law enforcement › Contacts.</div>
+    {% else %}
+      <div><b>{{ authority.name }}</b>{% if authority.contact.case_investigator %} <span class="muted">(the investigator signing this case's letters)</span>{% endif %}</div>
+      {% if authority.contact.contact %}<div>{{ mask.value(authority.contact.contact) }}</div>{% endif %}
+      {% if authority.contact.email %}<div class="mono">{{ mask.value(authority.contact.email) }}</div>{% endif %}
+      {% if authority.contact.phone %}<div class="mono">{{ mask.value(authority.contact.phone) }}</div>{% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+  {% if authority.entity and authority.entity.le_contact_notes and not access.is_external %}
+  <div class="panel"><h2>Contact notes</h2><div class="muted">{{ authority.entity.le_contact_notes }}</div></div>
+  {% endif %}
+</aside>
+</div>
+{% endblock %}

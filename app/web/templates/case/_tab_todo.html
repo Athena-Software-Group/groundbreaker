@@ -1,0 +1,110 @@
+{# To do tab — owner: app/web/routes_todo.py (todo_tab; logic app/domain/todo.py).
+   Context: todo_rows (the open app.domain.todo.Task rows after the filter, sorted overdue → priority → due date),
+   todo_open / todo_p1 / todo_overdue / todo_mine (counts of the open tasks), todo_done (done, dismissed and resolved
+   within todo.RECENT), todo_snoozed, todo_failed (the sources that could not be read), todo_show (all | mine | p1),
+   todo_source (a source key or None), todo_sources ([(key, label)] of the open tasks), todo_can_act (investigators and
+   up: done / snooze / dismiss / edit / add; read-only members see the list without buttons), todo_may(action) (the
+   task's own action button), todo_assignees ([{id, name}]), todo_priorities, todo_snooze_days, todo_relative(at, now),
+   todo_flash, now. No inline script: forms and <details> only. #}
+{% macro prio(p) -%}<span class="todo-prio todo-{{ p | lower }}" title="{{ todo_priorities[p] }}">{{ p }}</span>{%- endmacro %}
+{% macro due(t) -%}
+{%- if t.due -%}<span class="{{ 'todo-late' if t.overdue(now) }}" title="{{ t.due | dt }}">{{ todo_relative(t.due, now) }}</span><br><span class="muted todo-small">{{ t.due | dt }}{% if t.due_label %} · {{ t.due_label }}{% endif %}{% if 'due' in t.overridden %} · set by a person{% endif %}</span>
+{%- else %}<span class="muted">—</span>{% endif -%}
+{%- endmacro %}
+{% macro keep(t) -%}<input type="hidden" name="key" value="{{ t.key }}"><input type="hidden" name="show" value="{{ todo_show }}"><input type="hidden" name="source" value="{{ todo_source or '' }}">{%- endmacro %}
+{% macro action(t) -%}
+{%- set a = t.action -%}
+{%- if a and todo_may(a) -%}
+{%- if a.post -%}<form method="post" action="{{ a.post }}" class="inline">{{ csrf_field() }}{% for k, v in a.fields.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}<button class="btn small primary" type="submit">{{ a.label }}</button></form>
+{%- else -%}<a class="btn small primary" href="{{ a.href | mail_return }}">{{ a.label }}</a>{%- endif -%}
+{%- endif -%}
+{%- endmacro %}
+
+{% if todo_flash %}<div class="alert info" role="status">{{ todo_flash }}</div>{% endif %}
+<div class="panel todo-panel" id="todo">
+  <div class="row todo-head">
+    <h2>To do <small>{{ todo_open }} open · <span class="{{ 'todo-late' if todo_p1 }}">{{ todo_p1 }} P1</span>{% if todo_overdue %} · <span class="todo-late">{{ todo_overdue }} overdue</span>{% endif %}{% if todo_mine %} · {{ todo_mine }} mine{% endif %}</small></h2>
+    <div class="spacer"></div>
+    <nav class="todo-filters" aria-label="Filter the list">
+      {% for key, label in (('all', 'All'), ('mine', 'Mine'), ('p1', 'P1')) %}<a href="/cases/{{ case.id }}?tab=todo{{ '&show=' ~ key if key != 'all' }}{{ '&source=' ~ todo_source if todo_source }}" class="todo-filter {{ 'active' if todo_show == key }}">{{ label }}</a>{% endfor %}
+      <span class="muted todo-small">source:</span>
+      <a href="/cases/{{ case.id }}?tab=todo{{ '&show=' ~ todo_show if todo_show != 'all' }}" class="todo-filter {{ 'active' if not todo_source }}">any</a>
+      {% for key, label in todo_sources %}<a href="/cases/{{ case.id }}?tab=todo{{ '&show=' ~ todo_show if todo_show != 'all' }}&source={{ key }}" class="todo-filter {{ 'active' if todo_source == key }}">{{ label }}</a>{% endfor %}
+    </nav>
+  </div>
+  <p class="muted todo-small">Everything that should be done for the case, from the freeze &amp; stop-order board, the Recovery plan, Block status, the mailbox, the evidence and the case setup, plus your own tasks. P1: overdue, due within 48 hours, or money at stake with urgency · P2: due within 7 days, or money at stake · P3: setup and optional. Advisory: each button opens the source's own step; nothing is drafted or sent from here.</p>
+  {% if todo_failed %}<div class="alert warning">Could not read {{ todo_failed | join(', ') }} just now: their tasks are missing from the list (nothing was closed). Reload to try again.</div>{% endif %}
+
+  {% if todo_rows %}
+  <div class="todo-scroll">
+  <table class="todo-table">
+    <thead><tr><th>Priority</th><th>Task</th><th>Due</th><th>Source</th><th>Next step</th>{% if todo_can_act %}<th class="right">Manage</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for t in todo_rows %}
+    <tr id="t-{{ t.anchor }}" class="todo-row {{ 'todo-row-late' if t.overdue(now) }}">
+      <td>{{ prio(t.priority) }}{% if 'priority' in t.overridden %}<div class="muted todo-small" title="derived: {{ t.derived_priority }}">set by a person</div>{% endif %}</td>
+      <td class="todo-what"><b>{{ t.title }}</b>{% if t.manual %} <span class="tag">manual</span>{% endif %}{% if t.assignee %} <span class="tag blue" title="assigned to">{{ t.assignee }}</span>{% endif %}
+        {% if t.why %}<div class="muted todo-why">{{ t.why }}</div>{% endif %}
+        {% if t.note and not t.manual %}<div class="todo-note todo-small">Note: {{ t.note }}</div>{% endif %}</td>
+      <td class="nowrap">{{ due(t) }}</td>
+      <td class="todo-small">{{ t.source_label }}</td>
+      <td>{{ action(t) }}</td>
+      {% if todo_can_act %}
+      <td class="right todo-manage">
+        <form method="post" action="/cases/{{ case.id }}/todo/task" class="inline">{{ csrf_field() }}{{ keep(t) }}<input type="hidden" name="op" value="done"><button class="btn small" type="submit" title="{{ 'it reopens if its source changes' if t.derived else 'mark done' }}">Done</button></form>
+        <details class="todo-menu"><summary class="btn small">Snooze</summary>
+          <div class="todo-pop">{% for d in todo_snooze_days %}<form method="post" action="/cases/{{ case.id }}/todo/task" class="inline">{{ csrf_field() }}{{ keep(t) }}<input type="hidden" name="op" value="snooze"><input type="hidden" name="days" value="{{ d }}"><button class="btn small" type="submit">{{ d }} day{{ 's' if d != 1 }}</button></form> {% endfor %}</div>
+        </details>
+        <details class="todo-menu"><summary class="btn small">Dismiss</summary>
+          <form method="post" action="/cases/{{ case.id }}/todo/task" class="todo-pop">{{ csrf_field() }}{{ keep(t) }}<input type="hidden" name="op" value="dismiss">
+            <label for="dn-{{ t.anchor }}">Why (optional)</label><input id="dn-{{ t.anchor }}" name="note" maxlength="500" placeholder="e.g. handled by phone">
+            <button class="btn small" type="submit">Dismiss</button>{% if t.derived %}<div class="muted todo-small">It stays hidden until its source changes.</div>{% endif %}</form>
+        </details>
+        <details class="todo-menu"><summary class="btn small">Edit</summary>
+          <form method="post" action="/cases/{{ case.id }}/todo/task" class="todo-pop todo-edit">{{ csrf_field() }}{{ keep(t) }}<input type="hidden" name="op" value="edit">
+            {% if t.manual %}<label for="et-{{ t.anchor }}">Title</label><input id="et-{{ t.anchor }}" name="title" maxlength="300" required value="{{ t.title }}">{% endif %}
+            <label for="ep-{{ t.anchor }}">Priority</label><select id="ep-{{ t.anchor }}" name="priority">{% if t.derived %}<option value="">derived ({{ t.derived_priority }})</option>{% endif %}{% for p, label in todo_priorities.items() %}<option value="{{ p }}" {{ 'selected' if t.row and t.row.priority_override == p }}>{{ label }}</option>{% endfor %}</select>
+            <label for="ed-{{ t.anchor }}">Due date{% if t.derived %} (empty: the source's){% endif %}</label><input id="ed-{{ t.anchor }}" type="date" name="due" value="{{ t.row.due_override.strftime('%Y-%m-%d') if t.row and t.row.due_override else '' }}">
+            <label for="ea-{{ t.anchor }}">Assignee</label><select id="ea-{{ t.anchor }}" name="assignee_id"><option value="">nobody</option>{% for u in todo_assignees %}<option value="{{ u.id }}" {{ 'selected' if t.assignee_id == u.id }}>{{ u.name }}</option>{% endfor %}</select>
+            <label for="en-{{ t.anchor }}">Note</label><textarea id="en-{{ t.anchor }}" name="note" rows="2" maxlength="4000">{{ t.note or '' }}</textarea>
+            <button class="btn small primary" type="submit">Save</button></form>
+        </details>
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% elif todo_open %}<p class="muted">Nothing matches this filter ({{ todo_open }} open task{{ 's' if todo_open != 1 }} in all).</p>
+  {% else %}<p class="muted">Nothing to do right now: every request is waiting on someone else, secured or closed.</p>{% endif %}
+</div>
+
+{% if todo_can_act %}
+<details class="panel todo-add" id="todo-add"{% if not todo_open %} open{% endif %}>
+  <summary><b>Add task</b> <span class="muted todo-small">a task of your own (a call to make, a document to chase)</span></summary>
+  <form method="post" action="/cases/{{ case.id }}/todo/add" class="todo-add-form">{{ csrf_field() }}<input type="hidden" name="show" value="{{ todo_show }}"><input type="hidden" name="source" value="{{ todo_source or '' }}">
+    <div class="todo-add-title"><label for="add-title">Title</label><input id="add-title" name="title" maxlength="300" required></div>
+    <div><label for="add-priority">Priority</label><select id="add-priority" name="priority">{% for p, label in todo_priorities.items() %}<option value="{{ p }}" {{ 'selected' if p == 'P2' }}>{{ label }}</option>{% endfor %}</select></div>
+    <div><label for="add-due">Due date</label><input id="add-due" type="date" name="due"></div>
+    <div><label for="add-assignee">Assignee</label><select id="add-assignee" name="assignee_id"><option value="">nobody</option>{% for u in todo_assignees %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select></div>
+    <div class="todo-add-note"><label for="add-note">Note</label><textarea id="add-note" name="note" rows="2" maxlength="4000"></textarea></div>
+    <div><button class="btn small primary" type="submit">Add task</button></div>
+  </form>
+</details>
+{% endif %}
+
+{% if todo_snoozed %}
+<details class="panel todo-hidden" id="todo-snoozed"><summary><b>Snoozed</b> <span class="muted todo-small">{{ todo_snoozed | length }}</span></summary>
+  <ul class="todo-list">{% for t in todo_snoozed %}<li id="t-{{ t.anchor }}">{{ prio(t.priority) }} {{ t.title }} <span class="muted todo-small">until {{ t.snoozed_until | dt }} · {{ t.source_label }}</span>
+    {% if todo_can_act %}<form method="post" action="/cases/{{ case.id }}/todo/task" class="inline">{{ csrf_field() }}{{ keep(t) }}<input type="hidden" name="op" value="reopen"><button class="btn small" type="submit">Wake now</button></form>{% endif %}</li>{% endfor %}</ul>
+</details>
+{% endif %}
+
+<div class="panel todo-done" id="todo-done">
+  <h2>Done recently <small>the last 14 days · a derived task closes itself as "done (resolved)" once its source no longer calls for it</small></h2>
+  {% if todo_done %}
+  <ul class="todo-list">{% for t in todo_done %}<li id="t-{{ t.anchor }}"><span class="tag {{ 'green' if t.status != 'dismissed' }}">{{ t.status_label }}</span> {{ t.title }} <span class="muted todo-small">{{ t.done_at | dt }} · {{ t.source_label }}{% if t.dismissed_note %} · “{{ t.dismissed_note }}”{% endif %}</span>
+    {% if todo_can_act and t.status != 'resolved' %}<form method="post" action="/cases/{{ case.id }}/todo/task" class="inline">{{ csrf_field() }}{{ keep(t) }}<input type="hidden" name="op" value="reopen"><button class="btn small" type="submit">Reopen</button></form>{% endif %}</li>{% endfor %}</ul>
+  {% else %}<p class="muted">Nothing closed in the last 14 days.</p>{% endif %}
+</div>

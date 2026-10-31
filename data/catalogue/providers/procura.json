@@ -1,0 +1,92 @@
+{
+  "_comment": "I0 law-enforcement playbook (schema: app/domain/playbook.py). The Italian prosecutor's office (Procura della Repubblica, the PM): the judicial authority that requests a sequestro, issues a Reg. (EU) 2018/1805 freezing certificate or an EIO, and starts an MLAT request. The police level (carabinieri.json) receives the complaint and sends LE requests; binding and cross-border instruments come from here.",
+  "key": "procura",
+  "version": 1,
+  "side": "le",
+  "le_role": "judicial",
+  "jurisdiction": "IT",
+  "notes": "Brief the PM assigned to the case (or the cybercrime section until one is assigned), quoting the complaint reference. A provider receives a decree or a certificate from the PM, never from the victim.",
+  "domains": {"own": ["giustizia.it"], "sibling": [], "vendor_portals": []},
+  "channels_ext": {
+    "procura.web": {
+      "who": "any", "source_ids": ["p1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-21"
+    }
+  },
+  "paths": [
+    {
+      "key": "querela_pm", "kind": "complaint", "requester": ["victim", "counsel", "pi"],
+      "instrument": {"type": "none", "notes": "The querela may be filed with the PM or a police officer (art. 337 c.p.p.); a PI files only as the victim's special proxy."},
+      "evidence": ["victim_id", "incident_narrative", "tx_list_copyable", "comms_export", "trace_report_run", "special_proxy"],
+      "produces": ["police_report", "complaint_ref"],
+      "timing": {"deadlines": [
+        {"key": "querela_term", "what": "file_by", "months": 3, "starts": "fact_known", "by": "victim",
+         "action": "File the querela within 3 months of learning of the fact (art. 124 c.p.); whether aggravants make the offence prosecutable ex officio after the Cartabia reform is disputed, so treat the limit as binding.",
+         "source_ids": ["c3", "c4", "c9"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+      ]},
+      "source_ids": ["c8"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "sequestro_preventivo", "kind": "court_order", "requester": ["le", "court"],
+      "instrument": {"type": "freezing_order", "issuer_jurisdictions": ["IT"],
+                     "notes": "Decreto di sequestro preventivo (art. 321 c.p.p.): the PM requests and the GIP decrees; in urgency the PM seizes, subject to validation."},
+      "evidence": ["police_report", "trace_report_run", "tx_list_copyable", "balance_reading"],
+      "outcomes": ["frozen"],
+      "notes": "Served on an Italian or EU platform directly; a provider outside Italy usually needs the decree recognised abroad (EU freezing certificate) or an MLAT.",
+      "source_ids": ["c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "eu_freezing_order", "kind": "cross_border", "requester": ["le", "court"],
+      "instrument": {"type": "eu_freezing_order", "notes": "Reg. (EU) 2018/1805 freezing certificate on the domestic decree, to the provider's EU state (e.g. France for Circle's EU entity). For live funds the PM states that immediate freezing is necessary (Art. 9(3)). Not for civil proceedings."},
+      "evidence": ["domestic_order", "tx_list_copyable", "balance_reading", "urgency_stmt"],
+      "timing": {"deadlines": [
+        {"key": "recognition", "what": "recognise_by", "hours": 48, "starts": "certificate_received", "by": "court",
+         "action": "Only when the certificate states that immediate freezing is necessary (Art. 9(3)): the executing authority decides on recognition within 48 hours of receipt. Otherwise no fixed limit, only 'without delay' (Art. 9(1)).",
+         "source_ids": ["e1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+        {"key": "execution", "what": "execute_by", "hours": 48, "starts": "recognition", "by": "court",
+         "action": "The executing authority takes the concrete freezing measures within 48 hours of the recognition decision (Art. 9(4)), whether or not immediate freezing was certified; only the 48-hour recognition limit depends on that (Art. 9(3)).",
+         "source_ids": ["e1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"}
+      ]},
+      "outcomes": ["frozen"],
+      "source_ids": ["e1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "mlat_us", "kind": "cross_border", "requester": ["le", "court"],
+      "instrument": {"type": "mlat", "notes": "US-Italy MLAT through the Ministry of Justice, on the PM's request."},
+      "evidence": ["domestic_order", "mlat_bundle", "tx_list_copyable"],
+      "notes": "About 10 months on average in 2013-14 data (old): pair it with a faster route while funds are live.",
+      "source_ids": ["c6", "m1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "issues": [
+    {"instrument": "freezing_order", "jurisdiction": "IT", "by": "the PM requests, the GIP decrees (art. 321 c.p.p.)",
+     "to": [], "source_ids": ["c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"instrument": "eu_freezing_order", "jurisdiction": "IT", "by": "the PM, to the executing EU state",
+     "to": ["circle"], "notes": "For Circle: to France, where its EU entity is licensed (medium).",
+     "source_ids": ["e1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"instrument": "eio", "jurisdiction": "IT", "by": "the PM, to the executing EU state (evidence / records)",
+     "to": [], "source_ids": ["e1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"instrument": "mlat", "jurisdiction": "IT", "by": "the Ministry of Justice on the PM's request (US-Italy MLAT)",
+     "to": ["circle"], "source_ids": ["c6"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "p1", "title": "Ministero della Giustizia", "url": "https://www.giustizia.it", "retrieved_at": "2026-10-21"},
+    {"id": "c2", "title": "Brocardi - art. 321 c.p.p. (sequestro preventivo)",
+     "url": "https://www.brocardi.it/codice-di-procedura-penale/libro-quarto/titolo-ii/capo-ii/art321.html",
+     "retrieved_at": "2026-10-20"},
+    {"id": "c6", "title": "US-Italy Mutual Legal Assistance Treaty (State Department)", "url": "https://www.state.gov/85-1113/",
+     "retrieved_at": "2026-10-20"},
+    {"id": "c3", "title": "Brocardi - art. 640 c.p. (truffa)",
+     "url": "https://www.brocardi.it/codice-penale/libro-secondo/titolo-xiii/capo-ii/art640.html", "retrieved_at": "2026-10-20"},
+    {"id": "c4", "title": "La legge per tutti - truffa online: querela o d'ufficio",
+     "url": "https://www.laleggepertutti.it/802349_la-truffa-online-e-perseguibile-dufficio-o-serve-la-querela-della-vittima",
+     "retrieved_at": "2026-10-20"},
+    {"id": "c9", "title": "Brocardi - art. 124 c.p. (termine per proporre la querela)",
+     "url": "https://www.brocardi.it/codice-penale/libro-primo/titolo-iv/capo-iv/art124.html", "retrieved_at": "2026-10-21"},
+    {"id": "c8", "title": "Brocardi - art. 337 c.p.p. (formalita della querela)",
+     "url": "https://www.brocardi.it/codice-di-procedura-penale/libro-quinto/titolo-iii/art337.html", "retrieved_at": "2026-10-20"},
+    {"id": "e1", "title": "Regulation (EU) 2018/1805 on the mutual recognition of freezing and confiscation orders",
+     "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=celex%3A32018R1805", "retrieved_at": "2026-10-20"},
+    {"id": "m1", "title": "DOJ OIG audit of the handling of incoming MLA requests (21-097)",
+     "url": "https://oig.justice.gov/sites/default/files/reports/21-097.pdf", "retrieved_at": "2026-10-20"}
+  ]
+}

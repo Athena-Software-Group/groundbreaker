@@ -1,0 +1,112 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. Kraken freezes on lawful law-enforcement requests where the funds are identified and held with it; victims report (scam report form) and are told to go to the police, IC3 / FTC and have officers submit Kraken's Compliance & Legal inquiry form. Kraken has no recovery or fund-release team.",
+  "key": "kraken",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": "US",
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "Kraken cannot reverse, recall or cancel a completed transaction, recover funds sent to a scammer or retrieve funds from another platform. It investigates activity on its own accounts and answers lawful requests from law enforcement, including freeze requests. The legal-inquiry form is open to anyone with a compliance or legal matter, but a freeze needs the officer's request.",
+  "entities": [
+    {"key": "kraken", "name": "Kraken (Payward)", "source_ids": ["k1", "k2"]}
+  ],
+  "domains": {"own": ["kraken.com"], "sibling": [], "vendor_portals": []},
+  "channels": [
+    {
+      "key": "kraken.legal_form", "kind": "webform", "value": "https://support.kraken.com/hc/forms/35862482750484",
+      "purpose": "le_request", "role_default": "to", "label": "Compliance & Legal Inquiry form",
+      "notes": "For Compliance, Legal and Privacy / Data Protection inquiries (other topics may get no response). Kraken Support tells victims to have law enforcement submit 'the Compliance and Legal request' here; submitting opens a ticket and Kraken contacts the officer.",
+      "source_url": "https://support.kraken.com/articles/how-do-i-submit-a-legal-inquiry",
+      "who": "counsel_with_order", "source_ids": ["k1", "k3"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "kraken.scam_report", "kind": "webform", "value": "https://support.kraken.com/forms/33616932532628",
+      "purpose": "complaint", "role_default": "to", "label": "Report a scam form",
+      "notes": "Kraken asks victims to report when a Kraken account was involved or Kraken was impersonated. The form may ask the reporter to sign in.",
+      "source_url": "https://support.kraken.com/articles/recover-crypto-lost-to-scam",
+      "who": "any", "source_ids": ["k2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "kraken.le": {
+      "who": "counsel_with_order",
+      "notes": "Kraken Support points law enforcement to the Compliance & Legal Inquiry form (kraken.legal_form); its own help pages do not name an LE channel.",
+      "source_ids": ["k3"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "victim_report", "kind": "victim_report", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["kraken.scam_report"],
+      "instrument": {"type": "none", "notes": "Report to the local police and the national reporting body (US: IC3 and FTC) as well."},
+      "evidence": ["tx_list_copyable", "receiving_account", "incident_narrative", "comms_export", "police_report", "ic3_ref"],
+      "produces": ["prior_ticket_ref"],
+      "expected_replies": ["auto_reply", "acknowledged", "le_process_required"],
+      "on_refusal": "le_freeze",
+      "notes": "Kraken asks the victim to save: tx IDs and hashes, wallet addresses, dates, amounts, screenshots, e-mails and messages, the scammer's names, phones and websites. It does not recover funds: the reply points to the police. The form is meant for Kraken account holders and scams impersonating Kraken; for funds traced to a scammer's Kraken deposit address it is a notice at most: Kraken acts on lawful requests from law enforcement, including requests to freeze funds.",
+      "source_ids": ["k2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "private_notice", "kind": "private_notice", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["kraken.legal_form"],
+      "instrument": {"type": "none", "notes": "A police / IC3 reference strengthens the notice; it is not an instrument."},
+      "evidence": ["tx_list_copyable", "receiving_account", "trace_report_run", "complaint_ref", "loa"],
+      "produces": ["prior_ticket_ref"],
+      "expected_replies": ["auto_reply", "acknowledged", "le_process_required"],
+      "on_refusal": "le_freeze",
+      "notes": "A compliance notice that funds traced to a Kraken deposit address are stolen: it flags them and gets a ticket the officer can cite. No source says a private notice gets a freeze.",
+      "source_ids": ["k1", "k2"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_freeze", "kind": "le_request", "requester": ["le"], "channel_keys": ["kraken.legal_form"],
+      "instrument": {"type": "le_request", "notes": "A lawful law-enforcement request; Kraken freezes 'where those funds are identified and held with us'."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "receiving_account", "trace_report_run", "prior_ticket_ref"],
+      "expected_replies": ["acknowledged", "info_requested", "frozen"], "outcomes": ["frozen"],
+      "on_refusal": "court_freeze",
+      "notes": "No SLA is published. Kraken checks legal sufficiency and scope and may narrow or challenge a request. The channel (the Compliance & Legal Inquiry form) is Kraken Support's pointer on X (k3, reported): the officer confirms it with Kraken.",
+      "source_ids": ["k2", "k4"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_records", "kind": "data_disclosure", "requester": ["le", "court", "regulator"], "channel_keys": ["kraken.legal_form"],
+      "instrument": {"type": "subpoena", "notes": "Subpoena or summons (the most common), court order or warrant."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "receiving_account"],
+      "expected_replies": ["acknowledged", "info_requested"],
+      "notes": "2025 transparency report: requests from 74 countries, data provided for about half. Non-US agencies may need an MLAT or letters rogatory (secondary).",
+      "source_ids": ["k4"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "court_freeze", "kind": "court_order", "requester": ["le", "court"],
+      "channel_keys": ["kraken.legal_form"],
+      "instrument": {"type": "freezing_order", "notes": "E.g. a UK crypto-wallet freezing order under POCA, obtained by the police."},
+      "evidence": ["court_order", "tx_list_copyable", "receiving_account"],
+      "outcomes": ["frozen"],
+      "notes": "Reported 2025 UK case: the police froze a Kraken wallet by a magistrates' court order and repatriation to the victim was ordered. Other jurisdictions' orders are not documented.",
+      "source_ids": ["k5", "k3"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "Compliance and Legal request", "means": "le_process_required", "instrument": "le_request",
+     "channel_key": "kraken.legal_form", "path": "le_freeze",
+     "source_ids": ["k3"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "lawful requests from law enforcement", "means": "le_process_required", "instrument": "le_request",
+     "path": "le_freeze", "source_ids": ["k2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "report to your local police", "means": "le_process_required", "instrument": "police_report",
+     "path": "le_freeze", "source_ids": ["k2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "tickets": [
+    {"system": "kraken_support", "regex": null, "source_ids": ["k1"], "basis": "I", "confidence": "L",
+     "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "k1", "title": "Kraken: How do I submit a legal inquiry?", "url": "https://support.kraken.com/articles/how-do-i-submit-a-legal-inquiry",
+     "retrieved_at": "2026-10-20"},
+    {"id": "k2", "title": "Kraken: Can I recover crypto lost to a scam?", "url": "https://support.kraken.com/articles/recover-crypto-lost-to-scam",
+     "retrieved_at": "2026-10-20"},
+    {"id": "k3", "title": "Kraken Support on X (LE form pointer)", "url": "https://x.com/krakensupport/status/2029830309240344894",
+     "retrieved_at": "2026-10-20"},
+    {"id": "k4", "title": "Kraken 2025 Transparency Report", "url": "https://blog.kraken.com/compliance/2025-transparency-report",
+     "retrieved_at": "2026-10-20"},
+    {"id": "k5", "title": "Lexology: Victims and Crypto Wallet Freezing Orders (Kraken wallet case)",
+     "url": "https://www.lexology.com/library/detail.aspx?g=31d0db81-8367-4aaf-ad27-118df5e0659a", "retrieved_at": "2026-10-20"}
+  ]
+}

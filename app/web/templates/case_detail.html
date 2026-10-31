@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{#
+  Case page shell. Tabs are links (?tab=<key>); only the active tab's partial is rendered and only
+  its context provider (app/web/tabs.py, registered by the owning router) runs.
+  Every partial sees: case, access (CaseAccess: .role, .user, .is_external, .can(action)),
+  tab, tabs, can(action), request — plus what its own provider returns.
+  Blocks: title, head, case_header (reference/title line), case_actions (right-hand buttons),
+  content, scripts. A partial may load its own external script files (src=…); no inline scripts.
+#}
+{% block title %}Aegis · {{ case.reference }}{% endblock %}
+{% block content %}
+<div class="row case-head" style="margin-bottom:12px">
+  <div>
+    {% block case_header %}
+    <h1><span class="mono muted">{{ case.reference }}</span> &nbsp;{{ case.title }}</h1>
+    {% if not access.is_external %}
+    <div class="sub">{{ case.fraud_type or '' }} · victim {{ case.victim_name }}{% if case.victim_entity %} ({{ case.victim_entity }}){% endif %} · fraud {{ case.fraud_date | dt }}</div>
+    {% endif %}
+    {% endblock %}
+  </div>
+  <div class="spacer"></div>
+  {% block case_actions %}<span class="tag" title="your role on this case">{{ access.role.value | replace('_', ' ') }}</span>{% endblock %}
+</div>
+
+{% include "case/_tabs_nav.html" %}
+
+<section class="case-tab-panel" id="tab-{{ tab }}" data-case-id="{{ case.id }}">
+{% if tab == 'overview' %}{% include "case/_tab_overview.html" %}
+{% elif tab == 'todo' %}{% include "case/_tab_todo.html" %}
+{% elif tab == 'fund_flow' %}{% include "case/_tab_fund_flow.html" %}
+{% elif tab == 'authorities' %}{% include "case/_tab_authorities.html" %}
+{% elif tab == 'evidence' %}{% include "case/_tab_evidence.html" %}
+{% elif tab == 'team' %}{% include "case/_tab_team.html" %}
+{% elif tab == 'notifications' %}{% include "case/_tab_notifications.html" %}
+{% elif tab == 'assistant' %}{% include "case/_tab_assistant.html" %}
+{% endif %}
+</section>
+{% endblock %}

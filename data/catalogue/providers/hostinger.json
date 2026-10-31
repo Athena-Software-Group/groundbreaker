@@ -1,0 +1,89 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. Hosting: no funds, so the value is a takedown of a scam site and preservation of its records. The abuse policy publishes an abuse alias and a compliance alias on hostinger.com and the Report Abuse form; the aliases are declared with value null until the catalogue's address list is extended in a reviewed change. No separate LE portal is published: hostinger.le stays null.",
+  "key": "hostinger",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": "LT",
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "Group entity HOSTINGER, UAB (Lithuania); the contracting entity depends on the customer's country (Cyprus for EU and most others, UK, Singapore, Luxembourg, Indonesia). Hostinger may share an abuse report with its customer (the reporter's identity only where strictly necessary): ask for preservation first and say whether the customer may be told. EU authority orders are accepted in English, Lithuanian or Greek; the policy does not say whose authorities it acts on, so no issuer jurisdiction is set.",
+  "entities": [
+    {"key": "hostinger-uab", "name": "HOSTINGER, UAB", "jurisdiction": "LT", "source_ids": ["s3"]},
+    {"key": "hostinger-intl", "name": "HOSTINGER INTERNATIONAL LIMITED", "jurisdiction": "CY", "separate": true,
+     "notes": "Contracting entity for EU countries and all countries not listed elsewhere.", "source_ids": ["s2"]},
+    {"key": "hostinger-uk", "name": "Hostinger UK Limited", "jurisdiction": "GB", "separate": true,
+     "notes": "Contracting entity for UK customers.", "source_ids": ["s2"]},
+    {"key": "hostinger-pte", "name": "HOSTINGER PTE LTD", "jurisdiction": "SG", "separate": true,
+     "notes": "Contracting entity for the 'Group No. 1' countries.", "source_ids": ["s2"]},
+    {"key": "hostinger-global", "name": "HOSTINGER Global S.a r.l", "jurisdiction": "LU", "separate": true,
+     "notes": "Contracting entity for the 'Group No. 2' countries.", "source_ids": ["s2"]}
+  ],
+  "domains": {"own": ["hostinger.com"], "sibling": [], "vendor_portals": []},
+  "channels": [
+    {
+      "key": "hostinger.abuse_mail", "kind": "email", "value": null, "purpose": "abuse", "role_default": "to",
+      "label": "Abuse reports (e-mail)",
+      "notes": "The abuse policy names an abuse alias on hostinger.com next to the Report Abuse form, available 24/7; EU authority orders may also go there. Not yet catalogued as a value: confirm it on the policy page and add it as a case channel.",
+      "source_url": "https://www.hostinger.com/legal/abuse-policy", "who": "any",
+      "source_ids": ["s1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "hostinger.compliance", "kind": "email", "value": null, "purpose": "compliance", "role_default": "to",
+      "label": "Requests from competent authorities (information, preservation, orders)",
+      "notes": "The abuse policy sends requests, orders and other communications from competent authorities to a compliance alias on hostinger.com; requests may also come from attorneys or parties to legal proceedings entitled to make them. Hostinger may ask for proof of identity, authority or legal basis. Not yet catalogued as a value.",
+      "source_url": "https://www.hostinger.com/legal/abuse-policy", "who": "counsel_with_order",
+      "source_ids": ["s1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "hostinger.abuse": {
+      "who": "any",
+      "notes": "The Report Abuse form at https://www.hostinger.com/report-abuse (24/7): domain, URL or IP, a description of why it is unlawful, supporting evidence, reporter contact details and a good-faith declaration.",
+      "source_ids": ["s1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    "hostinger.le": {
+      "who": "le_only",
+      "notes": "No separate law-enforcement portal is published: authority requests go to the compliance alias (EU authority orders also to the abuse alias). Leave null.",
+      "source_ids": ["s1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "takedown", "kind": "takedown", "requester": ["victim", "pi", "counsel", "le"],
+      "channel_keys": ["hostinger.abuse", "hostinger.abuse_mail"],
+      "instrument": {"type": "none"},
+      "evidence": ["incident_narrative", "comms_export", "provider_ids"],
+      "on_refusal": "le_request",
+      "notes": "Hostinger aims at an initial review within 24 hours of receipt; further assessment may take longer. It may restrict or disable content, or suspend or terminate services, and may share the report with the customer: ask for preservation of the site and account records in the same report.",
+      "source_ids": ["s1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_request", "kind": "le_request", "requester": ["le"], "channel_keys": ["hostinger.compliance"],
+      "instrument": {"type": "le_request", "language": ["en", "lt", "el"],
+                     "notes": "An authority request with enough to identify the customer, account, service or domain; Hostinger may ask for proof of authority or legal basis. Languages are those stated for EU authority communications."},
+      "evidence": ["le_agency_identity", "provider_ids", "incident_narrative"],
+      "on_refusal": "data_disclosure",
+      "notes": "Covers information and preservation requests; Hostinger may preserve data on a valid request. The privacy policy discloses personal data to state and public authorities when legally required or on enforceable government requests.",
+      "source_ids": ["s1", "s3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "data_disclosure", "kind": "data_disclosure", "requester": ["le", "court", "counsel"],
+      "channel_keys": ["hostinger.compliance"],
+      "instrument": {"type": "court_order",
+                     "notes": "Subpoenas and court orders are listed among the request types; the policy does not state which one is required."},
+      "evidence": ["court_order", "provider_ids"],
+      "notes": "Requests from attorneys or parties to legal proceedings are handled according to their entitlement under the applicable rules.",
+      "source_ids": ["s1", "s2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [],
+  "tickets": [],
+  "sources": [
+    {"id": "s1", "title": "Hostinger Abuse handling policy", "url": "https://www.hostinger.com/legal/abuse-policy",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s2", "title": "Hostinger Universal Terms of Service Agreement",
+     "url": "https://www.hostinger.com/legal/universal-terms-of-service-agreement", "retrieved_at": "2026-10-20"},
+    {"id": "s3", "title": "Hostinger Privacy Policy", "url": "https://www.hostinger.com/legal/privacy-policy",
+     "retrieved_at": "2026-10-20"}
+  ]
+}

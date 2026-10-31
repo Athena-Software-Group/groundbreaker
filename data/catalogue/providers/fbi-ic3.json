@@ -1,0 +1,89 @@
+{
+  "_comment": "I0 law-enforcement playbook (schema: app/domain/playbook.py). What IC3 accepts from a victim or PI, what the US side can then send to whom, and the evidence it wants. IC3 analyses and refers; only the receiving agency acts. An IC3 complaint ID is context for a provider, never an LE request and never a freeze.",
+  "key": "fbi-ic3",
+  "version": 1,
+  "side": "le",
+  "le_role": "intake",
+  "jurisdiction": "US",
+  "notes": "IC3 does not investigate and gives no status; any follow-up comes from the receiving agency (an fbi.gov / usss / state or local .gov address naming an agent and a case number). For time-sensitive matters IC3 says to contact local law enforcement directly. Scammers impersonate IC3: IC3 never contacts victims to recover funds or charges fees.",
+  "domains": {"own": ["ic3.gov", "fbi.gov"], "sibling": [], "vendor_portals": []},
+  "channels_ext": {
+    "fbi-ic3.portal": {
+      "who": "any",
+      "notes": "Anyone may file, including on another person's behalf. Complaints cannot be edited: new facts go in a new complaint that says so.",
+      "source_ids": ["i2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "complaint", "kind": "complaint", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["fbi-ic3.portal"],
+      "instrument": {"type": "none", "notes": "A complaint, not legal process."},
+      "evidence": ["incident_narrative", "tx_list_copyable", "receiving_account", "comms_export", "trace_report_run"],
+      "produces": ["ic3_ref", "complaint_ref"],
+      "notes": "Give every sending and receiving address, full 64-hex transaction hashes, amounts, asset, chain and UTC times, the exchanges used, how the victim met the scammer, communications with names / addresses / numbers, and the scam's domains and apps. An on-screen confirmation ('Your complaint has been successfully submitted'), then no contact from IC3. Save or print the complaint on the confirmation screen: it is the only chance to keep a copy (the FAQ). Keep the complaint reference IC3 shows and quote it in every provider letter.",
+      "source_ids": ["i1", "i2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "rat_fiat", "kind": "complaint", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["fbi-ic3.portal"],
+      "instrument": {"type": "none"},
+      "evidence": ["wire_details"],
+      "produces": ["ic3_ref"],
+      "notes": "Recovery Asset Team (Financial Fraud Kill Chain): the RAT asks the receiving bank to freeze a wire. Fiat legs only, and only within days of the transfer; not on-chain crypto.",
+      "source_ids": ["i4"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "issues": [
+    {"instrument": "le_request", "jurisdiction": "US", "by": "the FBI field office or partner agency that takes the referral (case agent)",
+     "to": ["tether", "circle", "binance", "coinbase", "kraken"],
+     "notes": "Freeze / hold request through the provider's LE channel; Circle acts on a US authority, Tether reports onboarding the FBI and USSS. Exchange holds are short (about two weeks at Binance.US), so the warrant must follow quickly.",
+     "source_ids": ["f1", "f2", "f3"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"instrument": "formal_directive", "jurisdiction": "US", "by": "the case agent's federal agency",
+     "to": ["paxos"],
+     "notes": "Paxos acts only on a formal legal directive from an authority with jurisdiction over it (USDP / PYUSD: Paxos Trust, US); in 2022 it froze PAXG on a US federal law-enforcement direction.",
+     "source_ids": ["x1", "x2"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"instrument": "seizure_warrant", "jurisdiction": "US", "by": "a federal magistrate on the case agent's / AUSA's application",
+     "to": [], "notes": "Then civil or criminal forfeiture, then remission / restitution to victims (months to years).",
+     "source_ids": ["f2"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"instrument": "subpoena", "jurisdiction": "US", "by": "grand jury subpoena, court order or search warrant (records)",
+     "to": [], "source_ids": ["f1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"instrument": "mlat", "jurisdiction": "US", "by": "DOJ Criminal Division, Office of International Affairs",
+     "to": [], "notes": "For providers outside the US; slow (months).",
+     "source_ids": ["m1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "reply_signals": [
+    {"phrase": "Your complaint has been successfully submitted", "means": "acknowledged",
+     "source_ids": ["i2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "You will not hear from the IC3", "means": "acknowledged",
+     "source_ids": ["i2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"}
+  ],
+  "tickets": [
+    {"system": "ic3_complaint", "regex": null, "source_ids": ["i2"], "basis": "I", "confidence": "L",
+     "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "i1", "title": "IC3 - Cryptocurrency", "url": "https://www.ic3.gov/CrimeInfo/Cryptocurrency", "retrieved_at": "2026-10-20"},
+    {"id": "i2", "title": "IC3 FAQ", "url": "https://www.ic3.gov/Home/FAQ", "retrieved_at": "2026-10-20"},
+    {"id": "i3", "title": "IC3 2025 Annual Report", "url": "https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf",
+     "retrieved_at": "2026-10-20"},
+    {"id": "i4", "title": "FBI Las Vegas - Recovery Asset Team",
+     "url": "https://www.fbi.gov/contact-us/field-offices/lasvegas/news/press-releases/fbi-las-vegas-federal-fact-friday-recovery-asset-team",
+     "retrieved_at": "2026-10-20"},
+    {"id": "f1", "title": "Binance.US Law Enforcement Guide",
+     "url": "https://support.binance.us/en/articles/9842980-binance-us-law-enforcement-guide", "retrieved_at": "2026-10-20"},
+    {"id": "f2", "title": "TRM Talks - how the FBI tracks and seizes illicit crypto (Virtual Assets Unit)",
+     "url": "https://www.trmlabs.com/resources/trm-talks/trm-talks-how-the-fbi-tracks-and-seizes-illicit-crypto-with-the-virtual-assets-unit-chief-patrick-wyman",
+     "retrieved_at": "2026-10-20"},
+    {"id": "f3", "title": "The Block: Tether onboarded FBI, Secret Service to its platform",
+     "url": "https://www.theblock.co/post/267973/tether-weve-onboarded-fbi-secret-service-to-our-platform",
+     "retrieved_at": "2026-10-20"},
+    {"id": "x1", "title": "Paxos Illegal Activity terms", "url": "https://www.paxos.com/terms-and-conditions/illegal-activity",
+     "retrieved_at": "2026-10-20"},
+    {"id": "x2", "title": "Bitcoin.com News: US law enforcement directs Paxos to freeze more than 11,000 PAXG (2022)",
+     "url": "https://news.bitcoin.com/us-law-enforcement-directs-paxos-to-freeze-more-than-11000-paxg-tokenized-gold-coins/",
+     "retrieved_at": "2026-10-20"},
+    {"id": "m1", "title": "DOJ OIG audit of the handling of incoming MLA requests (21-097)",
+     "url": "https://oig.justice.gov/sites/default/files/reports/21-097.pdf", "retrieved_at": "2026-10-20"}
+  ]
+}

@@ -1,0 +1,94 @@
+Aegis (GroundBreaker) — powered by Athena Software Group, Inc.
+Copyright (C) 2026 Athena Software Group, Inc.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU
+Affero General Public License as published by the Free Software Foundation, version 3 (see LICENSE).
+It is distributed WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. If you run a modified version as a network service, the AGPL
+requires you to offer its users the corresponding source.
+
+The AGPL licenses the code only: it grants no right to use the GroundBreaker or Athena names, logos
+or other marks.
+
+This product includes third-party components, which remain under their own licences, listed below.
+
+===============================================================================
+1. Vendored JavaScript (app/web/static/vendor/), served locally with no CDN
+===============================================================================
+
+cytoscape.js 3.30.4 (cytoscape.min.js)
+  Copyright (c) 2016-2024, The Cytoscape Consortium.
+  MIT License. The full licence text is in the header of cytoscape.min.js.
+  The bundle also contains code under its own MIT-style notices, including:
+    - Copyright (c) 2013-2014 Ralf S. Engelschall (http://engelschall.com)
+    - Copyright Gaetan Renaudeau (MIT License)
+  https://github.com/cytoscape/cytoscape.js
+
+dagre 0.8.5 (dagre.min.js)
+  Copyright (c) 2012-2014 Chris Pettitt
+  MIT License. The bundle includes graphlib 2.1.8 (Copyright (c) 2014, Chris Pettitt; MIT)
+  and lodash (Copyright OpenJS Foundation and other contributors; MIT).
+  https://github.com/dagrejs/dagre
+
+cytoscape-dagre 2.5.0 (cytoscape-dagre.js; version as recorded when vendored, since the file has no version string)
+  Copyright (c) The Cytoscape Consortium.
+  MIT License. The vendored file has no licence header; this notice supplies it. Restoring the
+  upstream header in the file is an open item.
+  https://github.com/cytoscape/cytoscape.js-dagre
+
+MIT License text (applies to the components above):
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+  and associated documentation files (the "Software"), to deal in the Software without
+  restriction, including without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+  Software is furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies or
+  substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+  BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+===============================================================================
+2. Python dependencies (installed from PyPI, not vendored)
+===============================================================================
+
+Runtime (requirements.txt)
+  fastapi ............. MIT
+  uvicorn ............. BSD-3-Clause
+  SQLAlchemy .......... MIT
+  alembic ............. MIT
+  psycopg / psycopg-binary  LGPL-3.0-only (used unmodified as a dynamically loaded library;
+                        any redistribution must keep it replaceable and include its licence)
+  pydantic ............ MIT
+  pydantic-settings ... MIT
+  Jinja2 .............. BSD-3-Clause
+  networkx ............ BSD-3-Clause
+  httpx ............... BSD-3-Clause
+  python-multipart .... Apache-2.0
+  python-docx ......... MIT
+  pypdf ............... BSD-3-Clause
+  markdown-it-py ...... MIT
+  itsdangerous ........ BSD-3-Clause
+  anthropic ........... MIT (Anthropic Python SDK; used only when the case assistant is configured)
+
+Development (requirements-dev.txt)
+  pytest .............. MIT
+  pytest-asyncio ...... Apache-2.0
+  aiosqlite ........... MIT
+  ruff ................ MIT
+
+Transitive dependencies are not listed here. Generate a full report per release
+(e.g. `pip-licenses --from=mixed` and a CycloneDX SBOM) before distribution or due diligence.
+
+===============================================================================
+3. Fonts and marks
+===============================================================================
+
+The brand SVGs reference Space Grotesk and IBM Plex Mono by name only. No font files are
+bundled; both families are under the SIL Open Font License 1.1. The GroundBreaker and Athena
+marks are not licensed under any of the licences above (see the trademark note at the top).

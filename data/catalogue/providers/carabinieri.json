@@ -1,0 +1,115 @@
+{
+  "_comment": "I0 law-enforcement playbook (schema: app/domain/playbook.py). What the Carabinieri / Procura accept from a victim or PI, what the Italian side can send to whom, and the evidence it wants. An Italian authority is neither US nor French: Circle needs the cross-border route (EU freezing order / EIO to France, MLAT to the US) or US counsel. The binding and cross-border instruments are the Procura's (procura.json): the police level here issues LE requests only.",
+  "key": "carabinieri",
+  "version": 1,
+  "side": "le",
+  "le_role": "police",
+  "jurisdiction": "IT",
+  "notes": "Only the PM (or the police in urgency, subject to validation) orders a sequestro; providers receive the decree from the PM or police, never from the victim. A protocol number or verbale is never a freeze.",
+  "domains": {"own": ["carabinieri.it"], "sibling": [], "vendor_portals": []},
+  "channels_ext": {
+    "carabinieri.station": {
+      "who": "victim_or_rep",
+      "notes": "The receiving office attests the filing and forwards it to the PM (art. 337 co. 4 c.p.p.). The querela is signed by the victim or a special proxy (procuratore speciale).",
+      "source_ids": ["c1", "c8"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "querela", "kind": "complaint", "requester": ["victim", "counsel", "pi"],
+      "channel_keys": ["carabinieri.station"],
+      "instrument": {"type": "none", "notes": "Verbale di denuncia-querela (art. 337 c.p.p. formalities): a PI files only as the victim's special proxy."},
+      "evidence": ["victim_id", "incident_narrative", "tx_list_copyable", "comms_export", "trace_report_run", "special_proxy"],
+      "produces": ["police_report", "complaint_ref"],
+      "timing": {"deadlines": [
+        {"key": "querela_term", "what": "file_by", "months": 3, "starts": "fact_known", "by": "victim",
+         "action": "File the querela within 3 months of learning of the fact (art. 124 c.p.); whether aggravants make the offence prosecutable ex officio after the Cartabia reform is disputed, so treat the limit as binding.",
+         "source_ids": ["c3", "c4", "c9"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+      ]},
+      "notes": "The receiving office attests the filing and forwards the querela to the PM (art. 337 co. 4 c.p.p.). The Polizia di Stato's online pre-denuncia (a pilot in a few Lazio / Umbria offices) must be formalised in person at a Polizia di Stato office within 48 hours. Aegis advice (inferred, not from these sources): bring the victim's ID and tax code, the narrative, transaction hashes, wallet addresses, exchange names, screenshots, e-mails with full headers and bank movements; the trace report can follow (integrazione di querela); expect a protocol number and verbale, and a PM and RGNR number from the Procura later.",
+      "source_ids": ["c1", "c8"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "sequestro_preventivo", "kind": "court_order", "requester": ["le", "court"],
+      "instrument": {"type": "freezing_order", "issuer_jurisdictions": ["IT"],
+                     "notes": "Decreto di sequestro preventivo (art. 321 c.p.p.): the PM requests and the GIP decrees; in urgency the PM or police seize and the measure must be validated."},
+      "evidence": ["police_report", "trace_report_run", "tx_list_copyable", "balance_reading"],
+      "timing": {"deadlines": [
+        {"key": "police_transmission", "what": "submit_by", "hours": 48, "starts": "seizure", "by": "le",
+         "action": "After an urgent seizure by the police, the police send the verbale to the PM within 48 hours (art. 321 co. 3-bis c.p.p.).",
+         "source_ids": ["c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+        {"key": "validation_request", "what": "validate_by", "hours": 48, "starts": "seizure", "by": "le",
+         "action": "The PM requests validation within 48 hours of the seizure (own seizure) or of receiving the police verbale (art. 321 co. 3-bis c.p.p.): a police seizure can therefore take up to 96 hours in all.",
+         "source_ids": ["c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+        {"key": "validation_decision", "what": "decide_by", "days": 10, "starts": "validation_requested", "by": "court",
+         "action": "The judge decides within 10 days or the seizure lapses.",
+         "source_ids": ["c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+      ]},
+      "outcomes": ["frozen"],
+      "notes": "Notified to the platform, which must block the wallet, prevent transfers and provide KYC. Foreign providers usually need the cross-border route.",
+      "source_ids": ["c2", "c5"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "eu_freezing_order", "kind": "cross_border", "requester": ["le", "court"],
+      "instrument": {"type": "eu_freezing_order", "notes": "Reg. (EU) 2018/1805 freezing certificate to the provider's EU state (e.g. France for Circle's EU entity). Not for civil proceedings."},
+      "evidence": ["domestic_order", "tx_list_copyable", "balance_reading"],
+      "timing": {"deadlines": [
+        {"key": "recognition", "what": "recognise_by", "hours": 48, "starts": "certificate_received", "by": "court",
+         "action": "Only when the certificate states that immediate freezing is necessary (Art. 9(3)): the executing authority decides on recognition within 48 hours of receipt. Otherwise no fixed limit, only 'without delay' (Art. 9(1)): tick immediate freezing for live funds.",
+         "source_ids": ["e1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+        {"key": "execution", "what": "execute_by", "hours": 48, "starts": "recognition", "by": "court",
+         "action": "The executing authority takes the concrete freezing measures within 48 hours of the recognition decision (Art. 9(4)), whether or not immediate freezing was certified; only the 48-hour recognition limit depends on that (Art. 9(3)).",
+         "source_ids": ["e1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"}
+      ]},
+      "source_ids": ["e1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "mlat_us", "kind": "cross_border", "requester": ["le", "court"],
+      "instrument": {"type": "mlat", "notes": "US-Italy MLAT through the Ministry of Justice."},
+      "evidence": ["domestic_order", "mlat_bundle", "tx_list_copyable"],
+      "notes": "About 10 months on average in 2013-14 data (old): pair it with a faster route while funds are live.",
+      "source_ids": ["c6", "m1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "issues": [
+    {"instrument": "le_request", "jurisdiction": "IT", "by": "the police / PM of the case",
+     "to": ["tether"], "notes": "Tether reportedly accepts requests from agencies of many countries (reported, medium); Circle does not act on an Italian request.",
+     "source_ids": ["c5"], "basis": "R", "confidence": "L", "retrieved_at": "2026-10-20"}
+  ],
+  "reply_signals": [
+    {"phrase": "Prot. n.", "means": "acknowledged", "source_ids": ["c1"], "basis": "I", "confidence": "M",
+     "retrieved_at": "2026-10-20"},
+    {"phrase": "verbale di ricezione di denuncia-querela", "means": "acknowledged", "source_ids": ["c1"],
+     "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "decreto di sequestro preventivo", "means": "acknowledged", "instrument": "freezing_order",
+     "path": "sequestro_preventivo", "source_ids": ["c2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "tickets": [
+    {"system": "protocollo", "regex": null, "source_ids": ["c1"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"system": "rgnr", "regex": null, "source_ids": ["c5"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "c1", "title": "Polizia Postale - Denuncia per reati telematici",
+     "url": "https://www.commissariatodips.it/special/denuncia-per-reati-telematici/index.html", "retrieved_at": "2026-10-20"},
+    {"id": "c2", "title": "Brocardi - art. 321 c.p.p. (sequestro preventivo)",
+     "url": "https://www.brocardi.it/codice-di-procedura-penale/libro-quarto/titolo-ii/capo-ii/art321.html",
+     "retrieved_at": "2026-10-20"},
+    {"id": "c3", "title": "Brocardi - art. 640 c.p. (truffa)",
+     "url": "https://www.brocardi.it/codice-penale/libro-secondo/titolo-xiii/capo-ii/art640.html", "retrieved_at": "2026-10-20"},
+    {"id": "c4", "title": "La legge per tutti - truffa online: querela o d'ufficio",
+     "url": "https://www.laleggepertutti.it/802349_la-truffa-online-e-perseguibile-dufficio-o-serve-la-querela-della-vittima",
+     "retrieved_at": "2026-10-20"},
+    {"id": "c5", "title": "Giammatteo - recupero criptovalute e Procura",
+     "url": "https://www.giammatteo.it/news/recupero-criptovalute-procura", "retrieved_at": "2026-10-20"},
+    {"id": "c6", "title": "US-Italy Mutual Legal Assistance Treaty (State Department)", "url": "https://www.state.gov/85-1113/",
+     "retrieved_at": "2026-10-20"},
+    {"id": "c8", "title": "Brocardi - art. 337 c.p.p. (formalita della querela)",
+     "url": "https://www.brocardi.it/codice-di-procedura-penale/libro-quinto/titolo-iii/art337.html", "retrieved_at": "2026-10-20"},
+    {"id": "c9", "title": "Brocardi - art. 124 c.p. (termine per proporre la querela)",
+     "url": "https://www.brocardi.it/codice-penale/libro-primo/titolo-iv/capo-iv/art124.html", "retrieved_at": "2026-10-21"},
+    {"id": "e1", "title": "Regulation (EU) 2018/1805 on the mutual recognition of freezing and confiscation orders",
+     "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=celex%3A32018R1805", "retrieved_at": "2026-10-20"},
+    {"id": "m1", "title": "DOJ OIG audit of the handling of incoming MLA requests (21-097)",
+     "url": "https://oig.justice.gov/sites/default/files/reports/21-097.pdf", "retrieved_at": "2026-10-20"}
+  ]
+}

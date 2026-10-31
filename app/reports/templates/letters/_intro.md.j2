@@ -1,0 +1,10 @@
+{# Opening paragraph: who writes, for whom, under which instrument. Context: sender, victim, loss_*, fraud_date_fmt.
+   sender.kind "athena": the case's sender profile (app.domain.sender); the victim's role is added only when the
+   profile names the victim exactly as the case does (on_behalf_of usually already says who they are). #}
+{% if sender.kind == "athena" %}
+We write as {{ sender.firm }}, on behalf of {{ sender.on_behalf_of }}{% if victim.role and sender.on_behalf_of == victim.name %} ({{ victim.role }}){% endif %}{% if victim.jurisdiction %}, {{ victim.jurisdiction }}{% endif %}, the victim of a cryptocurrency fraud{% if fraud_date_fmt %} on {{ fraud_date_fmt }}{% endif %}{% if loss_usd_fmt %} with a loss of approximately {{ loss_usd_fmt }}{% if loss_fmt %} ({{ loss_fmt }}){% endif %}{% endif %}, acting under the victim's {{ sender.instrument }} (attached).
+{% elif sender.firm %}
+{{ sender.firm }} is a private investigations and intelligence firm{% if sender.based_in %} based in {{ sender.based_in }}{% endif %}. We act on the instructions of {{ victim.name }}{% if victim.role %} ({{ victim.role }}){% endif %}{% if victim.jurisdiction %}, {{ victim.jurisdiction }}{% endif %}, under a {{ sender.instrument }}{% if loss_usd_fmt %}, in the matter of a cryptocurrency fraud{% if fraud_date_fmt %} on {{ fraud_date_fmt }}{% endif %} in which the victim lost approximately {{ loss_usd_fmt }}{% if loss_fmt %} ({{ loss_fmt }}){% endif %}{% endif %}.
+{% else %}
+We write on behalf of {{ victim.name }}{% if victim.role %} ({{ victim.role }}){% endif %}{% if victim.jurisdiction %}, {{ victim.jurisdiction }}{% endif %}, the victim of a cryptocurrency fraud{% if fraud_date_fmt %} on {{ fraud_date_fmt }}{% endif %}{% if loss_usd_fmt %} with a loss of approximately {{ loss_usd_fmt }}{% if loss_fmt %} ({{ loss_fmt }}){% endif %}{% endif %}, acting on the victim's {{ sender.instrument }}.
+{% endif %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{# Import a reply — owner: app/web/routes_mail.py (import_page / import_reply; app/domain/mail_import.py).
+   Context: case, access, error, shown ({mm, duplicate, letter_id} after an import, or None), authorities
+   [{key, name}], selected (an authority key), can_review (triage_mail: case admins), max_mb. #}
+{% block title %}Aegis · {{ case.reference }} · Import a reply{% endblock %}
+{% block content %}
+<div class="row case-head" style="margin-bottom:12px"><div><h1>Import a reply</h1>
+  <div class="sub"><a href="/cases/{{ case.id }}?tab=authorities" class="mono">{{ case.reference }}</a> · Authorities · a reply received in Outlook, uploaded as .eml or .msg</div></div></div>
+
+{% if error %}<div class="alert critical" id="mail-error">{{ error }}</div>{% endif %}
+{% if shown %}
+{% set m = shown.mm %}
+<div class="alert {{ 'warning' if shown.duplicate else 'info' }}" id="mail-imported" role="status">
+  {% if shown.duplicate %}This file was imported before as e-mail #{{ m.id }}{% else %}Imported as e-mail #{{ m.id }}{% endif %}:
+  “{{ m.subject or '(no subject)' }}” from <span class="mono">{{ m.from_addr or '—' }}</span>.
+  {% if m.status.value == 'needs_review' %}It waits on <b>Mail to review</b>{% if shown.letter_id %} with letter #{{ shown.letter_id }} pre-selected ({{ (m.match or {}).get('method') }}){% else %} (no letter matched: a case admin picks the authority){% endif %}.{% else %}It is {{ m.status.value | replace('_', ' ') }}.{% endif %}
+  {% if can_review and m.status.value == 'needs_review' %}<a href="/cases/{{ case.id }}/mail/review#m{{ m.id }}">Review it now</a>{% elif m.status.value == 'needs_review' %}A case admin accepts it there.{% endif %}
+</div>
+{% endif %}
+
+<div class="auth-grid">
+<div class="auth-main">
+  <div class="panel">
+    <h2>Upload the reply</h2>
+    <form method="post" action="/cases/{{ case.id }}/mail/import" enctype="multipart/form-data" id="mail-import-form">
+      {{ csrf_field() }}
+      <label for="imp-file">Reply file (.eml or .msg, up to {{ max_mb }} MB)</label>
+      <input type="file" id="imp-file" name="reply" accept=".eml,.msg,message/rfc822,application/vnd.ms-outlook" required>
+      <label for="imp-auth">From which authority? (optional: used when the subject lost its tracking tag)</label>
+      <select id="imp-auth" name="authority_key"><option value="">— match by the tracking tag —</option>
+        {% for a in authorities %}<option value="{{ a.key }}" {{ 'selected' if selected == a.key }}>{{ a.name }}</option>{% endfor %}</select>
+      <div style="margin-top:10px"><button class="btn primary" type="submit">Import for review</button></div>
+    </form>
+  </div>
+</div>
+<aside class="auth-side">
+  <div class="panel">
+    <h2>What happens</h2>
+    <ul class="mail-help">
+      <li>Outlook: open the reply, <b>File → Save As</b> (.msg), or drag it to the desktop.</li>
+      <li>Aegis reads it like mail from the case mailbox: the tracking tag <span class="mono">[Aegis {{ case.reference }} #…]</span> in the subject finds the letter it answers.</li>
+      <li>An uploaded file is never trusted on its own: it waits on <b>Mail to review</b> until a case admin accepts it. Only then is it filed on the authority's timeline (the e-mail and its attachments as R3 evidence) and the reply clock stops.</li>
+      <li>Nothing in an imported e-mail changes a status or sends anything. A .msg is converted for reading; the original file is kept as evidence.</li>
+    </ul>
+  </div>
+</aside>
+</div>
+{% endblock %}

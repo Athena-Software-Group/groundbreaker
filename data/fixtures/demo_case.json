@@ -1,0 +1,1820 @@
+{
+  "_comment": "DEMO CASE. A fictional case for trying Aegis. The victim, the impersonated company, the investigating firm, the law-enforcement references, the attacker-infrastructure identifiers and every e-mail address are demo values (Exempla Holding AG, Jordan Avery / Northbridge Analytics, Inc., Kestrel Ridge Investigations GmbH, DEMO-* references, reserved *.example domains). Sources: source=manual = the victim's own records and statement (including the asserted USDC relay hops 0x57de→0x3007→0x0d0b→0xba02→0xe944); source=pi_report = asserted by the investigator's reports (intermediate hops or hashes not yet observed on-chain); source=blockscout/mempool/trongrid = read from a public explorer. Unknown amounts are null, never invented. Asserted relay hops carry tx_hash 'ASSERTED:...' until verified on-chain. Remaining *_PENDING placeholders are unresolved in the story. WORKSPACE: team, le_contacts, evidence, correspondence and notification_rules are demo data; entries marked synthetic are demo files. stop_orders_imported are six demo preservation letters logged as sent outside Aegis on 18.10.2026, each citing the chain references of its recipient; the demo defect and follow-ups they carry are described in their notes. One sender throughout: the letters are signed by the case's sender of record (Athena Software Group, Inc., signed Athena Investigations, on behalf of Northbridge Analytics, Inc., under the victim's Letter of Authorisation), as every follow-up Aegis drafts is; Kestrel Ridge Investigations GmbH is the investigating firm advising on the case (its reports are the source=pi_report rows; it filed the Italian complaint for the victim).",
+  "case": {
+    "reference": "DEMO-2026-001",
+    "title": "Exempla Holding AG impersonation — crypto investment fraud (demo case)",
+    "status": "open",
+    "victim_name": "Jordan Avery",
+    "victim_entity": "Northbridge Analytics, Inc.",
+    "victim_jurisdiction": "USA",
+    "fraud_type": "Investment fraud / corporate impersonation (pig-butchering variant)",
+    "fraud_date": "2026-10-12T10:49:47Z",
+    "loss_amount": "399247.92",
+    "loss_asset": "USDC",
+    "loss_usd": "399247.92",
+    "summary": "Perpetrators impersonated Exempla Holding AG (UID CHE-000.000.000, Musterstadt) via exempla-holding.example and the persona 'Adrian Example, CFO'. On 12 Oct 2026 at 10:49:47 UTC the victim sent 399,247.92 USDC (origin tx 0x70ab…a814) from 0x7AC3…455b to 0x57de…F8df, a perpetrator wallet reached through a perpetrator-registered ENS lure name. The USDC was relayed 0x57de → 0x3007 → 0x0d0b → 0xba02 → 0xe944 (arrived 11:07:35 UTC); 0xe944 is perpetrator-controlled and itself swapped USDC → ETH on Uniswap, then sent 156.611 ETH to the hub 0x5445…becb at 11:09:59 UTC. The hub split it within 90 minutes: 53.94 ETH → 0xc6a2…d5a1, 39.15 ETH → 0x9cf8…42c1, 8.77 ETH → 0x2501…57e3 (the wallet the investigator's reports call the scammers' wallet), and on 16 Oct 27.9 ETH was swapped to USDT via the Uniswap Universal Router. 0x2501… still held 5.04 ETH on 19 Oct. Downstream touchpoints: KuCoin, Rainbet, SWFT swaps to USDT-TRON and BTC. Relay-hop hashes are pending on-chain verification.",
+    "facts": {
+      "impersonated_entity": "Exempla Holding AG (UID CHE-000.000.000, Musterstrasse 1, 0000 Musterstadt, Switzerland)",
+      "persona": "Adrian Example, CFO",
+      "domains": [
+        "exempla-holding.example"
+      ],
+      "infrastructure": [
+        {
+          "provider": "Hostinger",
+          "detail": "domain registrar / hosting for exempla-holding.example (registered 01.07.2026 00:00 CEST)"
+        },
+        {
+          "provider": "Supabase",
+          "detail": "project demo0000project (anon key issued 01.07.2026 04:00 CEST); edge function /functions/v1/chatbot"
+        },
+        {
+          "provider": "Groq",
+          "detail": "GroqCloud API key gsk_DEMO…XXXX hard-coded in https://exempla-holding.example/assets/index-DEMO0000.js (hash omitted); behind the site's chatbot"
+        }
+      ],
+      "complaints": [
+        {
+          "authority": "Carabinieri — Demo City station (demo)",
+          "reference": "DEMO-IT-0000000000",
+          "filed_at": "2026-10-14T09:30:00+02:00"
+        },
+        {
+          "authority": "FBI Internet Crime Complaint Center (IC3)",
+          "reference": "IC3-DEMO-00000000",
+          "filed_at": null
+        }
+      ],
+      "investigator": {
+        "firm": "Kestrel Ridge Investigations GmbH",
+        "contact": "Mara Lindqvist — Director",
+        "email": "mara.lindqvist@kestrel-ridge.example",
+        "cc": [
+          "investigations@kestrel-ridge.example",
+          "victim@northbridge.example"
+        ],
+        "address": "Beispielweg 10, CH-0000 Musterstadt, Switzerland",
+        "phone": "+41 00 000 00 00",
+        "authority_instrument": "Power of Attorney"
+      },
+      "victim_contact": {
+        "name": "Jordan Avery",
+        "email": "victim@northbridge.example",
+        "role": "CEO, Northbridge Analytics, Inc."
+      },
+      "origin": {
+        "tx_hash": "0x70abbe14aa9080b572aa69881536e5c165097c0574c4791467e915b708bba814",
+        "victim_wallet": "0x7AC32c88e5489B4c406fFc1d6B835f4EBa7B455b",
+        "first_recipient": "0x57de1021A507d46272d386995d5B58667Ac1F8df",
+        "timestamp": "2026-10-12T10:49:47Z",
+        "amount": "399247.92",
+        "asset": "USDC",
+        "lure": "first recipient reached via a perpetrator-registered ENS lure name",
+        "source": "victim records; verify on-chain"
+      }
+    }
+  },
+  "seeds": [
+    {
+      "role": "origin_tx",
+      "chain": "ethereum",
+      "value": "0x70abbe14aa9080b572aa69881536e5c165097c0574c4791467e915b708bba814",
+      "note": "Origin 399,247.92 USDC transfer (victim records; verify on-chain). Its recipient 0x57de… is the true root."
+    },
+    {
+      "role": "victim_wallet",
+      "chain": "ethereum",
+      "value": "0x7AC32c88e5489B4c406fFc1d6B835f4EBa7B455b",
+      "note": "Victim's sending wallet (self-custody), from the victim's records."
+    },
+    {
+      "role": "perpetrator_wallet",
+      "chain": "ethereum",
+      "value": "0x57de1021A507d46272d386995d5B58667Ac1F8df",
+      "note": "First recipient of the origin transfer (true root), reached via a perpetrator-registered ENS lure name."
+    },
+    {
+      "role": "known_downstream",
+      "chain": "ethereum",
+      "value": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "note": "Distribution hub (hop 6): received 156.611 ETH from 0xe944… 20 min after the theft and split it within 90 min (Blockscout, 19.10.2026)."
+    },
+    {
+      "role": "known_downstream",
+      "chain": "ethereum",
+      "value": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "note": "Wallet the investigator's reports call the scammers' wallet; on-chain it is one peel (8.77 ETH) off the hub."
+    }
+  ],
+  "entities": [
+    {
+      "name": "KuCoin",
+      "category": "exchange",
+      "jurisdiction": "Seychelles (verify current licensing)",
+      "website": "https://www.kucoin.com",
+      "compliance_email": null,
+      "le_contact_notes": "No compliance mailbox on file: use the entity's law-enforcement request portal. KuCoin operates a law-enforcement request channel — confirm the current portal before formal process.",
+      "freeze_capable": true,
+      "sweep_window_hours": 1,
+      "notes": "Hot wallet 'KuCoin 17' publicly tagged on Etherscan."
+    },
+    {
+      "name": "Rainbet",
+      "category": "casino",
+      "jurisdiction": "Curaçao (verify)",
+      "website": "https://rainbet.com",
+      "compliance_email": "compliance@rainbet-demo.example",
+      "le_contact_notes": "Generic compliance alias above; otherwise use the entity's law-enforcement request portal. Casino deposit → minimal play → withdrawal is a laundering indicator; request withdrawal destinations.",
+      "freeze_capable": true,
+      "sweep_window_hours": 1,
+      "notes": "Deposit address forwards to 0x307576Dd… tagged 'Rainbet.com' on Etherscan."
+    },
+    {
+      "name": "SWFT / Bridgers",
+      "category": "swap_service",
+      "jurisdiction": "Unclear (Singapore / HK presence; verify)",
+      "website": "https://swft.pro",
+      "compliance_email": null,
+      "le_contact_notes": "No compliance mailbox on file: use the entity's law-enforcement request portal. Non-custodial-style cross-chain swap; can supply order records, IP, device, destination addresses.",
+      "freeze_capable": false,
+      "sweep_window_hours": 0,
+      "notes": "Receiving contract on Ethereum 0xc1d13492285eb664951E201BF7C80c7c6318a1b5. Converts ETH → USDT (TRON) and ETH → BTC."
+    },
+    {
+      "name": "Tether (USDT issuer)",
+      "category": "stablecoin_issuer",
+      "jurisdiction": "El Salvador / BVI",
+      "website": "https://tether.to",
+      "compliance_email": "compliance@tether-demo.example",
+      "le_contact_notes": "Tether freezes USDT at specific addresses on verified law-enforcement request. Relevant to the TRON destination TWdZZhGv…L77 (1,359.899028 USDT received 18.10.2026).",
+      "freeze_capable": true,
+      "notes": "Freeze lever independent of any exchange."
+    },
+    {
+      "name": "Circle (USDC issuer)",
+      "category": "stablecoin_issuer",
+      "jurisdiction": "USA",
+      "website": "https://www.circle.com",
+      "compliance_email": "compliance@circle-demo.example",
+      "le_contact_notes": "Circle can blacklist addresses holding USDC on verified LE request. Only useful while proceeds remain as USDC (original asset).",
+      "freeze_capable": true,
+      "notes": "Original loss asset was USDC."
+    },
+    {
+      "name": "Hostinger",
+      "category": "hosting",
+      "jurisdiction": "Lithuania",
+      "website": "https://www.hostinger.com",
+      "compliance_email": "legal@hostinger-demo.example",
+      "le_contact_notes": "Generic legal alias above; otherwise use the entity's law-enforcement request portal.",
+      "freeze_capable": false,
+      "notes": "Registrar/host for exempla-holding.example."
+    },
+    {
+      "name": "Supabase",
+      "category": "infra",
+      "jurisdiction": "USA",
+      "website": "https://supabase.com",
+      "compliance_email": "legal@supabase-demo.example",
+      "le_contact_notes": "Generic legal alias above; otherwise use the entity's law-enforcement request portal.",
+      "freeze_capable": false,
+      "notes": "Backend project for the fraudulent site."
+    },
+    {
+      "name": "Groq",
+      "category": "infra",
+      "jurisdiction": "USA",
+      "website": "https://groq.com",
+      "compliance_email": null,
+      "le_contact_notes": "No compliance mailbox on file: use the entity's law-enforcement request portal.",
+      "freeze_capable": false,
+      "notes": "LLM API behind the site's 'AI investment advisor' chatbot."
+    },
+    {
+      "name": "Uniswap (Universal Router)",
+      "category": "dex",
+      "jurisdiction": "n/a — non-custodial protocol",
+      "website": "https://uniswap.org",
+      "compliance_email": null,
+      "le_contact_notes": "Non-custodial; no freeze. Useful only to identify the swap output (USDT) and its destination via the tx logs.",
+      "freeze_capable": false,
+      "sweep_window_hours": 0,
+      "notes": "Router 0x23617e59a5925b2a4bf75d73ff6711cd0b29de85 called with selector 0x3593564c (execute)."
+    }
+  ],
+  "addresses": [
+    {
+      "chain": "ethereum",
+      "address": "0x7AC32c88e5489B4c406fFc1d6B835f4EBa7B455b",
+      "address_type": "victim",
+      "label": "Victim sending wallet (self-custody)",
+      "label_source": "manual"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "address_type": "perpetrator",
+      "label": "Peel wallet (investigator reports: 'scammers' wallet')",
+      "label_source": "pi_report"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xe5351383dcb18c14c3a7c1b9674c6dd501e0a8ed",
+      "address_type": "eoa",
+      "label": "Laundering chain wallet",
+      "label_source": "pi_report"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x0a17ed3ea9e61d9c16be85e22dea19b09aa758e2",
+      "address_type": "deposit",
+      "label": "KuCoin deposit address",
+      "label_source": "pi_report",
+      "entity": "KuCoin"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x45300136662dD4e58fc0DF61E6290DFfD992B785",
+      "address_type": "hot_wallet",
+      "label": "KuCoin 17",
+      "label_source": "etherscan_tag",
+      "entity": "KuCoin"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x141D9aef573051c277676124a468223484077673",
+      "address_type": "eoa",
+      "label": "Prior depositor to KuCoin acct (12.09/18.09)",
+      "label_source": "pi_report"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x9D4790695ec9CDC6DBe72aB5dd71158793dC391d",
+      "address_type": "eoa",
+      "label": "Prior depositor to KuCoin acct",
+      "label_source": "pi_report"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x693B36F71E3210Fde2C8A8c194648AC5A9Be3fBA",
+      "address_type": "eoa",
+      "label": "Prior depositor to KuCoin acct",
+      "label_source": "pi_report"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x74e697c26f0ce168849411c53707ae689de10d5b",
+      "address_type": "deposit",
+      "label": "Rainbet deposit address",
+      "label_source": "pi_report",
+      "entity": "Rainbet"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x307576Dd4F73f91BB8c4A2EdB762938E8e067d31",
+      "address_type": "hot_wallet",
+      "label": "Rainbet.com",
+      "label_source": "etherscan_tag",
+      "entity": "Rainbet"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x1a456698F53732efe57503C867b2D1762F8dbf9E",
+      "address_type": "eoa",
+      "label": "SWFT order sender #1",
+      "label_source": "pi_report"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xA2F14fe2965766F93e927C09729711133e8EeeFF",
+      "address_type": "eoa",
+      "label": "SWFT order sender #2",
+      "label_source": "pi_report"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xc1d13492285eb664951E201BF7C80c7c6318a1b5",
+      "address_type": "contract",
+      "label": "SWFT/Bridgers receiving contract",
+      "label_source": "pi_report",
+      "entity": "SWFT / Bridgers",
+      "is_contract": true
+    },
+    {
+      "chain": "tron",
+      "address": "TJ4KeiGTvTX4wRUgLARiwr8rGLaurmVkdZ",
+      "address_type": "hot_wallet",
+      "label": "SWFT payout wallet (TRON)",
+      "label_source": "tronscan",
+      "entity": "SWFT / Bridgers"
+    },
+    {
+      "chain": "tron",
+      "address": "TWdZZhGv7zqeRnmxWd65yQSE2YDZRteL77",
+      "address_type": "eoa",
+      "label": "USDT-TRON destination (SWFT order #1)",
+      "label_source": "pi_report"
+    },
+    {
+      "chain": "bitcoin",
+      "address": "bc1q8kaht9suldvmhpn9vcmtepsh53ne9q4fdcjrhy",
+      "address_type": "hot_wallet",
+      "label": "SWFT payout wallet (BTC)",
+      "label_source": "mempool",
+      "entity": "SWFT / Bridgers"
+    },
+    {
+      "chain": "bitcoin",
+      "address": "bc1pxnd9wrqg5yk4h4nvxmr5nmr4hne5yfpt4s6ec5hrm6ad9y9yv5jqsfknzn",
+      "address_type": "eoa",
+      "label": "BTC destination (SWFT order #2)",
+      "label_source": "pi_report"
+    },
+    {
+      "chain": "ethereum",
+      "address": "UNATTRIBUTED_RAINBET_DEPOSITOR",
+      "address_type": "unknown",
+      "label": "Unattributed depositor(s) to Rainbet acct",
+      "label_source": "pi_report"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x57de1021A507d46272d386995d5B58667Ac1F8df",
+      "address_type": "perpetrator",
+      "label": "Perpetrator first-receiving wallet — true root (reached via a perpetrator-registered ENS lure name)",
+      "label_source": "manual"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x0d0bdb37e6dd16e6fcf53cb0067e1df30e0fb23e",
+      "address_type": "perpetrator",
+      "label": "Perpetrator relay #2 (USDC 0x3007→0xba02)",
+      "label_source": "manual"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xba02b694e55f603fdfbb6e89abd5bafaf02246b5",
+      "address_type": "perpetrator",
+      "label": "Perpetrator relay #3 (USDC 0x0d0b→0xe944)",
+      "label_source": "manual"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xe9449ba33c8dcf6f859c9bc476b8debab64a4b1b",
+      "address_type": "perpetrator",
+      "label": "Perpetrator swap wallet — executed Uniswap USDC->ETH, then funded the hub with 156.611 ETH",
+      "label_source": "manual"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "address_type": "perpetrator",
+      "label": "Distribution hub (156.611 ETH in, split within 90 min)",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x300762e2ba1fdb1fc02ed4e4fcee0d6b93d51fb4",
+      "address_type": "perpetrator",
+      "label": "Perpetrator relay #1 (USDC 0x57de→0x0d0b); later also received hub outflow #1 (1.10 ETH)",
+      "label_source": "manual"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x9cf83877484791d1852d30884d5dcde4409342c1",
+      "address_type": "eoa",
+      "label": "Hub outflow #2 (39.15 ETH) — PRIORITY",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xc6a2b6d375e5c1fbaab2b4a8adbcef887225d5a1",
+      "address_type": "eoa",
+      "label": "Hub outflow #3 (53.94 ETH) — PRIORITY",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xef9b95e1e8921b7a3e6c1c3d72922ad301017de3",
+      "address_type": "eoa",
+      "label": "Hub outflow #4 (0.22 ETH)",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x5ac8fd6bf0186fff52713b0b4e7a5693e9d6d7f4",
+      "address_type": "eoa",
+      "label": "Hub outflow #5 (0.44 ETH)",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xee1349a9ff78f4e2c5712491a37e9d4a1eb8cbc9",
+      "address_type": "eoa",
+      "label": "Hub outflow #6 (0.013 ETH)",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xb574814007a9ca5da84f7221ef41e019a4b4f4a1",
+      "address_type": "eoa",
+      "label": "Peel outflow (1.48 ETH)",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x24dec91c23afbdeb8f31e2e4806c5230363669fc",
+      "address_type": "eoa",
+      "label": "Peel outflow (0.058 ETH)",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xe2d99d3a6025beccd3d180e001452968a47fa2b1",
+      "address_type": "eoa",
+      "label": "Peel outflow (0.52 ETH)",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xdc1c8934a6b700ea7db72184bd7a29676e33b2dc",
+      "address_type": "eoa",
+      "label": "Peel outflow (0.75 ETH over 4 txs)",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x567becfb81845881ee9877341fa36aa3941790a2",
+      "address_type": "eoa",
+      "label": "Peel outflow (0.20 ETH)",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x4839f2bf6828ce318e8663659531d7d576f1c3f9",
+      "address_type": "eoa",
+      "label": "Peel outflow (0.54 ETH)",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xb9316bccc3ce126b0686470250e2d8c0bae775b9",
+      "address_type": "eoa",
+      "label": "Peel outflow (0.12 ETH)",
+      "label_source": "blockscout"
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x23617e59a5925b2a4bf75d73ff6711cd0b29de85",
+      "address_type": "contract",
+      "label": "Uniswap Universal Router",
+      "label_source": "blockscout",
+      "entity": "Uniswap (Universal Router)",
+      "is_contract": true
+    },
+    {
+      "chain": "ethereum",
+      "address": "USDT_DEST_PENDING",
+      "address_type": "unknown",
+      "label": "USDT received from the 16 Oct swap: destination being resolved",
+      "label_source": "pi_report"
+    },
+    {
+      "chain": "tron",
+      "address": "THrUA7FojKa8ypwJ77mQZUc23RADWeUVCx",
+      "address_type": "hot_wallet",
+      "label": "SWFT trigger/owner address (TRON)",
+      "label_source": "tronscan",
+      "entity": "SWFT / Bridgers"
+    }
+  ],
+  "transfers": [
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x70abbe14aa9080b572aa69881536e5c165097c0574c4791467e915b708bba814",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T10:49:47Z",
+      "from": "0x7AC32c88e5489B4c406fFc1d6B835f4EBa7B455b",
+      "to": "0x57de1021A507d46272d386995d5B58667Ac1F8df",
+      "asset": "USDC",
+      "token_contract": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount": "399247.92",
+      "source": "manual",
+      "confidence": 0.95,
+      "method": "token_transfer",
+      "notes": "Origin transfer: from victim records; verify on-chain."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x580d3a804899ca7e084af17c13ecd2cb7af781e15572a62eaf604ff056c30293",
+      "sub_index": 0,
+      "timestamp": "2026-10-14T10:07:59Z",
+      "block_number": 26190041,
+      "from": "0xe5351383dcb18c14c3a7c1b9674c6dd501e0a8ed",
+      "to": "0x0a17ed3ea9e61d9c16be85e22dea19b09aa758e2",
+      "asset": "ETH",
+      "amount": "0.05683880584988242",
+      "source": "fixture",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": "Deposit to KuCoin customer address."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x0c3593c8a9677fb107e765c8597ba3239074f0fa4173cb09f7a1128d05a5ad4e",
+      "sub_index": 0,
+      "timestamp": "2026-10-14T10:14:35Z",
+      "from": "0x0a17ed3ea9e61d9c16be85e22dea19b09aa758e2",
+      "to": "0x45300136662dD4e58fc0DF61E6290DFfD992B785",
+      "asset": "ETH",
+      "amount": "0.056837853652636425",
+      "source": "fixture",
+      "confidence": 1.0,
+      "method": "sweep",
+      "notes": "Sweep to KuCoin 17 hot wallet (6m36s after deposit)."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:141D->kucoin-dep",
+      "sub_index": 0,
+      "timestamp": "2026-09-12T00:00:00Z",
+      "from": "0x141D9aef573051c277676124a468223484077673",
+      "to": "0x0a17ed3ea9e61d9c16be85e22dea19b09aa758e2",
+      "asset": "ETH",
+      "amount": null,
+      "source": "pi_report",
+      "confidence": 0.8,
+      "method": "transfer",
+      "notes": "Pre-theft deposit (12.09/18.09.2026) — shows the KuCoin account was in use before the fraud. Context only; not tainted."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:9D47->kucoin-dep",
+      "sub_index": 0,
+      "timestamp": "2026-10-05T00:00:00Z",
+      "from": "0x9D4790695ec9CDC6DBe72aB5dd71158793dC391d",
+      "to": "0x0a17ed3ea9e61d9c16be85e22dea19b09aa758e2",
+      "asset": "ETH",
+      "amount": null,
+      "source": "pi_report",
+      "confidence": 0.8,
+      "method": "transfer",
+      "notes": "Pre-theft deposit (05.10.2026). Context only."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:693B->kucoin-dep",
+      "sub_index": 0,
+      "timestamp": "2026-10-06T00:00:00Z",
+      "from": "0x693B36F71E3210Fde2C8A8c194648AC5A9Be3fBA",
+      "to": "0x0a17ed3ea9e61d9c16be85e22dea19b09aa758e2",
+      "asset": "ETH",
+      "amount": null,
+      "source": "pi_report",
+      "confidence": 0.8,
+      "method": "transfer",
+      "notes": "Pre-theft deposit (06.10.2026). Context only."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xfda766545c41b900ce5ccee9f0c7b1a2318ba1186b741101b9ab47f4c3fa038c",
+      "sub_index": 0,
+      "timestamp": "2026-10-18T17:48:59Z",
+      "from": "0x1a456698F53732efe57503C867b2D1762F8dbf9E",
+      "to": "0xc1d13492285eb664951E201BF7C80c7c6318a1b5",
+      "asset": "ETH",
+      "amount": "0.581280863881450395",
+      "source": "fixture",
+      "confidence": 1.0,
+      "method": "swap",
+      "bridged_to": {
+        "chain": "tron",
+        "tx_hash": "705f713545499afc5860f45d1be2c40413a8d813d28f268fb203b3ead818ea67"
+      },
+      "notes": "SWFT order demo0swf_t000_0000_0000_000000000001 — ETH → USDT (TRON)."
+    },
+    {
+      "chain": "tron",
+      "tx_hash": "705f713545499afc5860f45d1be2c40413a8d813d28f268fb203b3ead818ea67",
+      "sub_index": 1,
+      "timestamp": "2026-10-18T17:50:30Z",
+      "from": "TJ4KeiGTvTX4wRUgLARiwr8rGLaurmVkdZ",
+      "to": "TWdZZhGv7zqeRnmxWd65yQSE2YDZRteL77",
+      "asset": "USDT",
+      "token_contract": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+      "amount": "1359.899028",
+      "source": "trongrid",
+      "confidence": 1.0,
+      "method": "swap_payout",
+      "notes": "SWFT payout leg (91 s after deposit). Verified on tronscan 19.10.2026: owner THrUA7…UVCx, TRC-20 USDT 1,359.899028."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x2b9ce18c974dce7166bf6e48dcd1c7e7c16baece43adb242d8b1dc4361aeb196",
+      "sub_index": 0,
+      "timestamp": "2026-10-15T09:33:23Z",
+      "from": "0xA2F14fe2965766F93e927C09729711133e8EeeFF",
+      "to": "0xc1d13492285eb664951E201BF7C80c7c6318a1b5",
+      "asset": "ETH",
+      "amount": "0.445",
+      "source": "fixture",
+      "confidence": 1.0,
+      "method": "swap",
+      "bridged_to": {
+        "chain": "bitcoin",
+        "tx_hash": "9e573f03585ce4647fbdeeb351bd6b95c154a49d42957ad68f19e34db5137897"
+      },
+      "notes": "SWFT order (no public ID) — ETH → BTC."
+    },
+    {
+      "chain": "bitcoin",
+      "tx_hash": "9e573f03585ce4647fbdeeb351bd6b95c154a49d42957ad68f19e34db5137897",
+      "sub_index": 0,
+      "timestamp": "2026-10-15T09:46:00Z",
+      "from": "bc1q8kaht9suldvmhpn9vcmtepsh53ne9q4fdcjrhy",
+      "to": "bc1pxnd9wrqg5yk4h4nvxmr5nmr4hne5yfpt4s6ec5hrm6ad9y9yv5jqsfknzn",
+      "asset": "BTC",
+      "amount": "0.012836",
+      "source": "mempool",
+      "confidence": 1.0,
+      "method": "swap_payout",
+      "notes": "Verified on mempool.space 19.10.2026: block 971548, 1,283,600 sats to bc1pxnd9…, change 0.38140497 BTC back to bc1q8ka…; this confirms the destination the investigator's report gave as likely.",
+      "block_number": 971548
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:unattrib->rainbet-dep-1210",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T09:43:00Z",
+      "from": "UNATTRIBUTED_RAINBET_DEPOSITOR",
+      "to": "0x74e697c26f0ce168849411c53707ae689de10d5b",
+      "asset": "ETH",
+      "amount": null,
+      "source": "pi_report",
+      "confidence": 0.8,
+      "method": "transfer",
+      "notes": "Deposit ~1h BEFORE the theft (also 09.10 and 11.10). Ties the Rainbet player account to the operation; funds are not the victim's. A live trace identifies the senders."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:rainbet-dep->rainbet-hot",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T10:00:00Z",
+      "from": "0x74e697c26f0ce168849411c53707ae689de10d5b",
+      "to": "0x307576Dd4F73f91BB8c4A2EdB762938E8e067d31",
+      "asset": "ETH",
+      "amount": null,
+      "source": "pi_report",
+      "confidence": 0.9,
+      "method": "sweep",
+      "notes": "PI report: deposit address 'forwards everything' to Rainbet.com hot wallet."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:relay1-0x57de->0x3007",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T10:49:47Z",
+      "from": "0x57de1021A507d46272d386995d5B58667Ac1F8df",
+      "to": "0x300762e2ba1fdb1fc02ed4e4fcee0d6b93d51fb4",
+      "asset": "USDC",
+      "token_contract": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount": "399247.92",
+      "source": "manual",
+      "confidence": 0.9,
+      "method": "token_transfer",
+      "notes": "Victim statement; hop tx hash pending on-chain verification; amount asserted (full loss). Timestamp not yet verified — set to the window lower bound (origin time)."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:relay2-0x3007->0x0d0b",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T10:49:47Z",
+      "from": "0x300762e2ba1fdb1fc02ed4e4fcee0d6b93d51fb4",
+      "to": "0x0d0bdb37e6dd16e6fcf53cb0067e1df30e0fb23e",
+      "asset": "USDC",
+      "token_contract": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount": "399247.92",
+      "source": "manual",
+      "confidence": 0.9,
+      "method": "token_transfer",
+      "notes": "Victim statement; hop tx hash pending on-chain verification; amount asserted (full loss). Timestamp not yet verified — set to the window lower bound (origin time)."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:relay3-0x0d0b->0xba02",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T10:49:47Z",
+      "from": "0x0d0bdb37e6dd16e6fcf53cb0067e1df30e0fb23e",
+      "to": "0xba02b694e55f603fdfbb6e89abd5bafaf02246b5",
+      "asset": "USDC",
+      "token_contract": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount": "399247.92",
+      "source": "manual",
+      "confidence": 0.9,
+      "method": "token_transfer",
+      "notes": "Victim statement; hop tx hash pending on-chain verification; amount asserted (full loss). Timestamp not yet verified — set to the window lower bound (origin time)."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:relay4-0xba02->0xe944",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T11:07:35Z",
+      "from": "0xba02b694e55f603fdfbb6e89abd5bafaf02246b5",
+      "to": "0xe9449ba33c8dcf6f859c9bc476b8debab64a4b1b",
+      "asset": "USDC",
+      "token_contract": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount": "399247.92",
+      "source": "manual",
+      "confidence": 0.9,
+      "method": "token_transfer",
+      "notes": "Victim statement; hop tx hash pending on-chain verification; amount asserted (full loss). Arrival at the perpetrator swap wallet 0xe944… at 11:07:35 UTC."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x9c91f8f5e567da86089791d12d3649dd6ce66bd49fe717db39acf9c2da79cb68",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T11:09:59Z",
+      "from": "0xe9449ba33c8dcf6f859c9bc476b8debab64a4b1b",
+      "to": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "asset": "ETH",
+      "amount": "156.611348125658750941",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": "Hub funding by the perpetrator swap wallet, 20 min 12 s after the theft (after its USDC→ETH swap)."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xe4ac129fbadc25ca6e5cd4d4a712469251758597a059bbcf846a494d7930cdf3",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T11:13:47Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "asset": "ETH",
+      "amount": "8.773087729978384774",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": "Hub → peel wallet (the investigator reports' 'scammers' wallet')."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x48ee4b6c36cb40d762d7104b51c595816a5d1cb9ad22a17e5d4bbdecb6aa48a1",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T12:33:11Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0x300762e2ba1fdb1fc02ed4e4fcee0d6b93d51fb4",
+      "asset": "ETH",
+      "amount": "1.101050",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": "Amount rounded to 6 decimals (explorer summary); the exact amount comes with a live trace. 0x3007… is also perpetrator relay #1 of the USDC path."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x6584290e344cc5fe3bbc1944ed309d125fef99b0948555e9488ab17017d5ec02",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T12:36:23Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0x9cf83877484791d1852d30884d5dcde4409342c1",
+      "asset": "ETH",
+      "amount": "39.15",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": "Second-largest split. Trace this wallet first."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xb09eb154c10cc0450e0fa00aa2a694d0e5e27a49835f15ec0fe90e14ec3480f5",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T12:37:47Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0xc6a2b6d375e5c1fbaab2b4a8adbcef887225d5a1",
+      "asset": "ETH",
+      "amount": "53.5",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": "Largest split. Trace this wallet first."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x945860259a70e7b89b6ee6a16595a4823896c8023f007debdb0748b2e783ad5d",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T12:38:47Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0xc6a2b6d375e5c1fbaab2b4a8adbcef887225d5a1",
+      "asset": "ETH",
+      "amount": "0.442052",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": "Top-up to the same wallet one minute later."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x6ed87e7ce76e10eca7e4d6951b1e7f2803bac0e3046477339c6663c4f10377a5",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T12:41:59Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0xef9b95e1e8921b7a3e6c1c3d72922ad301017de3",
+      "asset": "ETH",
+      "amount": "0.221434",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x29793ce3c15e6f3da77df3a1095de2329180ff037b5318c3c240f2efd0cf4150",
+      "sub_index": 0,
+      "timestamp": "2026-10-12T12:55:23Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0x5ac8fd6bf0186fff52713b0b4e7a5693e9d6d7f4",
+      "asset": "ETH",
+      "amount": "0.442708",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xcaa63536bcda8bb0fcbf66f1d5f5974432e6d3669708ef87c5ac365daf24958a",
+      "sub_index": 0,
+      "timestamp": "2026-10-13T15:58:11Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0xee1349a9ff78f4e2c5712491a37e9d4a1eb8cbc9",
+      "asset": "ETH",
+      "amount": "0.013383",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x0149bd257333c0dec0b4b797ee8a44c7b4808a9897698804bda53b4e5b73cb34",
+      "sub_index": 0,
+      "timestamp": "2026-10-16T14:46:35Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0x23617e59a5925b2a4bf75d73ff6711cd0b29de85",
+      "asset": "ETH",
+      "amount": "27.919509",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "swap",
+      "notes": "Uniswap Universal Router execute (0x3593564c): ETH → USDT. Two USDT transfer() calls followed at 14:47:35 and 14:50:47 UTC."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:hub->usdt-dest",
+      "sub_index": 0,
+      "timestamp": "2026-10-16T14:47:35Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "USDT_DEST_PENDING",
+      "asset": "USDT",
+      "amount": null,
+      "source": "pi_report",
+      "confidence": 0.7,
+      "method": "token_transfer",
+      "notes": "USDT transfer() calls 0x8b9d3dfc… and 0x9befec6e… from the hub after the swap; the destinations and amounts of the USDT are still being resolved from the token transfer records."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x61d001e80dfeaa7f87f794c0eb8378669ae86270a193460fd2986bcd3862f582",
+      "sub_index": 0,
+      "timestamp": "2026-10-13T11:24:35Z",
+      "from": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "to": "0xb574814007a9ca5da84f7221ef41e019a4b4f4a1",
+      "asset": "ETH",
+      "amount": "1.483428629625562406",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xaad879120f7240ffe4dddd3d73c4faa17763776e33bd1bb5fc028dbd77422efd",
+      "sub_index": 0,
+      "timestamp": "2026-10-13T19:16:11Z",
+      "from": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "to": "0x24dec91c23afbdeb8f31e2e4806c5230363669fc",
+      "asset": "ETH",
+      "amount": "0.057993435751562506",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x01a7b69bfb02fd23ea47d28c9581468ea31bd31dce23a363b41d1ed0820a49b7",
+      "sub_index": 0,
+      "timestamp": "2026-10-14T10:06:47Z",
+      "from": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "to": "0xe5351383dcb18c14c3a7c1b9674c6dd501e0a8ed",
+      "asset": "ETH",
+      "amount": "0.058127181445991906",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": "Resolves the PI report's asserted link; 72 s later this wallet deposited to KuCoin."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xebaae8259de158434ea69bea698fb135857e0424881e26c9747a8e0abe4f9fc0",
+      "sub_index": 0,
+      "timestamp": "2026-10-14T13:26:35Z",
+      "from": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "to": "0xe2d99d3a6025beccd3d180e001452968a47fa2b1",
+      "asset": "ETH",
+      "amount": "0.517786627854495294",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x405001f40af1d79b3f819bcbcece5fc22949df107c9dba0ad1b99619f1211aad",
+      "sub_index": 0,
+      "timestamp": "2026-10-14T14:32:23Z",
+      "from": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "to": "0xdc1c8934a6b700ea7db72184bd7a29676e33b2dc",
+      "asset": "ETH",
+      "amount": "0.454789476097194016",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xf7a49a169d8f252843d272c3d4b58d63c969086a930ecc776475fd3716ac0b1d",
+      "sub_index": 0,
+      "timestamp": "2026-10-14T16:16:59Z",
+      "from": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "to": "0xdc1c8934a6b700ea7db72184bd7a29676e33b2dc",
+      "asset": "ETH",
+      "amount": "0.091587744194728783",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xa20bd827be9ae95c6129e984279e4646160275c30e3c0d746232b3fa29e0ceb8",
+      "sub_index": 0,
+      "timestamp": "2026-10-14T20:26:59Z",
+      "from": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "to": "0x567becfb81845881ee9877341fa36aa3941790a2",
+      "asset": "ETH",
+      "amount": "0.201972725071572766",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xc1bd7a21d71491cb11bb951a9b724db7d7bdfcd02d94d9e19b6dd58ba7f3296f",
+      "sub_index": 0,
+      "timestamp": "2026-10-15T13:57:35Z",
+      "from": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "to": "0xdc1c8934a6b700ea7db72184bd7a29676e33b2dc",
+      "asset": "ETH",
+      "amount": "0.157877968176246858",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xf239ed2ac219ae9f88f51d855ee479860d24076e4c564a7b827ba88f3d3b1f61",
+      "sub_index": 0,
+      "timestamp": "2026-10-15T14:45:59Z",
+      "from": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "to": "0xdc1c8934a6b700ea7db72184bd7a29676e33b2dc",
+      "asset": "ETH",
+      "amount": "0.047030921058774257",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x5497b3c02894843546fe6b2fe3349a06629cce2b5fc5f538b8a7c70962b1c5fd",
+      "sub_index": 0,
+      "timestamp": "2026-10-15T16:28:47Z",
+      "from": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "to": "0x4839f2bf6828ce318e8663659531d7d576f1c3f9",
+      "asset": "ETH",
+      "amount": "0.537803425912860016",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xa12729770cdee6157e8be4c40ae39e627bbe7739b8357462439280e168d62fcd",
+      "sub_index": 0,
+      "timestamp": "2026-10-18T13:26:47Z",
+      "from": "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+      "to": "0xb9316bccc3ce126b0686470250e2d8c0bae775b9",
+      "asset": "ETH",
+      "amount": "0.122784981375291213",
+      "source": "blockscout",
+      "confidence": 1.0,
+      "method": "transfer",
+      "notes": ""
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:hub->1a45",
+      "sub_index": 0,
+      "timestamp": "2026-10-16T12:00:00Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0x1a456698F53732efe57503C867b2D1762F8dbf9E",
+      "asset": "ETH",
+      "amount": null,
+      "source": "pi_report",
+      "confidence": 0.4,
+      "method": "laundering_chain",
+      "notes": "Investigator's report treats 0x1a45… as holding proceeds; it is NOT a direct outflow of 0x2501… or the hub per Blockscout — probably further downstream; not yet confirmed on-chain (an unverified link)."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:hub->A2F1",
+      "sub_index": 0,
+      "timestamp": "2026-10-14T12:00:00Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0xA2F14fe2965766F93e927C09729711133e8EeeFF",
+      "asset": "ETH",
+      "amount": null,
+      "source": "pi_report",
+      "confidence": 0.4,
+      "method": "laundering_chain",
+      "notes": "As above for 0xA2F1…."
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "ASSERTED:hub->rainbet-dep",
+      "sub_index": 0,
+      "timestamp": "2026-10-13T12:00:00Z",
+      "from": "0x54453e25e38b11009963361a123bde2b4457becb",
+      "to": "0x74e697c26f0ce168849411c53707ae689de10d5b",
+      "asset": "ETH",
+      "amount": null,
+      "source": "pi_report",
+      "confidence": 0.4,
+      "method": "laundering_chain",
+      "notes": "The Rainbet request's post-theft deposit is not among 0x2501…'s outflows per Blockscout; if confirmed, it comes from another hub outflow; not yet confirmed on-chain (an unverified link)."
+    }
+  ],
+  "team": [
+    {
+      "email": "case.admin@aegis.example",
+      "display_name": "Demo Case Admin",
+      "role": "admin",
+      "password_env": "AEGIS_DEMO_ADMIN_PASSWORD"
+    },
+    {
+      "email": "mara.lindqvist@kestrel-ridge.example",
+      "display_name": "Mara Lindqvist",
+      "role": "investigator",
+      "password_env": "AEGIS_DEMO_INVESTIGATOR_PASSWORD"
+    },
+    {
+      "email": "analyst@aegis.example",
+      "display_name": "Demo Analyst",
+      "role": "read_only",
+      "password_env": "AEGIS_DEMO_ANALYST_PASSWORD"
+    },
+    {
+      "email": "liaison@le-demo.example",
+      "display_name": "Demo LE Liaison",
+      "role": "external",
+      "password_env": "AEGIS_DEMO_EXTERNAL_PASSWORD",
+      "expires_in_days": 30
+    },
+    {
+      "email": "admin@northbridge.example",
+      "display_name": "Northbridge Case Admin (demo)",
+      "role": "admin",
+      "password_env": "AEGIS_DEMO_CLIENT_ADMIN_PASSWORD"
+    },
+    {
+      "email": "viewer@northbridge.example",
+      "display_name": "Northbridge Viewer (demo)",
+      "role": "read_only",
+      "password_env": "AEGIS_DEMO_VIEWER_PASSWORD"
+    }
+  ],
+  "le_contacts": [
+    {
+      "agency": "FBI Internet Crime Complaint Center (IC3)",
+      "unit": "Online complaint intake",
+      "role": "online complaint",
+      "name": null,
+      "email": null,
+      "phone": null,
+      "reference": "IC3-DEMO-00000000",
+      "jurisdiction": "USA",
+      "notes": "Fictional demo reference. The complaint is filed through the IC3 web portal; no named contact.",
+      "classification": "R3"
+    },
+    {
+      "agency": "Carabinieri — Demo City station (demo)",
+      "unit": "Station complaint desk",
+      "role": "desk officer",
+      "name": null,
+      "email": null,
+      "phone": null,
+      "reference": "DEMO-IT-0000000000",
+      "jurisdiction": "Italy",
+      "notes": "Fictional demo contact: the desk officer who received the complaint.",
+      "classification": "R3"
+    },
+    {
+      "agency": "Procura della Repubblica di Esempio (demo prosecutor's office)",
+      "unit": "Cybercrime section",
+      "role": "prosecutor (assignment pending)",
+      "name": null,
+      "email": "cybercrime@procura-esempio.example",
+      "phone": null,
+      "reference": "DEMO-IT-0000000000",
+      "jurisdiction": "Italy",
+      "notes": "Fictional prosecutor's office. Tracked under the complaint reference until a proceeding number is assigned. Formal requests to the VASPs are expected to come from here.",
+      "classification": "R3"
+    }
+  ],
+  "evidence": [
+    {
+      "folder": "digital_artifacts",
+      "title": "Chat excerpt with the 'Adrian Example, CFO' persona (synthetic)",
+      "description": "Synthetic excerpt of the messenger chat in which the persona pitched the investment. Demo file; not a real chat.",
+      "source_type": "chat_export",
+      "storage": "inline",
+      "mime": "text/plain",
+      "doc_date": "2026-10-12T00:00:00Z",
+      "received_from": "Jordan Avery (victim)",
+      "classification": "R3",
+      "tags": [
+        "chat",
+        "persona",
+        "synthetic"
+      ],
+      "shared_with_external": false,
+      "meta": {
+        "demo_file": "data/fixtures/demo_evidence/chat_excerpt.txt",
+        "synthetic": true,
+        "section": "messaging"
+      },
+      "inline_text": "SYNTHETIC DEMO ARTIFACT - fictional chat excerpt (case DEMO-2026-001). No real person or message.\n\n[2026-10-10 09:12] Adrian Example, CFO: Good morning Jordan. Exempla Holding AG confirms the\n  allocation for Northbridge Analytics, Inc. The treasury desk needs the settlement in USDC.\n[2026-10-10 09:15] Jordan Avery: Understood. Which wallet should we use?\n[2026-10-10 09:16] Adrian Example, CFO: Our onboarding portal at exempla-holding.example shows the\n  settlement address. Please send the test amount first.\n[2026-10-12 10:41] Adrian Example, CFO: The window closes at 11:00 UTC today. Please release the\n  full 399,247.92 USDC now.\n[2026-10-12 10:50] Jordan Avery: Sent. Origin tx 0x70abbe14aa9080b572aa69881536e5c165097c0574c4791467e915b708bba814\n[2026-10-12 11:30] Adrian Example, CFO: (no reply; account deleted)\n"
+    },
+    {
+      "folder": "law_enforcement",
+      "title": "IC3 complaint receipt IC3-DEMO-00000000 (synthetic)",
+      "description": "Synthetic receipt for the FBI IC3 online complaint. Demo file; the reference is fictional.",
+      "source_type": "complaint_receipt",
+      "storage": "inline",
+      "mime": "text/plain",
+      "received_from": "Jordan Avery (victim)",
+      "classification": "R3",
+      "tlp": "TLP:AMBER",
+      "tags": [
+        "ic3",
+        "complaint",
+        "synthetic"
+      ],
+      "shared_with_external": true,
+      "meta": {
+        "demo_file": "data/fixtures/demo_evidence/ic3_receipt.txt",
+        "synthetic": true,
+        "reference": "IC3-DEMO-00000000",
+        "section": "reports"
+      },
+      "inline_text": "SYNTHETIC DEMO ARTIFACT - fictional complaint receipt (case DEMO-2026-001).\n\nInternet Crime Complaint Center (IC3) - complaint submitted\nComplaint reference: IC3-DEMO-00000000\nFiled by: Jordan Avery, Northbridge Analytics, Inc.\nType: investment fraud / business impersonation\nReported loss: 399,247.92 USDC on 2026-10-12\nThis receipt is not a real IC3 record.\n"
+    },
+    {
+      "folder": "law_enforcement",
+      "title": "Carabinieri complaint receipt DEMO-IT-0000000000 (synthetic)",
+      "description": "Synthetic receipt for the criminal complaint filed with the Carabinieri — Demo City station (demo). Demo file; the reference is fictional.",
+      "source_type": "police_report",
+      "storage": "inline",
+      "mime": "text/plain",
+      "doc_date": "2026-10-14T09:30:00+02:00",
+      "received_from": "Carabinieri — Demo City station (demo)",
+      "classification": "R3",
+      "tlp": "TLP:AMBER",
+      "tags": [
+        "police",
+        "complaint",
+        "synthetic"
+      ],
+      "shared_with_external": true,
+      "meta": {
+        "demo_file": "data/fixtures/demo_evidence/police_receipt.txt",
+        "synthetic": true,
+        "reference": "DEMO-IT-0000000000",
+        "section": "reports"
+      },
+      "inline_text": "SYNTHETIC DEMO ARTIFACT - fictional police complaint receipt (case DEMO-2026-001).\n\nCarabinieri - Demo City station (demo)\nReceipt of complaint no. DEMO-IT-0000000000, 2026-10-14 09:30 CEST\nComplainant represented by Kestrel Ridge Investigations GmbH (Mara Lindqvist, Director)\nunder a power of attorney.\nSubject: fraud by impersonation of Exempla Holding AG; cryptocurrency transfer of 399,247.92 USDC.\nThis receipt is not a real police record.\n"
+    },
+    {
+      "folder": "digital_artifacts",
+      "title": "Video-call transcript excerpt with the persona (synthetic)",
+      "description": "Synthetic transcript excerpt of a call with the 'Adrian Example, CFO' persona. Demo file; not a real recording.",
+      "source_type": "transcript",
+      "storage": "inline",
+      "inline_text": "SYNTHETIC DEMO ARTIFACT - fictional video-call transcript excerpt (case DEMO-2026-001).\n\nCall recorded by the victim, 2026-10-09 15:00 UTC, 18 minutes. Participants: Jordan Avery\n(Northbridge Analytics, Inc.) and a caller presenting as \"Adrian Example, CFO\" of Exempla Holding AG.\n\n00:02:10 Caller: We work only through our private settlement platform, for compliance reasons.\n00:05:45 Caller: The allocation is reserved for 72 hours. After that it goes to the next investor.\n00:11:30 Jordan Avery: Can we pay by bank wire instead?\n00:11:42 Caller: No. Stablecoin only, it settles the same day.\n",
+      "mime": "text/plain",
+      "doc_date": "2026-10-09T15:00:00Z",
+      "received_from": "Jordan Avery (victim)",
+      "classification": "R3",
+      "tags": [
+        "transcript",
+        "persona",
+        "synthetic"
+      ],
+      "shared_with_external": false,
+      "meta": {
+        "demo_file": "data/fixtures/demo_evidence/meeting_transcript.txt",
+        "synthetic": true,
+        "section": "recordings"
+      }
+    },
+    {
+      "folder": "legal",
+      "title": "Letter of authorisation — Northbridge Analytics, Inc. to Athena Software Group, Inc. (synthetic)",
+      "description": "Synthetic letter of authorisation from the victim's company to Athena Software Group, Inc. (the sender of record of this case's letters). Demo file; not a real document.",
+      "source_type": "authority_instrument",
+      "storage": "inline",
+      "mime": "text/plain",
+      "doc_date": "2026-10-16T00:00:00Z",
+      "received_from": "Jordan Avery (victim)",
+      "classification": "R3",
+      "tags": [
+        "authority",
+        "synthetic"
+      ],
+      "shared_with_external": false,
+      "meta": {
+        "demo_file": "data/fixtures/demo_evidence/letter_of_authorisation.txt",
+        "synthetic": true
+      },
+      "inline_text": "SYNTHETIC DEMO ARTIFACT - fictional letter of authorisation (case DEMO-2026-001). Not a real document.\n\nLETTER OF AUTHORISATION\n\nNorthbridge Analytics, Inc. (the Client), represented by its CEO, Jordan Avery, authorises\nAthena Software Group, Inc. to act on the Client's behalf in the matter of the cryptocurrency\nfraud of 12 October 2026 (loss of 399,247.92 USDC), and in particular to:\n\n- contact virtual-asset service providers, stablecoin issuers, infrastructure providers and\n  law-enforcement agencies about the matter;\n- request the preservation of records and a hold on assets linked to the fraud;\n- receive correspondence about the matter and share it with the Client.\n\nThis authorisation does not include the right to receive funds on the Client's behalf.\n\nSigned for the Client: Jordan Avery, CEO (synthetic signature)\nDate: 2026-10-16\n"
+    }
+  ],
+  "sender_profile": {
+    "on_behalf_of": "Northbridge Analytics, Inc. (Jordan Avery)",
+    "signatory_name": "Athena Investigations",
+    "contact_email": null,
+    "instrument": "Letter of Authorisation",
+    "cc_default": [
+      "victim@northbridge.example"
+    ],
+    "authority_evidence_titles": [
+      "Letter of authorisation — Northbridge Analytics, Inc. to Athena Software Group, Inc. (synthetic)"
+    ]
+  },
+  "stop_orders_imported": [
+    {
+      "key": "hostinger-preservation-1",
+      "entity": "Hostinger",
+      "entity_category": "hosting",
+      "kind": "preservation",
+      "status": "sent",
+      "origin": "imported",
+      "template_key": null,
+      "subject": "Urgent: Data Preservation Request - Infrastructure Used in a Cryptocurrency Investment Fraud",
+      "body_markdown": "Dear Compliance / Legal Team,\n\nWe write as Athena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery), USA, the victim of a cryptocurrency investment fraud on 12 October 2026 with a loss of approximately USD 400,000 (399,247.92 USDC), acting under the victim's Letter of Authorisation (attached). The perpetrators impersonated a legitimate Swiss company, Exempla Holding AG (UID CHE-000.000.000, Musterstrasse 1, 0000 Musterstadt). They used the website https://exempla-holding.example/ and the fake persona \"Adrian Example, CFO\".\n\nA criminal complaint has been filed in Italy (14.10.2026 / 09.30h) under number DEMO-IT-0000000000 at the Carabinieri — Demo City station (demo), and the matter has been reported to the FBI Internet Crime Complaint Center (IC3). A formal law-enforcement and/or criminal authority request will follow. Until then, we ask you to preserve the records described below. We are not asking for disclosure. Any disclosure should follow formal legal process.\n\nThe infrastructure used in the fraud scheme falls within your jurisdiction:\n\n**1. Identifiers linked to your services and solutions:**\n\n- Domain: exempla-holding.example (registered 01.07.2026)\n- Website: https://exempla-holding.example/ (the fake company site) and its script bundle https://exempla-holding.example/assets/index-DEMO0000.js\n- Mailbox on the domain used to contact the victim: adrian.example@exempla-holding.example\n\nAll of the above comes from passive public observation and from our client’s own transaction records. We have not logged into, queried or otherwise accessed any account, project, mailbox, wallet or API.\n\n**2. Records requested to be preserved minimum 180 days or until legal process is received**\n\n- Account registration data for the domain and the hosting plan, including sign-up date and IP.\n- Billing and payment records.\n- Control-panel and mailbox login logs: IPs, timestamps, user-agents.\n- DNS and nameserver change history for the domain.\n- For every account, project, organisation or service linked to the identifiers above.\n\n**3. Requested action**\n\nWe ask that the subjects of this report are not notified, as this could lead to the movement of funds and the destruction of evidence.\n\nWe are a private party and cannot compel disclosure. Formal legal process, or a request through the criminal authorities and/or law enforcement, will follow. Complaints have been filed in Italy and with the FBI (IC3).\n\nWe can supply supporting evidence on request. Please contact the undersigned (the victim's single point of contact) or the victim's case manager, Jordan Avery (in Cc).\n\nAttached / Info:\n\n- Letter of Authorisation\n- Forensic report on the domain\n- Fund-flow report (to follow)\n- Complaint references (Italy and FBI)\n\nYours faithfully,\n\nAthena Investigations\n\nAthena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery)\n\ninvestigations@athena-demo.example\n\n*Disclaimer – This message has been sent as a part of a discussion between Athena Software Group, Inc. and the addressee whose name is specified above. Should you receive this message by mistake, please inform us and delete it; do not forward it or any part of it to anyone else. Parts herein may be restricted or a confidential work paper.*\n",
+      "recipient_email": null,
+      "recipient_cc": [
+        "victim@northbridge.example",
+        "legal@hostinger-demo.example",
+        "compliance@hostinger-demo.example"
+      ],
+      "sender": "Athena Software Group, Inc. <investigations@athena-demo.example>",
+      "sent_at": "2026-10-18T22:02:41Z",
+      "sent_via": "email",
+      "external_ref": null,
+      "response_due_at": "2026-10-21T22:02:41Z",
+      "responded_at": null,
+      "identifiers": {
+        "recipient": "Compliance / Legal Team (no e-mail on file; use the entity's law-enforcement request portal)",
+        "domains": [
+          "exempla-holding.example"
+        ],
+        "mailboxes": [
+          "adrian.example@exempla-holding.example"
+        ]
+      },
+      "notes": "KNOWN DEFECT (demo): the e-mail went out without the Letter of Authorisation the letter names as attached. FOLLOW-UP: resend the letter with the attachment and ask Hostinger to confirm the preservation. The reply date is the team's 72-hour follow-up target; the letter itself states no deadline.",
+      "classification": "R3",
+      "log_correspondence": true
+    },
+    {
+      "key": "supabase-preservation-1",
+      "entity": "Supabase",
+      "entity_category": "infra",
+      "kind": "preservation",
+      "status": "sent",
+      "origin": "imported",
+      "template_key": null,
+      "subject": "Urgent Preservation Request – Supabase project used in crypto investment fraud (exempla-holding.example)",
+      "body_markdown": "Dear Compliance / Legal Team,\n\nWe write as Athena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery), USA, the victim of a cryptocurrency investment fraud on 12 October 2026 with a loss of approximately USD 400,000 (399,247.92 USDC), acting under the victim's Letter of Authorisation (attached). The perpetrators impersonated a legitimate Swiss company, Exempla Holding AG (UID CHE-000.000.000, Musterstrasse 1, 0000 Musterstadt). They used the website https://exempla-holding.example/ and the fake persona \"Adrian Example, CFO\".\n\nA criminal complaint has been filed in Italy (14.10.2026 / 09.30h) under number DEMO-IT-0000000000 at the Carabinieri — Demo City station (demo), and the matter has been reported to the FBI Internet Crime Complaint Center (IC3). A formal law-enforcement and/or criminal authority request will follow. Until then, we ask you to preserve the records described below. We are not asking for disclosure. Any disclosure should follow formal legal process.\n\nThe infrastructure used in the fraud scheme falls within your jurisdiction:\n\n**Identifiers linked to your services and solutions:**\n\nProject URL / reference: https://demo0000project.supabase.co (project ref demo0000project)\n\nPublic (anon) key observed in the website's client-side code, shown here as eyJ…DEMO…XXXX (demo placeholder). Its embedded data shows issuer \"supabase\", ref demo0000project, role \"anon\", issued 01.07.2026 at 04:00 CEST. It was observed only, never used.\n\nStorage bucket / edge function endpoints:\n\n- Edge function: https://demo0000project.supabase.co/functions/v1/chatbot\n- Storage buckets: none referenced in the site's code\n- Source file: https://exempla-holding.example/assets/index-DEMO0000.js (hash omitted in the demo)\n\nThe issue date is a useful detail. The Supabase key was created at 04:00 CEST on 1 July, about four hours after the exempla-holding.example domain was registered at 00:00 CEST the same day. That ties the Supabase project to whoever set up the fake domain.\n\nAll of the above comes from passive public observation. We have not logged into, queried or otherwise accessed any account, project, mailbox, wallet or API.\n\n**Records requested to be preserved minimum 180 days or until legal process is received**\n\n- Organisation and project owner registration data, including sign-up date and IP, plus all members and their roles.\n- Billing and payment records.\n- Dashboard login and authentication logs: IPs, timestamps, user-agents, MFA events.\n- API, Auth and edge-function request logs with source IPs, plus API key creation and rotation events.\n- A snapshot of the database, including the Auth users table, and of the storage buckets. These are likely to contain data on further victims and on documents the perpetrators collected.\n- Linked organisations or projects that share the same login, payment method, email or IP.\n- Any abuse reports, support tickets or Trust & Safety notes. For every account, project, organisation or service linked to the identifiers above.\n\n**Requested action**\n\nWe ask that the subjects of this report are not notified, as this could lead to the movement of funds and the destruction of evidence.\n\nWe are a private party and cannot compel disclosure. Formal legal process, or a request through the criminal authorities and/or law enforcement, will follow. Tell us your channel and requirements for the formal law-enforcement request.\n\nWe can supply supporting evidence on request. Please contact the undersigned (the victim's single point of contact) or the victim's case manager, Jordan Avery (in Cc).\n\nAttached / Info:\n\n- Letter of Authorisation\n- Forensic report on the domain\n- Fund-flow report (to follow)\n- Complaint references (Italy and FBI)\n\nYours faithfully,\n\nAthena Investigations\n\nAthena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery)\n\ninvestigations@athena-demo.example\n\n*Disclaimer – This message has been sent as a part of a discussion between Athena Software Group, Inc. and the addressee whose name is specified above. Should you receive this message by mistake, please inform us and delete it; do not forward it or any part of it to anyone else. Parts herein may be restricted or a confidential work paper.*\n",
+      "recipient_email": null,
+      "recipient_cc": [
+        "victim@northbridge.example",
+        "abuse@supabase-demo.example",
+        "legal@supabase-demo.example"
+      ],
+      "sender": "Athena Software Group, Inc. <investigations@athena-demo.example>",
+      "sent_at": "2026-10-18T22:09:17Z",
+      "sent_via": "email",
+      "external_ref": null,
+      "response_due_at": "2026-10-21T22:09:17Z",
+      "responded_at": null,
+      "identifiers": {
+        "recipient": "Compliance / Legal Team (no e-mail on file; use the entity's law-enforcement request portal)",
+        "domains": [
+          "exempla-holding.example"
+        ],
+        "project_ref": "demo0000project",
+        "endpoints": [
+          "https://demo0000project.supabase.co/functions/v1/chatbot"
+        ],
+        "anon_key": "eyJ…DEMO…XXXX (demo placeholder; issued 01.07.2026 04:00 CEST)",
+        "source_file": "https://exempla-holding.example/assets/index-DEMO0000.js"
+      },
+      "notes": "The letter asks Supabase for its channel and requirements for the formal law-enforcement request: track the reply. The reply date is the team's 72-hour follow-up target; the letter itself states no deadline.",
+      "classification": "R3",
+      "log_correspondence": true
+    },
+    {
+      "key": "groq-preservation-1",
+      "entity": "Groq",
+      "entity_category": "infra",
+      "kind": "preservation",
+      "status": "sent",
+      "origin": "imported",
+      "template_key": null,
+      "subject": "Urgent Preservation Request – API account linked to crypto investment fraud (exempla-holding.example)",
+      "body_markdown": "Dear Compliance / Legal Team,\n\nWe write as Athena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery), USA, the victim of a cryptocurrency investment fraud on 12 October 2026 with a loss of approximately USD 400,000 (399,247.92 USDC), acting under the victim's Letter of Authorisation (attached). The perpetrators impersonated a legitimate Swiss company, Exempla Holding AG (UID CHE-000.000.000, Musterstrasse 1, 0000 Musterstadt). They used the website https://exempla-holding.example/ and the fake persona \"Adrian Example, CFO\".\n\nA criminal complaint has been filed in Italy (14.10.2026 / 09.30h) under number DEMO-IT-0000000000 at the Carabinieri — Demo City station (demo), and the matter has been reported to the FBI Internet Crime Complaint Center (IC3). A formal law-enforcement and/or criminal authority request will follow. Until then, we ask you to preserve the records described below. We are not asking for disclosure. Any disclosure should follow formal legal process.\n\nThe infrastructure used in the fraud scheme falls within your jurisdiction:\n\n**Identifiers linked to your services and solutions:**\n\nAPI usage connected to exempla-holding.example: the fake site's chatbot (\"Exempla Holding AG AI Assistant, an automated investment advisor\") sends requests to https://api.groq.com/openai/v1/chat/completions. The site normally reaches Groq through its Supabase project (https://demo0000project.supabase.co/functions/v1/chatbot), and if that fails, it calls Groq directly from the visitor's browser using the hard-coded key. Evidence: https://exempla-holding.example/assets/index-DEMO0000.js (hash omitted in the demo). The server reports the file was last modified on 03.07.2026.\n\nAPI key observed in client-side code: a GroqCloud API key, shown here as gsk_DEMO…XXXX (demo placeholder). It was observed only, never used. The full key can go to Groq Legal over a secure channel on request, so they can find the account.\n\nTwo further points: the Supabase project was created on 01.07.2026, and the same key very likely also sits in the Supabase function's settings. So Groq's records should show requests arriving both from Supabase's servers and directly from browsers, and the browser requests would carry the IP addresses of whoever tested the site, possibly the perpetrators themselves.\n\nAll of the above comes from passive public observation and from our client’s own transaction records. We have not logged into, queried or otherwise accessed any account, project, mailbox, wallet or API.\n\n**Records requested to be preserved minimum 180 days or until legal process is received**\n\n- Account registration data, including sign-up date and IP.\n- Billing and payment records.\n- Login and authentication logs.\n- API key creation and rotation events, plus request logs with source IPs and timestamps.\n- Prompt and output logs, where your retention policy allows. These may contain the scripts used to deceive victims.\n- Linked accounts that share the same login, payment method, email or IP.\n- Any abuse reports or Trust & Safety notes.\n- For every account, project, organisation or service linked to the identifiers above.\n\n**Requested action**\n\nWe ask that the subjects of this report are not notified, as this could lead to the movement of funds and the destruction of evidence.\n\nWe are a private party and cannot compel disclosure. Formal legal process, or a request through the criminal authorities and/or law enforcement, will follow. Complaints have been filed in Italy and with the FBI (IC3).\n\nWe can supply supporting evidence on request. Please contact the undersigned (the victim's single point of contact) or the victim's case manager, Jordan Avery (in Cc).\n\nAttached / Info:\n\n- Letter of Authorisation\n- Forensic report on the domain\n- Fund-flow report (to follow)\n- Complaint references (Italy and FBI)\n\nYours faithfully,\n\nAthena Investigations\n\nAthena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery)\n\ninvestigations@athena-demo.example\n\n*Disclaimer – This message has been sent as a part of a discussion between Athena Software Group, Inc. and the addressee whose name is specified above. Should you receive this message by mistake, please inform us and delete it; do not forward it or any part of it to anyone else. Parts herein may be restricted or a confidential work paper.*\n",
+      "recipient_email": null,
+      "recipient_cc": [
+        "victim@northbridge.example"
+      ],
+      "sender": "Athena Software Group, Inc. <investigations@athena-demo.example>",
+      "sent_at": "2026-10-18T22:18:53Z",
+      "sent_via": "email",
+      "external_ref": null,
+      "response_due_at": "2026-10-21T22:18:53Z",
+      "responded_at": null,
+      "identifiers": {
+        "recipient": "Compliance / Legal Team (no e-mail on file; use the entity's law-enforcement request portal)",
+        "domains": [
+          "exempla-holding.example"
+        ],
+        "api_endpoint": "https://api.groq.com/openai/v1/chat/completions",
+        "api_key": "gsk_DEMO…XXXX (demo placeholder)",
+        "source_file": "https://exempla-holding.example/assets/index-DEMO0000.js"
+      },
+      "notes": "FOLLOW-UP: the letter offers Groq Legal the full API key over a secure channel but proposes none; agree the channel in a short follow-up. The reply date is the team's 72-hour follow-up target; the letter itself states no deadline.",
+      "classification": "R3",
+      "log_correspondence": true
+    },
+    {
+      "key": "kucoin-preservation-1",
+      "entity": "KuCoin",
+      "entity_category": "exchange",
+      "kind": "preservation",
+      "status": "sent",
+      "origin": "imported",
+      "template_key": null,
+      "subject": "Urgent Preservation & Risk-Control Request – Fraud proceeds deposited to KuCoin",
+      "body_markdown": "Dear Compliance / Legal Team,\n\nWe write as Athena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery), USA, the victim of a cryptocurrency investment fraud on 12 October 2026 with a loss of approximately USD 400,000 (399,247.92 USDC), acting under the victim's Letter of Authorisation (attached). The perpetrators impersonated a legitimate Swiss company, Exempla Holding AG (UID CHE-000.000.000, Musterstrasse 1, 0000 Musterstadt). They used the website https://exempla-holding.example/ and the fake persona \"Adrian Example, CFO\".\n\nA criminal complaint has been filed in Italy (14.10.2026 / 09.30h) under number DEMO-IT-0000000000 at the Carabinieri — Demo City station (demo), and the matter has been reported to the FBI Internet Crime Complaint Center (IC3). A formal law-enforcement and/or criminal authority request will follow. Until then, we ask you to preserve the records described below. We are not asking for disclosure. Any disclosure should follow formal legal process.\n\nThe infrastructure used in the fraud scheme falls within your jurisdiction:\n\n**Identifiers linked to your services and solutions:**\n\nDeposit address: 0x0a17ed3ea9e61d9c16be85e22dea19b09aa758e2, Ethereum (ERC-20 network, native ETH). It forwards its funds to 0x45300136662dD4e58fc0DF61E6290DFfD992B785, which Etherscan publicly tags \"KuCoin 17\".\n\nTransaction hashes:\n\n- Deposit: 0x580d3a804899ca7e084af17c13ecd2cb7af781e15572a62eaf604ff056c30293, 14.10.2026 10:07:59 UTC (block 26190041), 0.05683880584988242 ETH, sent from 0xe5351383dcb18c14c3a7c1b9674c6dd501e0a8ed, a wallet in the laundering chain fed by the scammers' wallet 0x25018daA80887E133ee16a0070986dD8D4De57E3.\n- Forwarded to KuCoin's main wallet: 0x0c3593c8a9677fb107e765c8597ba3239074f0fa4173cb09f7a1128d05a5ad4e, 14.10.2026 10:14:35 UTC, 0.056837853652636425 ETH.\n\nThis deposit address isn't new. It also received ETH on 12.09, 18.09, 05.10 and 06.10.2026, from three other wallets: 0x141D9aef573051c277676124a468223484077673, 0x9D4790695ec9CDC6DBe72aB5dd71158793dC391d and 0x693B36F71E3210Fde2C8A8c194648AC5A9Be3fBA. That points to one KuCoin account the operation has been using for weeks. Please preserve and review the account's full history, not just this one deposit.\n\nAll of the above comes from passive public observation and from our client’s own transaction records. We have not logged into, queried or otherwise accessed any account, project, mailbox, wallet or API.\n\n**Records requested to be preserved minimum 180 days or until legal process is received**\n\n- KYC data: identity documents, selfie/liveness checks, nationality, address, phone, email.\n- Account registration data, including sign-up date and IP.\n- Login logs with IPs, device fingerprints and user-agents.\n- Full deposit, trade, P2P and withdrawal history, including destination addresses and fiat off-ramp bank details.\n- Linked accounts that share the same KYC, device, IP, phone, email or withdrawal address.\n- Any internal compliance alerts, STR/SAR flags or prior reports on these accounts.\n- For every account, project, organisation or service linked to the identifiers above.\n\n**Requested action**\n\nWe ask that the subjects of this report are not notified, as this could lead to the movement of funds and the destruction of evidence.\n\nWe are a private party and cannot compel disclosure. Formal legal process, or a request through the criminal authorities and/or law enforcement, will follow.\n\nWe can supply supporting evidence on request. Please contact the undersigned (the victim's single point of contact) or the victim's case manager, Jordan Avery (in Cc).\n\nAttached / Info:\n\n- Letter of Authorisation\n- Forensic report on the domain\n- Fund-flow report (to follow)\n- Complaint references (Italy and FBI)\n\nYours faithfully,\n\nAthena Investigations\n\nAthena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery)\n\ninvestigations@athena-demo.example\n\n*Disclaimer – This message has been sent as a part of a discussion between Athena Software Group, Inc. and the addressee whose name is specified above. Should you receive this message by mistake, please inform us and delete it; do not forward it or any part of it to anyone else. Parts herein may be restricted or a confidential work paper.*\n",
+      "recipient_email": null,
+      "recipient_cc": [
+        "victim@northbridge.example"
+      ],
+      "sender": "Athena Software Group, Inc. <investigations@athena-demo.example>",
+      "sent_at": "2026-10-18T22:27:06Z",
+      "sent_via": "email",
+      "external_ref": null,
+      "response_due_at": "2026-10-21T22:27:06Z",
+      "responded_at": null,
+      "identifiers": {
+        "recipient": "Compliance / Legal Team (no e-mail on file; use the entity's law-enforcement request portal)",
+        "chain": "ethereum",
+        "addresses": [
+          "0x0a17ed3ea9e61d9c16be85e22dea19b09aa758e2",
+          "0x45300136662dD4e58fc0DF61E6290DFfD992B785",
+          "0xe5351383dcb18c14c3a7c1b9674c6dd501e0a8ed",
+          "0x25018daA80887E133ee16a0070986dD8D4De57E3",
+          "0x141D9aef573051c277676124a468223484077673",
+          "0x9D4790695ec9CDC6DBe72aB5dd71158793dC391d",
+          "0x693B36F71E3210Fde2C8A8c194648AC5A9Be3fBA"
+        ],
+        "tx_hashes": [
+          "0x580d3a804899ca7e084af17c13ecd2cb7af781e15572a62eaf604ff056c30293",
+          "0x0c3593c8a9677fb107e765c8597ba3239074f0fa4173cb09f7a1128d05a5ad4e"
+        ],
+        "amounts": {
+          "deposit": "0.05683880584988242 ETH",
+          "sweep": "0.056837853652636425 ETH"
+        },
+        "prior_deposit_dates": [
+          "2026-09-12",
+          "2026-09-18",
+          "2026-10-05",
+          "2026-10-06"
+        ]
+      },
+      "notes": "Preservation plus risk-control review (no freeze requested in so many words). No KuCoin ticket number yet; formal process goes through KuCoin's law-enforcement request portal. The prior-deposit dates and senders come from the investigator's analysis (asserted). The reply date is the team's 72-hour follow-up target; the letter itself states no deadline.",
+      "classification": "R3",
+      "log_correspondence": true
+    },
+    {
+      "key": "rainbet-preservation-1",
+      "entity": "Rainbet",
+      "entity_category": "casino",
+      "kind": "preservation",
+      "status": "sent",
+      "origin": "imported",
+      "template_key": null,
+      "subject": "Urgent Preservation Request – Fraud proceeds deposited to Rainbet accounts",
+      "body_markdown": "Dear Compliance / Legal Team,\n\nWe write as Athena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery), USA, the victim of a cryptocurrency investment fraud on 12 October 2026 with a loss of approximately USD 400,000 (399,247.92 USDC), acting under the victim's Letter of Authorisation (attached). The perpetrators impersonated a legitimate Swiss company, Exempla Holding AG (UID CHE-000.000.000, Musterstrasse 1, 0000 Musterstadt). They used the website https://exempla-holding.example/ and the fake persona \"Adrian Example, CFO\".\n\nA criminal complaint has been filed in Italy (14.10.2026 / 09.30h) under number DEMO-IT-0000000000 at the Carabinieri — Demo City station (demo), and the matter has been reported to the FBI Internet Crime Complaint Center (IC3). A formal law-enforcement and/or criminal authority request will follow. Until then, we ask you to preserve the records described below. We are not asking for disclosure. Any disclosure should follow formal legal process.\n\nThe infrastructure used in the fraud scheme falls within your jurisdiction:\n\n**Identifiers linked to your services and solutions:**\n\nDeposit address: 0x74e697c26f0ce168849411c53707ae689de10d5b, Ethereum (native ETH). It forwards everything to 0x307576Dd4F73f91BB8c4A2EdB762938E8e067d31, which Etherscan publicly tags \"Rainbet.com\".\n\nThe account predates the theft. The same deposit address also received ETH on 09.10, 11.10 and 12.10 at 09:43 UTC, about an hour before the theft at 10:49 UTC, from other wallets. That points to one Rainbet player account in regular use, so please preserve the full account history.\n\nCasino play is a common laundering step: small deposits, minimal play, then a \"clean\" withdrawal. Please preserve, in particular, the destinations the account withdrew to, so that law enforcement can follow them.\n\nAll of the above comes from passive public observation and from our client’s own transaction records. We have not logged into, queried or otherwise accessed any account, project, mailbox, wallet or API.\n\n**Records requested to be preserved minimum 180 days or until legal process is received**\n\n- Account registration data and any KYC, including sign-up IP.\n- Login logs with IPs, devices and user-agents.\n- Deposit, wager and withdrawal history, including withdrawal destination addresses. Deposits with minimal play followed by withdrawal are a laundering indicator.\n- Linked accounts that share the same device, IP, email or withdrawal address, plus affiliate or referral links.\n- For every account, project, organisation or service linked to the identifiers above.\n\n**Requested action**\n\nWe ask that the subjects of this report are not notified, as this could lead to the movement of funds and the destruction of evidence.\n\nWe are a private party and cannot compel disclosure. Formal legal process, or a request through the criminal authorities and/or law enforcement, will follow. Complaints have been filed in Italy and with the FBI (IC3).\n\nWe can supply supporting evidence on request. Please contact the undersigned (the victim's single point of contact) or the victim's case manager, Jordan Avery (in Cc).\n\nAttached / Info:\n\n- Letter of Authorisation\n- Forensic report on the domain\n- Fund-flow report (to follow)\n- Complaint references (Italy and FBI)\n\nYours faithfully,\n\nAthena Investigations\n\nAthena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery)\n\ninvestigations@athena-demo.example\n\n*Disclaimer – This message has been sent as a part of a discussion between Athena Software Group, Inc. and the addressee whose name is specified above. Should you receive this message by mistake, please inform us and delete it; do not forward it or any part of it to anyone else. Parts herein may be restricted or a confidential work paper.*\n",
+      "recipient_email": "compliance@rainbet-demo.example",
+      "recipient_cc": [
+        "victim@northbridge.example"
+      ],
+      "sender": "Athena Software Group, Inc. <investigations@athena-demo.example>",
+      "sent_at": "2026-10-18T22:33:38Z",
+      "sent_via": "email",
+      "external_ref": null,
+      "response_due_at": "2026-10-21T22:33:38Z",
+      "responded_at": null,
+      "identifiers": {
+        "chain": "ethereum",
+        "addresses": [
+          "0x74e697c26f0ce168849411c53707ae689de10d5b",
+          "0x307576Dd4F73f91BB8c4A2EdB762938E8e067d31"
+        ],
+        "tx_hashes": [],
+        "prior_deposit_dates": [
+          "2026-10-09",
+          "2026-10-11",
+          "2026-10-12T09:43:00Z"
+        ],
+        "theft_time": "2026-10-12T10:49:47Z"
+      },
+      "notes": "Sent to the generic compliance alias. No transaction hash is cited and the deposit dates come from the investigator's analysis (asserted). The only letter that states the theft time (10:49 UTC). The reply date is the team's 72-hour follow-up target; the letter itself states no deadline.",
+      "classification": "R3",
+      "log_correspondence": true
+    },
+    {
+      "key": "swft-preservation-1",
+      "entity": "SWFT / Bridgers",
+      "entity_category": "swap_service",
+      "kind": "preservation",
+      "status": "sent",
+      "origin": "imported",
+      "template_key": null,
+      "subject": "Urgent Preservation Request – Swap orders processing fraud proceeds",
+      "body_markdown": "Dear Compliance / Legal Team,\n\nWe write as Athena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery), USA, the victim of a cryptocurrency investment fraud on 12 October 2026 with a loss of approximately USD 400,000 (399,247.92 USDC), acting under the victim's Letter of Authorisation (attached). The perpetrators impersonated a legitimate Swiss company, Exempla Holding AG (UID CHE-000.000.000, Musterstrasse 1, 0000 Musterstadt). They used the website https://exempla-holding.example/ and the fake persona \"Adrian Example, CFO\".\n\nA criminal complaint has been filed in Italy (14.10.2026 / 09.30h) under number DEMO-IT-0000000000 at the Carabinieri — Demo City station (demo), and the matter has been reported to the FBI Internet Crime Complaint Center (IC3). A formal law-enforcement and/or criminal authority request will follow. Until then, we ask you to preserve the records described below. We are not asking for disclosure. Any disclosure should follow formal legal process.\n\nThe infrastructure used in the fraud scheme falls within your jurisdiction:\n\n**Identifiers linked to your services and solutions:**\n\nOrder ID(s):\n\n1. demo0swf_t000_0000_0000_000000000001 – ETH → USDT (TRON), 18.10.2026\n2. No public order ID – please locate by TXID 0x2b9ce18c974dce7166bf6e48dcd1c7e7c16baece43adb242d8b1dc4361aeb196 and sender 0xA2F14fe2965766F93e927C09729711133e8EeeFF\n\nSource deposit TXID(s):\n\n1. 0xfda766545c41b900ce5ccee9f0c7b1a2318ba1186b741101b9ab47f4c3fa038c, Ethereum, 0.581280863881450395 ETH, 18.10.2026 17:48:59 UTC, from 0x1a456698F53732efe57503C867b2D1762F8dbf9E\n2. 0x2b9ce18c974dce7166bf6e48dcd1c7e7c16baece43adb242d8b1dc4361aeb196, Ethereum, 0.445 ETH, 15.10.2026 09:33:23 UTC, from 0xA2F14fe2965766F93e927C09729711133e8EeeFF\n\nDestination address(es) and TXID(s):\n\n1. TWdZZhGv7zqeRnmxWd65yQSE2YDZRteL77 (TRON) – 705f713545499afc5860f45d1be2c40413a8d813d28f268fb203b3ead818ea67, 18.10.2026 17:50:30 UTC, 1,359.899028 USDT\n2. Possibly bc1pxnd9wrqg5yk4h4nvxmr5nmr4hne5yfpt4s6ec5hrm6ad9y9yv5jqsfknzn (Bitcoin) – 9e573f03585ce4647fbdeeb351bd6b95c154a49d42957ad68f19e34db5137897, 15.10.2026 09:46:00 UTC, 0.012836 BTC\n\nSWFT/Bridgers receiving contract: Ethereum 0xc1d13492285eb664951E201BF7C80c7c6318a1b5\n\nAll of the above comes from passive public observation and from our client’s own transaction records. We have not logged into, queried or otherwise accessed any account, project, mailbox, wallet or API.\n\n**Records requested to be preserved minimum 180 days or until legal process is received**\n\n- Complete order records: tokens, amounts, rates, timestamps, source, destination and refund addresses.\n- IP address, device and user-agent at order creation, plus any account or email used.\n- Partner, referrer or API integrator through which the orders were placed.\n- Linked orders that share the same IP, device, source or destination address.\n- For every account, project, organisation or service linked to the identifiers above.\n\n**Requested action**\n\nWe ask that the subjects of this report are not notified, as this could lead to the movement of funds and the destruction of evidence.\n\nWe are a private party and cannot compel disclosure. Formal legal process, or a request through the criminal authorities and/or law enforcement, will follow. Complaints have been filed in Italy and with the FBI (IC3).\n\nWe can supply supporting evidence on request. Please contact the undersigned (the victim's single point of contact) or the victim's case manager, Jordan Avery (in Cc).\n\nAttached / Info:\n\n- Letter of Authorisation\n- Forensic report on the domain\n- Fund-flow report (to follow)\n- Complaint references (Italy and FBI)\n\nYours faithfully,\n\nAthena Investigations\n\nAthena Software Group, Inc., on behalf of Northbridge Analytics, Inc. (Jordan Avery)\n\ninvestigations@athena-demo.example\n\n*Disclaimer – This message has been sent as a part of a discussion between Athena Software Group, Inc. and the addressee whose name is specified above. Should you receive this message by mistake, please inform us and delete it; do not forward it or any part of it to anyone else. Parts herein may be restricted or a confidential work paper.*\n",
+      "recipient_email": null,
+      "recipient_cc": [
+        "victim@northbridge.example"
+      ],
+      "sender": "Athena Software Group, Inc. <investigations@athena-demo.example>",
+      "sent_at": "2026-10-18T22:41:12Z",
+      "sent_via": "email",
+      "external_ref": null,
+      "response_due_at": "2026-10-21T22:41:12Z",
+      "responded_at": null,
+      "identifiers": {
+        "recipient": "Compliance / Legal Team (no e-mail on file; use the entity's law-enforcement request portal)",
+        "order_ids": [
+          "demo0swf_t000_0000_0000_000000000001"
+        ],
+        "addresses": [
+          "0x1a456698F53732efe57503C867b2D1762F8dbf9E",
+          "0xA2F14fe2965766F93e927C09729711133e8EeeFF",
+          "0xc1d13492285eb664951E201BF7C80c7c6318a1b5",
+          "TWdZZhGv7zqeRnmxWd65yQSE2YDZRteL77",
+          "bc1pxnd9wrqg5yk4h4nvxmr5nmr4hne5yfpt4s6ec5hrm6ad9y9yv5jqsfknzn"
+        ],
+        "tx_hashes": [
+          "0xfda766545c41b900ce5ccee9f0c7b1a2318ba1186b741101b9ab47f4c3fa038c",
+          "0x2b9ce18c974dce7166bf6e48dcd1c7e7c16baece43adb242d8b1dc4361aeb196",
+          "705f713545499afc5860f45d1be2c40413a8d813d28f268fb203b3ead818ea67",
+          "9e573f03585ce4647fbdeeb351bd6b95c154a49d42957ad68f19e34db5137897"
+        ],
+        "amounts": {
+          "order_1_in": "0.581280863881450395 ETH",
+          "order_1_out": "1359.899028 USDT",
+          "order_2_in": "0.445 ETH",
+          "order_2_out": "0.012836 BTC"
+        }
+      },
+      "notes": "Order 2 has no public order id: SWFT must locate it by TXID and sender. The letter calls the BTC payout to bc1pxnd9… 'possibly' theirs; mempool.space confirms it. The reply date is the team's 72-hour follow-up target; the letter itself states no deadline.",
+      "classification": "R3",
+      "log_correspondence": true
+    }
+  ],
+  "correspondence": [
+    {
+      "key": "note-batch-sent-1",
+      "direction": "note",
+      "channel": "email",
+      "kind": "other",
+      "status": "logged",
+      "subject": "Six preservation letters sent 18.10.2026, 22:02–22:42 UTC",
+      "body_markdown": "Internal note (demo). Athena Investigations sent six preservation letters by e-mail on 18.10.2026, on behalf of Northbridge Analytics, Inc. (Jordan Avery):\n\n- 22:02:41 UTC Hostinger (domain / hosting)\n- 22:09:17 UTC Supabase (backend project)\n- 22:18:53 UTC Groq (LLM API account)\n- 22:27:06 UTC KuCoin (deposit account)\n- 22:33:38 UTC Rainbet (casino player account)\n- 22:41:12 UTC SWFT / Bridgers (swap orders)\n\nEach letter asks for 180-day preservation, no disclosure and no notification of the account holder. No formal law-enforcement request has been sent yet. Circle and Tether have not been contacted; their issuer letters are drafted by Aegis from the trace.",
+      "sender": "investigations@athena-demo.example",
+      "occurred_at": "2026-10-18T22:45:00Z",
+      "classification": "R2",
+      "meta": {
+        "demo": true
+      }
+    },
+    {
+      "key": "note-hostinger-defect-1",
+      "entity": "Hostinger",
+      "direction": "note",
+      "channel": "other",
+      "kind": "other",
+      "status": "logged",
+      "subject": "Hostinger letter went out without its attachment",
+      "body_markdown": "Internal note (demo). The Hostinger e-mail was sent without the Letter of Authorisation it names as attached. Resend it with the attachment and ask for a preservation confirmation.",
+      "sender": "investigations@athena-demo.example",
+      "occurred_at": "2026-10-19T07:30:00Z",
+      "due_at": "2026-10-20T12:00:00Z",
+      "stop_order_key": "hostinger-preservation-1",
+      "thread_key": "hostinger-preservation-1",
+      "classification": "R2",
+      "meta": {
+        "demo": true,
+        "follow_up": "resend_with_attachment"
+      }
+    },
+    {
+      "key": "note-groq-defect-1",
+      "entity": "Groq",
+      "direction": "note",
+      "channel": "other",
+      "kind": "other",
+      "status": "logged",
+      "subject": "Groq letter: agree a secure channel for the full API key",
+      "body_markdown": "Internal note (demo). The Groq letter offers the full API key over a secure channel but proposes none. Follow up with Groq Legal to agree the channel.",
+      "sender": "investigations@athena-demo.example",
+      "occurred_at": "2026-10-19T07:35:00Z",
+      "due_at": "2026-10-20T12:00:00Z",
+      "stop_order_key": "groq-preservation-1",
+      "thread_key": "groq-preservation-1",
+      "classification": "R2",
+      "meta": {
+        "demo": true,
+        "follow_up": "secure_channel"
+      }
+    },
+    {
+      "key": "rainbet-autoack-1",
+      "entity": "Rainbet",
+      "direction": "in",
+      "channel": "email",
+      "kind": "reply",
+      "status": "received",
+      "subject": "Re: Urgent Preservation Request – Fraud proceeds deposited to Rainbet accounts",
+      "body_markdown": "**SYNTHETIC DEMO MESSAGE: not a real reply from Rainbet.**\n\nThank you for contacting Rainbet Compliance. This is an automatic acknowledgement: your message has been received and logged under ticket RB-DEMO-0001. Requests are reviewed in the order received. Please quote the ticket number in any further correspondence.",
+      "sender": "compliance@rainbet-demo.example",
+      "recipients": [
+        "investigations@athena-demo.example"
+      ],
+      "cc": [],
+      "occurred_at": "2026-10-19T00:02:00Z",
+      "stop_order_key": "rainbet-preservation-1",
+      "thread_key": "rainbet-preservation-1",
+      "external_ref": "RB-DEMO-0001",
+      "shared_with_external": true,
+      "classification": "R2",
+      "meta": {
+        "synthetic": true,
+        "demo": true,
+        "auto_reply": true
+      }
+    },
+    {
+      "key": "note-rainbet-ack-1",
+      "entity": "Rainbet",
+      "direction": "note",
+      "channel": "other",
+      "kind": "other",
+      "status": "logged",
+      "subject": "Rainbet auto-acknowledgement logged; substantive reply pending",
+      "body_markdown": "Internal note (demo). The acknowledgement is automatic and confirms receipt only. No preservation confirmation yet; chase on the follow-up date and quote the ticket number.",
+      "sender": "investigations@athena-demo.example",
+      "occurred_at": "2026-10-19T07:40:00Z",
+      "due_at": "2026-10-21T22:33:38Z",
+      "stop_order_key": "rainbet-preservation-1",
+      "in_reply_to_key": "rainbet-autoack-1",
+      "thread_key": "rainbet-preservation-1",
+      "external_ref": "RB-DEMO-0001",
+      "classification": "R2",
+      "meta": {
+        "demo": true
+      }
+    }
+  ],
+  "notification_rules": [
+    {
+      "event_type": "vasp_deposit",
+      "min_usd": 1000,
+      "channels": [
+        "in_app",
+        "email"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    },
+    {
+      "event_type": "sweep_imminent",
+      "channels": [
+        "in_app",
+        "email"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    },
+    {
+      "event_type": "wallet_movement",
+      "min_usd": 500,
+      "channels": [
+        "in_app"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    },
+    {
+      "event_type": "stop_order_status",
+      "channels": [
+        "in_app"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator",
+        "read_only"
+      ]
+    },
+    {
+      "event_type": "correspondence_in",
+      "channels": [
+        "in_app"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    },
+    {
+      "event_type": "response_overdue",
+      "overdue_days": 3,
+      "channels": [
+        "in_app",
+        "email"
+      ],
+      "recipient_roles": [
+        "admin"
+      ]
+    },
+    {
+      "event_type": "correspondence_out",
+      "channels": [
+        "in_app"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    },
+    {
+      "event_type": "evidence_added",
+      "channels": [
+        "in_app"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    },
+    {
+      "event_type": "trace_completed",
+      "channels": [
+        "in_app"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    },
+    {
+      "event_type": "ai_summary",
+      "enabled": false,
+      "channels": [
+        "in_app"
+      ],
+      "recipient_roles": [
+        "admin"
+      ]
+    },
+    {
+      "event_type": "evidence_integrity",
+      "channels": [
+        "in_app",
+        "email"
+      ],
+      "recipient_roles": [
+        "admin"
+      ]
+    },
+    {
+      "event_type": "mail_prepared",
+      "channels": [
+        "in_app",
+        "email"
+      ],
+      "recipient_roles": [
+        "admin"
+      ]
+    },
+    {
+      "event_type": "freeze_detected",
+      "channels": [
+        "in_app"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    },
+    {
+      "event_type": "freeze_lifted",
+      "channels": [
+        "in_app"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    },
+    {
+      "event_type": "block_status_changed",
+      "channels": [
+        "in_app"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    },
+    {
+      "event_type": "provider_deadline",
+      "channels": [
+        "in_app",
+        "email"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    },
+    {
+      "event_type": "hold_expiring",
+      "channels": [
+        "in_app",
+        "email"
+      ],
+      "recipient_roles": [
+        "admin",
+        "investigator"
+      ]
+    }
+  ]
+}

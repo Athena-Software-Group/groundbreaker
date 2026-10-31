@@ -1,0 +1,14 @@
+{# Fund-flow legend row for on-chain freeze readings (app/freeze). Context: graph (annotated elements: nodes with
+   onchain_freeze / onchain_frozen). static/graph.js copies the row into the legend box (#ff-legend) after the
+   stop-order row; it stays inert (a <template>) without JavaScript. Included before trace_graph.html, whose
+   scripts run as soon as they are parsed. #}
+{% set oc = graph.nodes | map(attribute='data') | selectattr('onchain_freeze') | list if graph else [] %}
+{% set n_frozen = oc | selectattr('onchain_frozen') | list | length %}
+{% set n_lifted = oc | selectattr('onchain_unfrozen') | list | length %}
+<link rel="stylesheet" href="/static/css/freeze.css">
+<template id="ff-lg-onchain">
+  <div class="ff-lg-row" data-ff-onchain><span class="ff-lg-h">On-chain</span>
+    <span title="the issuer (Tether / Circle) blacklisted the wallet: read from the token contract, not from a reply"><i class="ff-fz onchain"></i><i class="fz-oc-mark" aria-hidden="true"></i>frozen on-chain (issuer blacklist){% if n_frozen %} <b>{{ n_frozen }}</b>{% endif %}</span>
+    {% if n_lifted %}<span title="the issuer removed the wallet from its blacklist again: the funds can move"><i class="ff-fz onchain-lifted"></i>freeze lifted <b>{{ n_lifted }}</b></span>{% endif %}
+    <span class="muted" title="wallets with an on-chain freeze check; exchange accounts cannot be seen on-chain">{{ oc | length }} checked · exchange accounts: reply-confirmed only</span></div>
+</template>

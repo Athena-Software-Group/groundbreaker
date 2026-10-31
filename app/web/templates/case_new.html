@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Aegis · New case{% endblock %}
+{% block content %}
+<h1>New case</h1>
+<div class="sub" style="margin-bottom:14px">Minimum to start a trace: the origin transaction hash <em>or</em> the perpetrator's receiving wallet. Everything else can be added later.</div>
+<form method="post" action="/cases/new" class="grid cols-2">
+  {{ csrf_field() }}
+  <div class="panel">
+    <h2>Case</h2>
+    <label>Reference</label><input name="reference" required placeholder="DEMO-2026-001" pattern="[A-Za-z0-9][A-Za-z0-9._\-]{2,63}" maxlength="64" title="3 to 64 characters: letters, digits, . _ or -; unique ignoring case">
+    <label>Title</label><input name="title" required placeholder="Impersonation of … — investment fraud">
+    <label>Client / victim name</label><input name="victim_name" required maxlength="255">
+    <label>Victim entity (optional)</label><input name="victim_entity" maxlength="255" placeholder="the company the victim acts for, if any">
+    <label>Client's contact e-mail (optional)</label><input name="client_email" type="email" maxlength="254" class="mono" placeholder="copied on every letter (default Cc)">
+    <label>Authority instrument</label><input name="authority_instrument" value="{{ instrument_default }}" maxlength="128" title="the document under which your organisation acts for the client">
+    <div class="muted" style="font-size:var(--fs-sm);margin-top:4px">Sender of record: letters will read “We write as {{ org_name }}, on behalf of &lt;client&gt;”, signed {{ signatory }}, from the case mailbox, under the client's {{ instrument_default }}. You can change it on the case's sender-profile page.</div>
+    <label>Summary</label><textarea name="summary" rows="4" placeholder="How the fraud was executed, who was impersonated, where the victim met the perpetrator…"></textarea>
+  </div>
+  <div class="panel">
+    <h2>Loss & chain</h2>
+    <div class="grid cols-3">
+      <div><label>Amount</label><input name="loss_amount" required placeholder="399247.92"></div>
+      <div><label>Asset</label><input name="loss_asset" value="USDC"></div>
+      <div><label>USD value</label><input name="loss_usd" placeholder="defaults to amount"></div>
+    </div>
+    <label>Fraud date/time (UTC)</label><input name="fraud_date" type="datetime-local">
+    <label>Chain of the origin transfer</label>
+    <select name="chain">{% for c in chains %}<option value="{{ c.value }}">{{ c.value }}</option>{% endfor %}</select>
+    <label>Origin transaction hash</label><input name="origin_tx" class="mono" placeholder="0x…">
+    <label>Victim wallet</label><input name="victim_wallet" class="mono" placeholder="0x…">
+    <label>Perpetrator receiving wallet</label><input name="perpetrator_wallet" class="mono" placeholder="0x…">
+    <div style="margin-top:16px"><button class="btn primary" type="submit">Create case</button></div>
+  </div>
+</form>
+{% endblock %}

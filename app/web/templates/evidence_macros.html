@@ -1,0 +1,74 @@
+{# Evidence feature macros — owner: app/web/routes_evidence.py. Import WITH context:
+   {% import "evidence_macros.html" as evm with context %} (needs ev_folders, ev_classifications, ev_flags). #}
+
+{% macro cls_badge(c) -%}
+<span class="ev-cls ev-cls-{{ c.value if c.value is defined else c }}" title="classification (docs/data-handling.md §1)">{{ c.value if c.value is defined else c }}</span>
+{%- endmacro %}
+
+{% macro storage_badge(item) -%}
+<span class="ev-storage" title="{{ {'reference': 'original referenced by path, never copied', 'vault': 'copy in the evidence vault', 'inline': 'text held in the database'}[item.storage.value] }}">{{ item.storage.value }}</span>
+{%- endmacro %}
+
+{% macro integrity_badge(item) -%}
+{% set st = ev_integrity(item) %}
+{% if st in ('mismatch', 'missing') %}<span class="tag red" title="last integrity check failed">{{ st }}</span>
+{% elif item.verified_at %}<span class="tag green" title="hash re-checked {{ item.verified_at | dt }}">verified</span>
+{% else %}<span class="tag" title="hash not re-checked yet">unverified</span>{% endif %}
+{%- endmacro %}
+
+{% macro folder_select(selected=None, name='folder') -%}
+<select name="{{ name }}" required>
+  {% for f in ev_folders %}{% if not f.admin_only or ev_flags.financial %}
+  <option value="{{ f.folder.value }}" {% if selected == f.folder.value %}selected{% endif %}>{{ f.label }}</option>
+  {% endif %}{% endfor %}
+</select>
+{%- endmacro %}
+
+{% macro section_select(selected=None) -%}
+<select name="section">
+  <option value="">— none / automatic —</option>
+  {% for f in ev_folders if f.sections %}
+  <optgroup label="{{ f.label }}">
+    {% for s in f.sections if s.key != 'contacts' %}<option value="{{ s.key }}" {% if selected == s.key %}selected{% endif %}>{{ s.label }}</option>{% endfor %}
+  </optgroup>
+  {% endfor %}
+</select>
+{%- endmacro %}
+
+{% macro classification_select(selected='R3') -%}
+<select name="classification">
+  {% for c in ev_classifications %}<option value="{{ c.value }}" {% if selected == c.value %}selected{% endif %}>{{ c.value }}</option>{% endfor %}
+</select>
+{%- endmacro %}
+
+{# the metadata fields shared by upload / reference / note / edit forms #}
+{% macro meta_fields(item=None, folder=None, section=None, cls='R3', title_required=False) -%}
+<div class="ev-fields">
+  <label>Title <input name="title" value="{{ item.title if item else '' }}" maxlength="512" {% if title_required %}required{% endif %} {% if not item %}placeholder="defaults to the file name"{% endif %} data-ev-title></label>
+  <label>Folder {{ folder_select(item.folder.value if item else folder) }}</label>
+  <label>Section {{ section_select(section) }}</label>
+  <label>Document date <input type="date" name="doc_date" value="{{ item.doc_date.strftime('%Y-%m-%d') if item and item.doc_date else '' }}"></label>
+  <label>Source type <input name="source_type" value="{{ item.source_type or '' if item else '' }}" maxlength="64" placeholder="police_report, chat, screenshot, eml …"></label>
+  <label>Received from <input name="received_from" value="{{ item.received_from or '' if item else '' }}" maxlength="255"></label>
+  <label>Classification {{ classification_select(item.classification.value if item else cls) }}</label>
+  <label>TLP <input name="tlp" value="{{ item.tlp or '' if item else '' }}" maxlength="32" placeholder="TLP:AMBER"></label>
+  <label class="ev-wide">Tags <input name="tags" value="{{ (item.tags or []) | join(', ') if item else '' }}" placeholder="comma-separated"></label>
+  {% if item and (item.tags or []) | map('lower') | select('in', ['aegis-mail', 'received-email', 'sent-email', 'email-attachment']) | list %}<div class="ev-wide muted">E-mail desk item: its mail tags (aegis-mail, sent-email, received-email, email-attachment) and its source type are kept when saving.</div>{% endif %}
+  <label class="ev-wide">Description <textarea name="description" rows="2">{{ item.description or '' if item else '' }}</textarea></label>
+</div>
+{%- endmacro %}
+
+{% macro contact_fields(c=None) -%}
+<div class="ev-fields">
+  <label>Agency <input name="agency" value="{{ c.agency if c else '' }}" required maxlength="255"></label>
+  <label>Unit <input name="unit" value="{{ c.unit or '' if c else '' }}" maxlength="255"></label>
+  <label>Role <input name="role" value="{{ c.role or '' if c else '' }}" maxlength="128" placeholder="complaint desk, investigating officer …"></label>
+  <label>Name <input name="name" value="{{ c.name or '' if c else '' }}" maxlength="255"></label>
+  <label>E-mail <input type="email" name="email" value="{{ c.email or '' if c else '' }}" maxlength="255"></label>
+  <label>Phone <input name="phone" value="{{ c.phone or '' if c else '' }}" maxlength="64"></label>
+  <label>Reference <input name="reference" value="{{ c.reference or '' if c else '' }}" maxlength="255" placeholder="complaint / file number"></label>
+  <label>Jurisdiction <input name="jurisdiction" value="{{ c.jurisdiction or '' if c else '' }}" maxlength="128"></label>
+  <label>Classification {{ classification_select(c.classification.value if c else 'R3') }}</label>
+  <label class="ev-wide">Notes <textarea name="notes" rows="2">{{ c.notes or '' if c else '' }}</textarea></label>
+</div>
+{%- endmacro %}

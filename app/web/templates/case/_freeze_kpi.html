@@ -1,0 +1,7 @@
+{# Overview funds-position tile: wallets frozen on-chain by the issuer (app/freeze). Context: fz
+   (routes_freeze.freeze_overview, or None). Separate from the "Frozen (confirmed holds)" tile, which counts
+   holds confirmed in a recipient's reply (exchange / issuer letters). #}
+{% if fz %}
+<div class="panel kpi" id="funds-onchain"><div class="v ok">{% if fz.frozen %}<i class="fz-oc-mark" aria-hidden="true"></i>{% endif %}{{ fz.frozen_usd | usd if fz.n_checked else '—' }}</div>
+  <div class="l">Frozen on-chain (issuer blacklist)<span class="muted fz-kpi-sub">{% if not fz.enabled and not fz.n_checked %}checks off for this case{% elif fz.frozen %}{{ fz.frozen | length }} wallet{{ 's' if fz.frozen | length != 1 }}; the wallets' whole balances{% if fz.unfrozen %} · {{ fz.unfrozen | length }} lifted{% endif %}{% elif fz.unfrozen %}{{ fz.unfrozen | length }} freeze{{ 's' if fz.unfrozen | length != 1 }} lifted: funds can move{% else %}{{ fz.n_checked }} of {{ fz.n_wallets }} wallets checked{% endif %}</span></div></div>
+{% endif %}

@@ -1,0 +1,31 @@
+{# AI Assistant (Pythia) tab — owner: app/web/routes_assistant.py (assistant_tab).
+   Context: ai_mode, ai_modes [(value, help)], ai_configured, ai_provider_ready, ai_model, ai_destination,
+   ai_third_party, ai_mode_sends, ai_full_unconfirmed, assistant_summary (stored envelope or None),
+   assistant_summary_hidden, assistant_summary_reason, can_summarize, can_ask, can_switch_mode, assistant_answer,
+   max_question_chars; chat: assistant_sub (chat | summary | mode), assistant_subtabs, chat_messages (AiMessage rows),
+   chat_skills (registry dicts with "allowed"), chat_suggestions, chat_md (safe Markdown renderer), disclaimer,
+   chat_data (JSON for the script).
+   Sub-tabs: all three panels are rendered, the inactive ones hidden; the links work without JavaScript and
+   /static/js/assistant.js switches in place (also for #assistant-summary / #assistant-mode).
+   Partials: case/assistant/_chat.html, _summary.html, _mode.html, _datapath.html, _message.html. #}
+<div class="assistant" id="assistant" data-case-id="{{ case.id }}" data-sub="{{ assistant_sub }}">
+
+<nav class="assistant-subtabs" aria-label="AI Assistant (Pythia) sections">
+  {% for key, label in assistant_subtabs %}<a href="/cases/{{ case.id }}?tab=assistant&amp;sub={{ key }}" class="assistant-subtab {{ 'active' if key == assistant_sub else '' }}" data-sub="{{ key }}" {% if key == assistant_sub %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+  <span class="spacer"></span>
+  {% include "case/assistant/_datapath.html" %}
+</nav>
+
+<div class="assistant-subpanel" id="assistant-sub-chat" data-sub="chat" {% if assistant_sub != 'chat' %}hidden{% endif %}>
+  {% include "case/assistant/_chat.html" %}
+</div>
+
+<div class="assistant-subpanel" id="assistant-sub-summary" data-sub="summary" {% if assistant_sub != 'summary' %}hidden{% endif %}>
+  {% include "case/assistant/_summary.html" %}
+</div>
+
+<div class="assistant-subpanel" id="assistant-sub-mode" data-sub="mode" {% if assistant_sub != 'mode' %}hidden{% endif %}>
+  {% include "case/assistant/_mode.html" %}
+</div>
+
+</div>

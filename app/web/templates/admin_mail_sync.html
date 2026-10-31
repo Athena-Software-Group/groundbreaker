@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{# Mailbox sync — owner: app/web/routes_mail_admin.py (_mailbox_overview). Context: info (describe()), settings_problem,
+   inbound_enabled, graph, folders [{key, label, since, delta_stored, last_*, last_result, last_error,
+   backfill_requested_at}], lease_held, last_result, last_error, sync_minutes, triage (metadata-only rows), found
+   (Sent Items messages found), review [{id, case_id, reference, corr_id, sent_at, domains, reason, metadata_only,
+   evidence_id, letters [(key, label)]}], default_since, result. Never a delta link, a subject or a full address. #}
+{% block title %}Aegis · Mailbox sync{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/css/mail_admin.css">{% endblock %}
+{% block content %}
+<div class="row case-head"><div><h1>Mailbox sync</h1><div class="sub">System administration · <a href="/admin/mail">mail</a>
+  · <a href="/admin/mail/unassigned">unassigned mail</a> · Aegis reads the case mailbox's Inbox and Sent Items and keeps only case-related mail
+  (docs/data-handling.md §6.4)</div></div></div>
+
+{% if not inbound_enabled %}<div class="alert info">Inbound mail is off: set <span class="mono">AEGIS_MAIL_INBOUND=on</span> to read the mailbox.</div>
+{% elif settings_problem %}<div class="alert info">{{ settings_problem }}</div>
+{% elif not graph %}<div class="alert info">The <span class="mono">{{ info.transport }}</span> transport reads one inbox only; Sent Items are read with <span class="mono">AEGIS_MAIL_TRANSPORT=graph</span>.</div>{% endif %}
+
+{% if result %}
+<div class="panel tight mail-result {{ 'ok' if result.ok else 'failed' }}" id="mail-result">
+  {% if result.ok %}<span class="tag green">{{ 'backfill started' if result.action == 'backfill' else 'mailbox checked' }}</span>{% if result.since %} from {{ result.since | dt }}{% endif %}
+  {% else %}<span class="tag {{ 'amber' if result.counts else 'red' }}">{{ result.action }}</span> {{ result.error }}{% endif %}
+  {% if result.counts %}<div class="mono small-counts">{% for k, v in result.counts.items() %}{{ k }}={{ v }} {% endfor %}</div>{% endif %}
+</div>
+{% endif %}
+
+<div class="grid cols-2 mail-cards">
+{% for f in folders %}
+<div class="panel" id="mail-folder-{{ f.key }}">
+  <h2>{{ f.label }} <small>{{ 'replies and other inbound mail' if f.key == 'inbox' else 'letters sent from the mailbox (Outlook) and Aegis' }}</small></h2>
+  <div class="table-scroll"><table><tbody>
+    <tr><th>Reads mail since</th><td>{{ f.since | dt if f.since else ((default_since | dt) ~ ' (AEGIS_MAIL_INBOUND_SINCE, from the first sync)' if default_since else 'set on the first sync') }}{% if f.backfill_requested_at %} <span class="muted">(backfill requested {{ f.backfill_requested_at | dt }})</span>{% endif %}</td></tr>
+    <tr><th>Last sync</th><td>started {{ f.last_started_at | dt }} · finished {{ f.last_finished_at | dt }} · last success {{ f.last_success_at | dt }}</td></tr>
+    <tr><th>Last result</th><td>{% if f.last_result %}<span class="mono small-counts">{% for k, v in f.last_result.items() if k not in ('trigger', 'at') %}{{ k }}={{ v }} {% endfor %}</span>{% if f.last_result.trigger %} <span class="muted">({{ f.last_result.trigger }})</span>{% endif %}{% else %}—{% endif %}</td></tr>
+    <tr><th>Last error</th><td>{% if f.last_error %}<span class="tag red">error</span> {{ f.last_error }}{% else %}—{% endif %}</td></tr>
+    <tr><th>Delta link</th><td>{% if f.delta_stored %}stored{% else %}none (the next sync reads from the start date){% endif %} <span class="muted">(never shown)</span></td></tr>
+  </tbody></table></div>
+</div>
+{% endfor %}
+
+<div class="panel" id="mail-sync-actions">
+  <h2>Sync <small>the scheduler reads both folders every {{ sync_minutes }} minutes (AEGIS_MAIL_SYNC_MINUTES)</small></h2>
+  <p class="muted">Lease: {% if lease_held %}<span class="tag amber">a sync is running</span>{% else %}free{% endif %}
+    · {{ found }} message(s) sent outside Aegis found in Sent Items · <a href="/admin/mail/unassigned">{{ triage }} metadata-only message(s)</a> waiting in the unassigned queue</p>
+  <div class="row mail-actions">
+    <form method="post" action="/admin/mail/mailbox/sync" class="inline">{{ csrf_field() }}<button class="btn small primary" type="submit" {{ '' if inbound_enabled and not settings_problem else 'disabled' }}>Sync now</button></form>
+  </div>
+  <h3>Backfill</h3>
+  <form method="post" action="/admin/mail/mailbox/backfill" class="mail-form" id="mail-backfill">{{ csrf_field() }}
+    <label for="backfill-since">Re-read Inbox and Sent Items from (UTC)</label>
+    <input id="backfill-since" name="since" type="date" required min="2020-01-01" value="{{ default_since.strftime('%Y-%m-%d') if default_since else '' }}">
+    <label class="mail-check"><input type="checkbox" name="confirm" value="1" required> forget both delta links and read again from this date</label>
+    <p class="muted">Mail already in Aegis is recognised and skipped; a letter found in Sent Items is recorded once. Mail that is not case-related is only counted.</p>
+    <button class="btn small" type="submit" {{ '' if inbound_enabled and not settings_problem else 'disabled' }}>Backfill since this date</button>
+  </form>
+</div>
+
+<div class="panel" id="mail-sent-review">
+  <h2>Sent Items to review <small>metadata only: no subjects, recipient domains only</small></h2>
+  {% if review %}
+  <div class="table-scroll"><table><thead><tr><th>E-mail</th><th>Case</th><th>Sent</th><th>To (domains)</th><th>Why</th><th>Logged as</th><th>Review</th></tr></thead><tbody>
+    {% for m in review %}<tr>
+      <td class="mono">#{{ m.id }}{% if m.metadata_only %} <span class="tag">metadata only</span>{% endif %}</td>
+      <td class="mono">{% if m.case_id %}<a href="/cases/{{ m.case_id }}?tab=authorities">{{ m.reference }}</a>{% else %}—{% endif %}</td>
+      <td>{{ m.sent_at | dt }}</td>
+      <td class="mono">{{ m.domains | join(', ') or '—' }}</td>
+      <td>{{ m.reason or '—' }}</td>
+      <td>{% if m.corr_id and m.case_id %}<a href="/cases/{{ m.case_id }}/authorities/correspondence/{{ m.corr_id }}">entry #{{ m.corr_id }}</a>{% elif m.evidence_id and m.case_id %}<a href="/cases/{{ m.case_id }}/evidence/{{ m.evidence_id }}">evidence #{{ m.evidence_id }}</a>{% else %}—{% endif %}</td>
+      <td class="mail-review-actions">
+        {% if m.letters and not m.metadata_only %}<form method="post" action="/admin/mail/mailbox/sent/{{ m.id }}/tie" class="inline">{{ csrf_field() }}
+          <select name="letter" required aria-label="the letter it carried">{% for key, label in m.letters %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select>
+          <button class="btn small" type="submit" title="a draft is recorded as sent at the e-mail's date; a sent letter is linked">Tie to letter</button></form>{% endif %}
+        <form method="post" action="/admin/mail/mailbox/sent/{{ m.id }}/dismiss" class="inline">{{ csrf_field() }}
+          <button class="btn small" type="submit" title="it carried no letter: remove it from the review list">Dismiss</button></form></td>
+    </tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<p class="muted">Every letter found in Sent Items was matched to its letter.</p>{% endif %}
+</div>
+</div>
+{% endblock %}

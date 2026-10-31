@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{# E-mail preview / send — owner: app/web/routes_mail.py (preview_page and the POSTs). Context: case, access, mm
+   (MailMessage, outbound), corr, authority, pv (mail_compose.Preview: the stored MIME bytes parsed back), confirm_rows
+   ({address, org, source} per unverified / typed-in address), att_evidence {id: EvidenceItem}, ev_text (ref mask),
+   transport, transport_problem, can_send (send_email: case admins), error, expired, draft_changed, result /
+   result_key, history, user_names, default_due_days, can_cancel, can_renew (Prepare again: expired / failed /
+   cancelled, draft unchanged, no other e-mail of the letter in flight), busy / busy_text (another e-mail of this letter
+   is sending / sent / unknown: no Send), sender_check (mail_compose.SenderCheck; a mismatch, needs_ack, needs
+   the admin's one tick; no sender profile is a note only), sender_help (what the sender of record is), mask, visible_atts (pv.attachments without evidence this member
+   may not see) / n_restricted (those: counted, never named), auth_warning (the letter says its Letter of
+   Authorisation is attached but none is), discarded (cancelled / expired: nothing was sent), superseded_by (id of
+   the e-mail that carried the letter instead), can_check_draft (failed leaving an unsent draft: Check the mailbox
+   deletes it).
+   Manual mode ("Draft — you send"): manual (no Send button: the "Send it yourself" checklist), checklist ({to, cc,
+   subject, text, html, mailto | None}: copied by js/mail.js from the JSON block), guidance (mail_guidance.Guidance |
+   None), can_record (a case admin may record the send), record_defaults / record_form (the Record as sent form),
+   upload_max_mb.
+   The editor: bcc (meta.bcc: hidden recipients, never a header of the message), can_edit (Edit: back to the
+   compose page with every field; a prepared preview is cancelled). checklist_block / checklist_block_text (the
+   letter's open old "Draft — you send" checklist while Aegis sends itself: nothing else of the letter is edited,
+   prepared or sent), is_block (this e-mail is that checklist: its only actions are can_retire — "I did not send it
+   from Outlook — retire it", case admins — and Record as sent; inbound_on: whether Aegis reads Sent Items first,
+   AEGIS_MAIL_INBOUND), suspected (a Sent Items message waiting for review
+   that refused the retire), pointless (why the letter is pointless now, or duplicates a request already sent: Send refuses it). The Send form is
+   _mail_send_form.html; return_to (the guided send: the page the editor was opened from, carried by Send and Edit). #}
+{% block title %}Aegis · E-mail #{{ mm.id }} · {{ case.reference }}{% endblock %}
+{% block content %}
+{% set st = mm.status.value %}
+{% set meta = mm.meta or {} %}
+{% set gone = not pv.ok and (discarded or st == 'failed') %}
+{% set ext = meta.sent_external or {} %}
+<div class="row case-head" style="margin-bottom:12px"><div><h1>E-mail #{{ mm.id }} <span class="tag {{ {'prepared':'amber','sending':'blue','sent':'green','sent_external':'green','failed':'red','unknown':'red','expired':'','cancelled':''}.get(st, '') }}">{{ 'superseded' if superseded_by else ('sent outside Aegis' if st == 'sent_external' else st) }}</span>{% if manual and st == 'prepared' %} <span class="tag gold" title="AEGIS_MAIL_TRANSPORT=manual: Aegis drafts, you send it from Outlook">draft — you send</span>{% endif %}</h1>
+  <div class="sub">{% if corr %}<a href="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}">← letter #{{ corr.id }}</a>{% endif %}
+    {% if authority %} · <a href="/cases/{{ case.id }}/authorities/{{ authority.key }}">{{ authority.name }}</a>{% endif %}
+    · transport <span class="mono">{{ mm.transport }}</span> · from <span class="mono">{{ mm.mailbox or 'your Outlook account' }}</span>
+    {% if mm.sent_at %} · sent {{ mm.sent_at | dt }}{% elif mm.expires_at and st == 'prepared' and not expired %} · {{ 'checklist' if manual else 'preview' }} valid until {{ mm.expires_at | dt }}{% endif %}</div></div>
+  <div class="spacer"></div>
+  {% if can_send and not gone and not manual %}<a class="btn" href="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/eml" title="the exact message; audited">⬇ .eml</a>{% endif %}
+</div>
+
+{% if result %}<div class="alert {{ 'critical' if result_key in ('failed', 'unknown') else 'info' }}" id="mail-result">{{ result }}{% if result_key in ('sent', 'sent_external') and st in ('sent', 'sent_external') %}
+  {% if corr %}Letter #{{ corr.id }} is marked sent{% if corr.stop_order_id %} and its stop order too{% endif %}; the reply clock runs.{% endif %}
+  <a href="/cases/{{ case.id }}/blocks" id="mail-blocks-link">Block status</a> · <a href="/cases/{{ case.id }}/recovery-plan">Recovery plan</a>{% if authority %} · <a href="/cases/{{ case.id }}/authorities/{{ authority.key }}">{{ authority.name }}</a>{% endif %}{% endif %}</div>{% endif %}
+{% if error %}<div class="alert critical" id="mail-error">{{ error }}</div>{% endif %}
+{% if suspected %}<div class="alert critical" id="mail-outlook-suspected">{% if suspected.case_id == case.id %}<a href="/cases/{{ case.id }}/blocks">Review it on Block status</a>{% else %}<a href="/admin/mail/mailbox">Review it in the mailbox</a>{% endif %} (e-mail #{{ suspected.id }}).</div>{% endif %}
+{% if checklist_block %}<div class="alert critical" id="mail-checklist-open">{% if is_block %}<b>Aegis now sends e-mail itself.</b> This checklist was prepared for sending from Outlook and may have gone out without being recorded: nothing else is prepared or sent for letter #{{ corr.id }} until a case admin chooses on this page — <b>I did not send it from Outlook — retire it</b>, or <b>Record as sent</b>.{% else %}{{ checklist_block_text }} <a href="/cases/{{ case.id }}/mail/messages/{{ checklist_block.id }}" id="mail-checklist-link">Open checklist #{{ checklist_block.id }}</a>{% endif %}</div>{% endif %}
+{% if st == 'unknown' %}<div class="alert critical">Aegis could not confirm the send. Only a check of the mailbox can mark it sent or failed: do not resend manually, and nothing else is sent for this letter until then.{% if meta.mailbox_draft and not meta.draft_delete_error %} The mailbox still holds it as an <b>unsent draft</b>; if it stays one, a check 15 minutes after the attempt deletes that draft, marks the e-mail failed and the letter can be prepared again.{% endif %}</div>
+{% if meta.draft_delete_error %}<div class="alert critical" id="mail-draft-not-deleted"><b>Unsent draft not deleted.</b> {{ mm.error_message or meta.draft_delete_error }}</div>{% endif %}{% endif %}
+{% if pointless %}<div class="alert critical" id="mail-pointless">{{ pointless }}{% if corr %} <a href="/cases/{{ case.id }}/{% if corr.stop_order_id and corr.stop_order and corr.stop_order.status.value == 'draft' %}stop-orders/{{ corr.stop_order_id }}{% else %}authorities/correspondence/{{ corr.id }}{% endif %}">Open the draft</a>{% endif %}</div>{% endif %}
+{% if busy %}<div class="alert critical" id="mail-letter-busy"><b>One e-mail per letter.</b> {{ busy_text }} <a href="/cases/{{ case.id }}/mail/messages/{{ busy.id }}">Open e-mail #{{ busy.id }}</a></div>{% endif %}
+{% if sender_check and sender_check.needs_ack %}<div class="alert warning" id="mail-sender-warning"><b>Sender of record does not match</b> <span class="mail-help-tip" title="{{ sender_help }}">?</span> {{ sender_check.text }} <a href="/cases/{{ case.id }}/sender-profile">Sender profile</a>{% if sender_check.fixable and can_edit %} · <a href="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}/email#mail-sender-warning">open the editor to use the profile's signature</a>{% endif %}</div>
+{% elif sender_check and sender_check.problem == 'no_profile' %}<div class="alert info mail-note" id="mail-sender-note">{{ sender_check.text }} <a href="/cases/{{ case.id }}/sender-profile">Set up the sender profile</a></div>{% endif %}
+{% if meta.sender_ack %}<div class="alert warning">Sent with an acknowledged sender mismatch ({{ meta.sender_ack.problem | replace('_', ' ') }}){% if meta.sender_ack.reason %}: {{ meta.sender_ack.reason }}{% endif %}.</div>{% endif %}
+{% if st == 'failed' and can_check_draft %}<div class="alert critical" id="mail-stale-draft"><b>An unsent draft of this e-mail may still be in the mailbox.</b> The letter is not prepared again until it is gone: {% if can_send %}use <b>Check the mailbox now</b> to delete it{% else %}a case admin checks the mailbox to delete it{% endif %}.{% if meta.draft_delete_error %} Last attempt: {{ meta.draft_delete_error }}.{% endif %}</div>
+{% elif st == 'failed' and mm.error_reason == 'unsent_draft' %}<div class="alert info" id="mail-not-sent">Nothing was sent: the e-mail never left the mailbox{% if meta.draft_deleted %} and Aegis deleted the unsent draft{% endif %}. The letter is still a draft; prepare the e-mail again.</div>
+{% elif st == 'failed' %}<div class="alert critical">Sending failed{% if mm.error_reason %} ({{ mm.error_reason }}){% endif %}{% if mm.error_message %}: {{ mm.error_message }}{% endif %}. The letter is still a draft; prepare the e-mail again when the problem is fixed.</div>{% endif %}
+{% if st == 'sent' and meta.finalize_error %}<div class="alert critical">The e-mail was sent, but filing it failed ({{ meta.finalize_error }}). {% if can_send %}Use <b>Retry filing</b>.{% endif %}</div>{% endif %}
+{% if meta.mark_sent_conflict %}<div class="alert warning">The letter had already been marked sent by hand; the e-mail was filed, the earlier record kept.</div>{% endif %}
+{% if meta.bounced %}<div class="alert critical">A delivery failure was received for this e-mail.</div>{% endif %}
+{% if st == 'sent_external' and ext.subject_tag_missing %}<div class="alert warning" id="mail-tag-missing"><b>The sent subject lost its tracking tag.</b> Replies will not be matched to letter #{{ mm.correspondence_id }} by themselves: import each reply and pick the letter on review.</div>{% endif %}
+{% if superseded_by %}<div class="alert info" id="mail-discarded">Superseded by <a href="/cases/{{ case.id }}/mail/messages/{{ superseded_by }}">e-mail #{{ superseded_by }}</a>, which carried this letter — nothing was sent from this preview.</div>
+{% elif st == 'cancelled' and meta.not_sent_confirmed %}<div class="alert info" id="mail-discarded">Retired — a case admin recorded that it was not sent from Outlook; Aegis sends the letter.</div>
+{% elif st == 'cancelled' %}<div class="alert info" id="mail-discarded">Cancelled — nothing was sent.</div>
+{% elif (expired or st == 'expired') and is_block %}<div class="alert info" id="mail-discarded">Expired in Aegis — but it may still have been sent from Outlook (see above).</div>
+{% elif expired or st == 'expired' %}<div class="alert info" id="mail-discarded">Expired — nothing was sent. {% if can_renew %}Prepare it again with the same recipients, subject and attachments (every check runs again).{% else %}Prepare the e-mail again from the letter.{% endif %}</div>{% endif %}
+{% if draft_changed %}<div class="alert warning">The draft changed after this preview was built; prepare again.</div>{% endif %}
+{% if auth_warning %}<div class="alert warning" id="mail-loa-warning"><b>Authority document missing.</b> {{ auth_warning }}</div>{% endif %}
+{% if not pv.ok and not discarded and st != 'failed' %}<div class="alert critical">{{ pv.problem }}</div>{% endif %}
+
+<div class="auth-grid">
+<div class="auth-main">
+  {% if manual and checklist and st == 'prepared' and not expired %}{% if is_block %}<details class="mail-outlook-sent" id="mail-outlook-checklist"><summary>The send-it-yourself checklist (compare it with the mailbox's Sent Items)</summary>{% include "mail_manual_checklist.html" %}</details>{% else %}{% include "mail_manual_checklist.html" %}{% endif %}{% endif %}
+  <div class="panel{{ ' mail-manual-msg' if manual else '' }}"{% if manual %} style="margin-top:14px"{% endif %}>
+    <h2>Message <small>{% if manual and not gone and st != 'sent_external' %}exactly what the Outlook draft holds{% elif st == 'sent_external' %}as prepared in Aegis (sent from Outlook){% else %}{% if gone %}never sent{% elif st == 'failed' %}was not sent{% else %}exactly what {{ 'was' if st == 'sent' else ('was handed to the mailbox' if st in ('sending', 'unknown') else 'will be') }}{{ '' if st in ('sending', 'unknown') else ' sent' }}{% endif %}{% endif %}</small></h2>
+    {% if gone %}
+    <p class="muted" id="mail-bytes-discarded">The prepared message was discarded when this e-mail was {{ 'superseded' if superseded_by else ('cancelled' if st == 'cancelled' else ('marked failed' if st == 'failed' else 'expired')) }}; it was never sent. Its recipients{% if (mm.attachments or []) %}, subject and attachments{% else %} and subject{% endif %} are listed here{% if corr %}; the letter itself is <a href="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}">#{{ corr.id }}</a>{% endif %}.</p>
+    <table class="mail-headers"><tbody>
+      <tr><th>To</th><td class="mono">{{ (mm.to_addrs or []) | join(', ') }}</td></tr>
+      {% if mm.cc_addrs %}<tr><th>Cc</th><td class="mono">{{ mm.cc_addrs | join(', ') }}</td></tr>{% endif %}
+      {% if bcc %}<tr><th>Bcc</th><td class="mono">{{ bcc | join(', ') }}</td></tr>{% endif %}
+      <tr><th>Subject</th><td class="mono">{{ mm.subject }}</td></tr>
+    </tbody></table>
+    {% else %}
+    <table class="mail-headers">
+      <tbody>
+      {% for name, value in pv.headers %}<tr><th>{{ name }}</th><td class="mono">{{ value }}</td></tr>{% endfor %}
+      {% if bcc and not pv.unsent %}<tr id="mail-bcc-row"><th>Bcc</th><td><span class="mono">{{ bcc | join(', ') }}</span> <span class="muted">— hidden recipients: not a header of the message (the other recipients never see them); the mailbox adds them when it sends</span></td></tr>{% endif %}
+      <tr><th>Size</th><td class="mono">{{ '{:,}'.format(pv.size) }} bytes</td></tr>
+      <tr><th>MIME sha256</th><td class="mono mail-hash">{{ pv.sha256 }}</td></tr>
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+  {% if not gone %}
+  <div class="panel" style="margin-top:14px">
+    <h2>Text version <small>text/plain, verbatim</small></h2>
+    <pre class="tl-text mail-text">{{ pv.text }}</pre>
+  </div>
+  <div class="panel" style="margin-top:14px">
+    <h2>HTML version <small>generated from the same letter text</small></h2>
+    <div class="letter">{{ pv.html_markdown | md }}</div>
+  </div>
+  {% endif %}
+  <div class="panel" style="margin-top:14px">
+    <h2>Attachments <small>{{ (mm.attachments or []) | length }}</small></h2>
+    <table class="mail-atts">
+      <thead><tr><th>File</th><th>Type</th><th class="right">Size</th><th>sha256</th><th>Source</th></tr></thead>
+      <tbody>
+      {% for a in visible_atts %}
+      {% set item = att_evidence.get(a.evidence_id) if a.evidence_id else None %}
+      <tr>
+        <td class="mono">{{ a.filename }}</td>
+        <td class="muted">{{ a.mime }}</td>
+        <td class="right nowrap">{{ '{:,}'.format(a.size) }} B</td>
+        <td class="mono mail-hash" title="{{ a.sha256 }}">{{ a.sha256[:16] }}…{% if a.parsed_sha256 and not a.matches %} <span class="tag red">changed</span>{% endif %}</td>
+        <td>{% if a.kind == 'letter_docx' %}the letter (.docx){% elif item %}<a href="/cases/{{ case.id }}/evidence/{{ item.id }}">#{{ item.id }} {{ ev_text(item.title) }}</a> <span class="tag">{{ item.classification.value }}</span>{% if item.tlp %} <span class="tag">{{ item.tlp }}</span>{% endif %}{% if a.kind == 'authority_doc' %} <span class="tag gold">authority</span>{% endif %}{% else %}evidence #{{ a.evidence_id }}{% endif %}</td>
+      </tr>
+      {% else %}{% if not n_restricted %}<tr><td colspan="5" class="muted">No attachments.</td></tr>{% endif %}{% endfor %}
+      {% if n_restricted %}<tr class="mail-att-restricted"><td colspan="5" class="muted">{{ n_restricted }} restricted attachment{{ 's' if n_restricted != 1 }} (not visible to your role)</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<aside class="auth-side">
+  {% if is_block %}
+  <div class="panel mail-confirm" id="retire-checklist"><h2>Not sent from Outlook?</h2>
+    {% if can_retire %}
+    {% if inbound_on %}<p class="muted" style="font-size:var(--fs-sm)" id="mail-retire-reads">Aegis reads the mailbox's Sent Items first; while a message sent from Outlook that may be this letter waits for review, the checklist stays open. Otherwise it is retired (recorded with your name) and the editor opens with its fields, ready to send from Aegis.</p>
+    {% else %}<p class="muted" style="font-size:var(--fs-sm)" id="mail-retire-reads">Aegis does not read this mailbox (AEGIS_MAIL_INBOUND is off), so it cannot see whether this checklist was sent from Outlook: check the mailbox's Sent Items in Outlook yourself first. The checklist is then retired (recorded with your name) and the editor opens with its fields, ready to send from Aegis.</p>{% endif %}
+    <form method="post" action="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/retire-checklist" id="mail-retire-form">{{ csrf_field() }}
+      <button class="btn primary" type="submit" data-sending="Checking Sent Items…">I did not send it from Outlook — retire it</button></form>
+    <div class="muted mail-note">Sent it after all? Use <b>Record as sent</b> instead: Aegis sends one e-mail per letter, and a stop order sent twice cannot be taken back.</div>
+    {% else %}<p class="muted">{% if not can_send %}A case admin opens this checklist and chooses: retire it (not sent from Outlook), or record it as sent.{% else %}Not available: another e-mail of this letter is in flight or was sent (see above).{% endif %}</p>{% endif %}
+  </div>
+  {% endif %}
+  {% if can_edit %}
+  <div class="panel" id="mail-edit"><h2>Edit</h2>
+    <form method="post" action="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/edit" class="inline">{{ csrf_field() }}<input type="hidden" name="return_to" value="{{ return_to or '' }}"><button class="btn{{ '' if st == 'prepared' else ' primary' }} small" type="submit">Edit this e-mail</button></form>
+    <div class="muted mail-note">Opens the editor with every field as {{ 'prepared' if st == 'prepared' else 'it was' }} (recipients, Cc, Bcc, subject, text, attachments){% if st == 'prepared' %}; this preview is cancelled — nothing is sent from it{% endif %}.</div>
+  </div>
+  {% endif %}
+  {% if manual %}{% include "mail_manual_record.html" %}
+  {% elif st == 'prepared' and not expired and pointless %}
+  <div class="panel mail-confirm" id="send"><h2>Send</h2><p class="muted">Not available: the board says to discard this draft (see above). Discard it; that cancels this e-mail.</p></div>
+  {% elif st == 'prepared' and not expired and (busy or checklist_block) %}
+  <div class="panel mail-confirm" id="send"><h2>Send</h2><p class="muted">Not available: {% if busy %}another e-mail of this letter is in flight or was sent{% else %}the letter has an open Outlook checklist{% endif %} (see above). Aegis sends one e-mail per letter.</p></div>
+  {% elif st == 'prepared' and not expired %}
+  <div class="panel mail-confirm" id="send">
+    <h2>Send</h2>
+    {% if not can_send %}
+      <p class="muted">Only case admins can send. A case admin opens this preview, confirms the recipients and attachments and presses Send.</p>
+    {% elif transport_problem %}
+      <div class="alert warning">Sending is not available: {{ transport_problem }}</div>
+      <p class="muted" style="font-size:var(--fs-sm)">Download the exact <a href="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/eml">.eml</a> to send it from a mail client, then use <b>Mark sent</b> on the letter.</p>
+      <button class="btn primary" type="button" disabled>Send</button>
+    {% else %}
+    {% include "_mail_send_form.html" %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if can_send and can_check_draft %}
+  <div class="panel"><h2>Unsent draft</h2>
+    <form method="post" action="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/reconcile" class="inline">{{ csrf_field() }}<button class="btn primary small" type="submit">Check the mailbox now</button></form>
+    <div class="muted mail-note">Deletes the unsent draft of this e-mail from the mailbox (nothing is sent); the letter can then be prepared again.</div>
+  </div>
+  {% endif %}
+  {% if can_send and st == 'unknown' %}
+  <div class="panel"><h2>Uncertain send</h2>
+    <form method="post" action="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/reconcile" class="inline">{{ csrf_field() }}<button class="btn primary small" type="submit">Check the mailbox now</button></form>
+    <div class="muted mail-note">Sent → filed and the letter marked sent. Missing, or still an unsent draft 15 minutes after the attempt → the draft is deleted and the e-mail marked failed (the letter can then be prepared again); if the draft cannot be deleted the letter stays blocked.{% if meta.last_reconcile %} Last check: {{ meta.last_reconcile }}.{% endif %}</div>
+  </div>
+  {% endif %}
+  {% if can_send and st == 'sent' and not meta.finalized %}
+  <div class="panel"><h2>Filing</h2>
+    <form method="post" action="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/finalize" class="inline">{{ csrf_field() }}<button class="btn primary small" type="submit">Retry filing</button></form>
+  </div>
+  {% endif %}
+  {% if st == 'sent' and mm.eml_evidence_id %}
+  <div class="panel"><h2>Filed</h2><div>Evidence <a href="/cases/{{ case.id }}/evidence/{{ mm.eml_evidence_id }}">#{{ mm.eml_evidence_id }}</a> (the .eml as sent, R3).</div></div>
+  {% endif %}
+  {% if can_renew %}
+  <div class="panel" id="renew"><h2>Prepare again</h2>
+    <form method="post" action="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/renew" class="inline">{{ csrf_field() }}<button class="btn primary small" type="submit">Prepare again</button></form>
+    <div class="muted mail-note">A new preview with the same recipients, subject and attachments, valid for 30 minutes{% if not can_send %}; the case admins are notified{% endif %}.</div>
+  </div>
+  {% endif %}
+  {% if can_cancel %}
+  <div class="panel"><form method="post" action="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/cancel" class="inline">{{ csrf_field() }}<button class="btn danger small" type="submit">Cancel this e-mail</button></form></div>
+  {% endif %}
+
+  <div class="panel">
+    <h2>History</h2>
+    {% for h in history %}
+    <div class="mail-hist"><span class="tag">{{ h.status }}</span> <span class="muted">{{ h.at[:19] | replace('T', ' ') }} UTC{% if h.by %} · {{ user_names.get(h.by, 'user #' ~ h.by) }}{% endif %}{% if h.reason %} · {{ h.reason }}{% endif %}{% if h.reconcile %} · mailbox: {{ h.reconcile }}{% endif %}</span></div>
+    {% else %}<div class="muted">—</div>{% endfor %}
+    <div class="muted mail-note">Attempts: {{ mm.attempts }}{% if mm.internet_message_id %} · Internet message id <span class="mono">{{ mm.internet_message_id }}</span>{% endif %}</div>
+  </div>
+</aside>
+</div>
+{% endblock %}

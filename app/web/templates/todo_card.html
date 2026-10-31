@@ -1,0 +1,43 @@
+{# Overview tab: the To do card (app/domain/todo.py; owner app/web/routes_todo.py). Context: tdc (routes_todo.todo_card:
+   rows (the top open tasks, overdue first, as on the To do tab), n, more (open tasks not shown), p1, overdue, now,
+   relative, may(action) (the task's own action button, as todo.may); or None). The columns follow the To do tab's
+   table (case/_tab_todo.html); managing a task (done / snooze / dismiss / edit) stays on the tab. No inline script. #}
+{% macro tdc_action(t) -%}
+{%- set a = t.action -%}
+{%- if a and tdc.may(a) -%}
+{%- if a.post -%}<form method="post" action="{{ a.post }}" class="inline">{{ csrf_field() }}{% for k, v in a.fields.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}<button class="btn small primary" type="submit">{{ a.label }}</button></form>
+{%- else -%}<a class="btn small primary" href="{{ a.href }}">{{ a.label }}</a>{%- endif -%}
+{%- else -%}<a class="btn small" href="/cases/{{ case.id }}?tab=todo#t-{{ t.anchor }}">View</a>
+{%- endif -%}
+{%- endmacro %}
+{% if tdc %}
+<div class="panel ov-block todo-card" id="todo-card">
+  <div class="row todo-head">
+    <h2>To do <small>{{ tdc.n }} open · <span class="{{ 'todo-late' if tdc.p1 }}">{{ tdc.p1 }} P1</span>{% if tdc.overdue %} · <span class="todo-late">{{ tdc.overdue }} overdue</span>{% endif %}{% if tdc.more %} · the top {{ tdc.rows | length }}, overdue first{% endif %}</small></h2>
+    <div class="spacer"></div>
+    <a class="btn small" href="/cases/{{ case.id }}?tab=todo">Open To do</a>
+  </div>
+  {% if tdc.rows %}
+  <div class="todo-scroll">
+  <table class="todo-table todo-card-table">
+    <thead><tr><th>Priority</th><th>Task</th><th>Due</th><th>Source</th><th>Assignee</th><th>Next step</th></tr></thead>
+    <tbody>
+    {% for t in tdc.rows %}
+    {% set late = t.overdue(tdc.now) %}
+    <tr class="todo-row {{ 'todo-row-late' if late }}">
+      <td><span class="todo-prio todo-{{ t.priority | lower }}">{{ t.priority }}</span></td>
+      <td class="todo-what"><a href="/cases/{{ case.id }}?tab=todo#t-{{ t.anchor }}"><b>{{ t.title }}</b></a>{% if t.manual %} <span class="tag">manual</span>{% endif %}
+        {% if t.why %}<div class="muted todo-why">{{ t.why }}</div>{% endif %}</td>
+      <td class="nowrap">{% if t.due %}<span class="{{ 'todo-late' if late }}" title="{{ t.due | dt }}{% if t.due_label %} · {{ t.due_label }}{% endif %}">{{ tdc.relative(t.due, tdc.now) }}</span><br><span class="muted todo-small">{{ (t.due | dt)[:11] }}{% if t.due_label %} · {{ t.due_label }}{% endif %}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td class="todo-small">{{ t.source_label }}</td>
+      <td class="todo-small">{% if t.assignee %}<span class="tag blue">{{ t.assignee }}</span>{% else %}<span class="muted">nobody</span>{% endif %}</td>
+      <td class="nowrap">{{ tdc_action(t) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if tdc.more %}<p class="todo-card-more"><a href="/cases/{{ case.id }}?tab=todo">All {{ tdc.n }} open tasks on the To do tab →</a> <span class="muted todo-small">{{ tdc.more }} more not shown here</span></p>{% endif %}
+  {% else %}<p class="muted">Nothing to do right now.</p>{% endif %}
+</div>
+{% endif %}

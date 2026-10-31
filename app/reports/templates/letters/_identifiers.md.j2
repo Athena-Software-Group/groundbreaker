@@ -1,0 +1,17 @@
+{# On-chain identifiers. Observed transactions are cited by hash; asserted links are described, never cited.
+   Context: identifiers (normalised dicts), unverified (addresses whose path includes asserted hops) #}
+{% for ident in identifiers %}
+- **{{ (ident.address_type | addr_kind ~ ' address') if ident.address_type not in ('unknown', '', none) else 'Address' }}:** {{ ident.address | code }}{{ (' (' ~ ident.chain | title ~ ')') if ident.chain else '' }}{{ (' — ' ~ ident.label) if ident.label else '' }}
+{% for tx in ident.inbound if not tx.asserted %}
+  - Inbound: {{ tx.tx_hash | code }}, {{ tx.timestamp | fmt_ts }}, {{ (tx.amount | fmt_amt ~ ' ' ~ tx.asset) | bold }}, from {{ tx.from | code }}
+{% endfor %}
+{% for tx in ident.inbound if tx.asserted %}
+  - *Asserted* link, not yet observed on-chain (described, not cited): proceeds{{ (' of ' ~ tx.amount | fmt_amt ~ ' ' ~ tx.asset) if tx.amount is not none else '' }} reached this address from {{ tx.from | code }}; the transaction is being verified.
+{% endfor %}
+{% if ident.address in unverified %}
+  - The path linking this address to the victim's funds includes *asserted* hops not yet verified on-chain; amounts are full transaction values, not a confirmed share of the loss.
+{% endif %}
+{% for ref in ident.swap_orders %}
+  - Swap order reference: {{ ref | code }}
+{% endfor %}
+{% endfor %}

@@ -1,0 +1,125 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. Paxos freezes or seizes only on a formal legal directive from a regulator, judicial body or LE agency with jurisdiction over Paxos (or a partner's contractual notification, or its own discretion); a victim / PI reports through the support center and goes to LE. The LE / subpoena e-mail on the contact page is not catalogued until its local part is reviewed (directory.EMAIL_LOCAL_PARTS): null here.",
+  "key": "paxos",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": "US",
+  "issuer_jurisdictions": ["US", "SG", "FI"],
+  "ground_truth": "reply",
+  "notes": "Issuers by token: USDP and PYUSD by Paxos Trust Company (US, OCC); USDG jointly by Paxos Digital Singapore (MAS) and Paxos Issuance Europe Oy (Finland, FIN-FSA e-money licence). A freeze can also follow 'a formal notification by a Paxos partner according to previously agreed contractual terms' (for PYUSD presumably PayPal: inferred, not named), or Paxos' own discretion. Freezes may happen with or without advance notice. On-chain the token contracts emit AddressFrozen / FrozenAddressWiped (medium confidence, contract design); app/freeze does not read Paxos tokens yet, so a person confirms a freeze on the explorer.",
+  "entities": [
+    {"key": "paxos-trust", "name": "Paxos Trust Company (USDP, PYUSD issuer)", "jurisdiction": "US", "source_ids": ["p3"]},
+    {"key": "paxos-sg", "name": "Paxos Digital Singapore (USDG co-issuer, MAS Major Payment Institution)",
+     "jurisdiction": "SG", "separate": true, "source_ids": ["p3"]},
+    {"key": "paxos-eu", "name": "Paxos Issuance Europe Oy (USDG co-issuer, FIN-FSA e-money institution)",
+     "jurisdiction": "FI", "separate": true, "source_ids": ["p3"]}
+  ],
+  "domains": {"own": ["paxos.com"], "sibling": [], "vendor_portals": []},
+  "channels": [
+    {
+      "key": "paxos.support", "kind": "portal", "value": "https://support.paxos.com", "purpose": "complaint",
+      "role_default": "to", "label": "Paxos support center (complaints, reports of illegal activity)",
+      "notes": "Anyone aware of improper conduct is told to contact Paxos here and also contact law enforcement to file a report. Complaints also go here as a support request.",
+      "source_url": "https://www.paxos.com/contact",
+      "who": "any", "source_ids": ["p1", "p2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "paxos.subpoenas", "kind": "email", "value": null, "purpose": "legal", "role_default": "to",
+      "label": "Law-enforcement inquiries and subpoenas",
+      "notes": "Paxos' contact page publishes an e-mail address 'for law enforcement inquiries or subpoenas'. Not catalogued yet (its local part needs review): add it as a verified case or global channel after checking the page. Acts only on a formal legal directive or court-ordered subpoena.",
+      "source_url": "https://www.paxos.com/contact",
+      "who": "counsel_with_order", "source_ids": ["p2", "p1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {},
+  "paths": [
+    {
+      "key": "victim_report", "kind": "victim_report", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["paxos.support"],
+      "instrument": {"type": "none", "notes": "Paxos asks reporters to contact law enforcement as well: give the police / IC3 reference."},
+      "evidence": ["tx_list_copyable", "balance_reading", "trace_report_run", "complaint_ref", "loa", "non_disclosure_stmt"],
+      "produces": ["prior_ticket_ref"],
+      "expected_replies": ["auto_reply", "acknowledged", "le_process_required"],
+      "on_refusal": "le_directive",
+      "notes": "Name the token (USDP / PYUSD / USDG), chain and each address. A freeze is not expected without a directive; the value is the flag while the funds sit and the ticket number for the LE request. Brief the LE officer as soon as the ticket arrives.",
+      "source_ids": ["p1", "p2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_directive", "kind": "le_request", "requester": ["le", "regulator"],
+      "channel_keys": ["paxos.subpoenas"],
+      "instrument": {"type": "formal_directive",
+                     "notes": "A formal legal directive from a regulator, judicial body, law-enforcement agency or other legal entity having jurisdiction over Paxos, naming the addresses."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "balance_reading", "prior_ticket_ref", "complaint_ref"],
+      "expected_replies": ["acknowledged", "frozen"], "outcomes": ["frozen"],
+      "on_refusal": "court_order",
+      "notes": "Precedent: in Nov 2022 Paxos froze PAXG at four addresses on a US federal law-enforcement direction (reported). No published response time.",
+      "source_ids": ["p1", "p3", "p4"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "court_order", "kind": "court_order", "requester": ["le", "court", "counsel"],
+      "channel_keys": ["paxos.subpoenas"],
+      "instrument": {"type": "court_order",
+                     "notes": "A court order or other legal process from a court with jurisdiction over Paxos (court-ordered subpoenas are a listed format)."},
+      "evidence": ["court_order", "tx_list_copyable", "balance_reading", "trace_report_run"],
+      "expected_replies": ["frozen"], "outcomes": ["frozen"],
+      "notes": "Paxos freezes 'if required to do so by law, including by court order or other legal process'.",
+      "source_ids": ["p1", "p3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "data_disclosure", "kind": "data_disclosure", "requester": ["le", "court", "counsel", "regulator"],
+      "channel_keys": ["paxos.subpoenas"],
+      "instrument": {"type": "subpoena", "notes": "Court-ordered subpoena, national security letter or a regulator's formal written directive."},
+      "evidence": ["court_order", "tx_list_copyable"],
+      "source_ids": ["p1", "p2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "seizure", "kind": "court_order", "requester": ["le", "court", "regulator"],
+      "channel_keys": ["paxos.subpoenas"],
+      "instrument": {"type": "formal_directive", "notes": "A binding formal written legal directive (seizure / forfeiture); never without one."},
+      "evidence": ["seizure_warrant", "tx_list_copyable"],
+      "notes": "Seized funds are held in a segregated wallet until disposed of as the law requires; the contract can wipe a frozen address (FrozenAddressWiped, medium). Return to victims follows the court process.",
+      "source_ids": ["p1", "p3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "mlat_us", "kind": "cross_border", "requester": ["le", "court"], "entity": "paxos-trust",
+      "instrument": {"type": "mlat", "issuer_jurisdictions": ["US"],
+                     "notes": "A non-US authority has no jurisdiction over Paxos Trust (USDP, PYUSD): MLAT or a US counterpart agency."},
+      "evidence": ["domestic_order", "mlat_bundle", "tx_list_copyable", "balance_reading"],
+      "outcomes": ["frozen"],
+      "notes": "Slow (months): pair it with a US agency or US counsel while the funds sit.",
+      "source_ids": ["p1", "p3"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "eu_freezing_order_fi", "kind": "cross_border", "requester": ["le", "court"], "entity": "paxos-eu",
+      "instrument": {"type": "eu_freezing_order", "issuer_jurisdictions": ["FI"],
+                     "notes": "USDG only: an EU judicial authority sends a Reg. (EU) 2018/1805 freezing certificate to Finland, where Paxos Issuance Europe is licensed."},
+      "evidence": ["domestic_order", "tx_list_copyable", "balance_reading"],
+      "outcomes": ["frozen"],
+      "notes": "Inferred route from USDG's EU co-issuer; not stated by Paxos. USDP / PYUSD are US-issued: use mlat_us.",
+      "source_ids": ["p3"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "formal legal directive", "means": "le_process_required", "instrument": "formal_directive", "path": "le_directive",
+     "source_ids": ["p1", "p3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "court-ordered subpoenas", "means": "le_process_required", "instrument": "subpoena", "path": "court_order",
+     "source_ids": ["p1", "p3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "national security letters", "means": "le_process_required", "instrument": "formal_directive", "path": "le_directive",
+     "source_ids": ["p1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "support.paxos.com", "means": "redirected", "channel_key": "paxos.support", "path": "victim_report",
+     "source_ids": ["p1", "p2"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"}
+  ],
+  "tickets": [
+    {"system": "paxos_support", "regex": null, "source_ids": ["p2"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "p1", "title": "Paxos Illegal Activity terms (last modified Dec 2025)",
+     "url": "https://www.paxos.com/terms-and-conditions/illegal-activity", "retrieved_at": "2026-10-20"},
+    {"id": "p2", "title": "Paxos contact page", "url": "https://www.paxos.com/contact", "retrieved_at": "2026-10-20"},
+    {"id": "p3", "title": "Paxos USD stablecoin terms and conditions (s. 3.5 freezing and seizure)",
+     "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions", "retrieved_at": "2026-10-20"},
+    {"id": "p4", "title": "Bitcoin.com News: US law enforcement directs Paxos to freeze more than 11,000 PAXG (2022)",
+     "url": "https://news.bitcoin.com/us-law-enforcement-directs-paxos-to-freeze-more-than-11000-paxg-tokenized-gold-coins/",
+     "retrieved_at": "2026-10-20"}
+  ]
+}

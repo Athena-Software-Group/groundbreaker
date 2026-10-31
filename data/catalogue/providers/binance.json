@@ -1,0 +1,200 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. Binance (.com) and Binance.US (BAM Trading Services, a separate company with no Binance records) are two entities. The Kodex portals and the Binance.US LERT inbox are LE-only: a victim / PI / counsel goes to Binance Customer Service (support chat), which escalates to the legal team. The current stolen-funds FAQ says Binance cannot freeze without an official freezing order: no courtesy freeze and no police-report clock are modelled.",
+  "key": "binance",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": null,
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "Binance (.com) lists no instrument by jurisdiction: it discloses 'as legally required' and needs an official freezing order from law enforcement or a court of competent jurisdiction. Binance.US acts on US law enforcement and government agencies only (official government e-mail domains). The LE e-mail addresses Binance publishes (Binance.US LERT; a Russia / Belarus LE inbox on a sibling domain) are not catalogued: their local parts are not on the reviewed alias list, and they are LE-only anyway.",
+  "entities": [
+    {"key": "binance-global", "name": "Binance (binance.com)", "source_ids": ["b1", "b2"]},
+    {"key": "binance-us", "name": "BAM Trading Services Inc. (Binance.US)", "jurisdiction": "US", "separate": true,
+     "notes": "Separate company: it has no records for Binance and cannot answer requests addressed to Binance. Binance.US Web3 wallet requests go separately to BAM Technology Services Inc.",
+     "source_ids": ["b3"]}
+  ],
+  "domains": {
+    "own": ["binance.com"],
+    "sibling": [
+      {"domain": "binance.us", "entity": "binance-us", "purpose": "Binance.US (BAM Trading): its LERT inbox for US law enforcement and its support site",
+       "source_ids": ["b3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+      {"domain": "binanceholdings.ru", "entity": null, "purpose": "Law-enforcement inbox for Russia and Belarus named in the stolen-funds FAQ (Binance left Russia in 2023: confirm before relying on it)",
+       "source_ids": ["b2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+    ],
+    "vendor_portals": [
+      {"host": "app.kodexglobal.com", "path_prefix": "/binance/", "tenant": "binance", "le_only": true,
+       "source_ids": ["b1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+      {"host": "app.kodexglobal.com", "path_prefix": "/binance-cn/", "tenant": "binance-cn", "le_only": true,
+       "source_ids": ["b1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"}
+    ]
+  },
+  "channels": [
+    {
+      "key": "binance.kodex", "kind": "webform", "value": "https://app.kodexglobal.com/binance/signup", "purpose": "le_request",
+      "role_default": "to", "label": "Government Law Enforcement Request System (Kodex)",
+      "notes": "For government and law enforcement agencies only. Works only in Chrome or Edge; agency verification over a VPN is not completed. Mark urgent cases 'Exigent' (processed immediately). Aegis never registers or submits there: the officer does, with the pack.",
+      "source_url": "https://www.binance.com/en/support/law-enforcement",
+      "who": "le_only", "source_ids": ["b1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "binance.kodex_cn", "kind": "webform", "value": "https://app.kodexglobal.com/binance-cn/signup", "purpose": "le_request",
+      "role_default": "to", "label": "Law Enforcement Request System, mainland China (Kodex)",
+      "notes": "Mainland China law enforcement only.",
+      "source_url": "https://www.binance.com/en/support/law-enforcement",
+      "who": "le_only", "source_ids": ["b1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "binance.ru_by_le", "kind": "email", "value": null, "purpose": "le_request", "role_default": "to",
+      "label": "Law-enforcement inbox for Russia and Belarus",
+      "notes": "The stolen-funds FAQ names an inbox on the binanceholdings.ru domain for Russian and Belarusian law enforcement. Not catalogued (local part not on the reviewed alias list); medium confidence since Binance left Russia in 2023.",
+      "source_url": "https://www.binance.com/en/support/faq/how-to-report-stolen-funds-transferred-to-binance-360000006051",
+      "who": "le_only", "source_ids": ["b2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "binance.support", "kind": "portal", "value": "https://www.binance.com/en/support", "purpose": "general",
+      "role_default": "to", "label": "Binance Customer Service (support chat)",
+      "notes": "Where the stolen-funds FAQ sends victims, and where the privacy portal sends legal representatives with court-order freezing or disclosure requests (escalated to the legal team). Non-users continue in the chat as a Visitor. Customer Service will not share law-enforcement case details.",
+      "source_url": "https://www.binance.com/en/about-legal/privacy-portal",
+      "who": "any", "source_ids": ["b2", "b4"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "binance.us_lert", "kind": "email", "value": null, "purpose": "le_request", "role_default": "to",
+      "label": "Binance.US Law Enforcement Response Team (LERT)",
+      "notes": "The LERT inbox on the binance.us domain (published in the Binance.US LE guide). Answers only official law-enforcement or government e-mail domains; US agencies. Not catalogued (local part not on the reviewed alias list).",
+      "source_url": "https://support.binance.us/en/articles/9842980-binance-us-law-enforcement-guide",
+      "who": "le_only", "source_ids": ["b3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "binance.us_support", "kind": "portal", "value": null, "purpose": "general", "role_default": "to",
+      "label": "Binance.US support team",
+      "notes": "The LE guide sends scam victims to the Binance.US support team and / or IC3; it gives no separate victim process. Confirm the support URL before use.",
+      "source_url": "https://support.binance.us/en/articles/9842980-binance-us-law-enforcement-guide",
+      "who": "any", "source_ids": ["b3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "binance.le": {
+      "who": "le_only",
+      "notes": "Binance's LE channel is the Kodex request system (binance.kodex; mainland China: binance.kodex_cn), for government and law enforcement agencies only.",
+      "source_ids": ["b1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "victim_report", "kind": "victim_report", "requester": ["victim", "pi", "counsel"], "entity": "binance-global",
+      "channel_keys": ["binance.support"],
+      "instrument": {"type": "none", "notes": "No instrument opens the ticket; the FAQ asks for a copy of the police report."},
+      "evidence": ["incident_narrative", "ownership_proof", "receiving_account", "tx_list_copyable", "police_report", "loa"],
+      "produces": ["prior_ticket_ref"],
+      "expected_replies": ["acknowledged", "info_requested", "le_process_required"],
+      "on_refusal": "le_request",
+      "conflict": "Older mirrored or localised versions of the FAQ (unsourced: reported, not linked here) describe a discretionary 'temporary courtesy freeze' and a police-report deadline (24 hours, later 7 days). The canonical page (published 2018, no update date) has neither: no clock is set, and a hold is never assumed.",
+      "notes": "Binance says it is 'unable to unilaterally freeze any user's assets without an appropriate official freezing order' from law enforcement or a court; it liaises with law enforcement directly and updates come from the officer. Value: Binance is told while the funds sit, and the ticket goes into the officer's Kodex request. Hand off to LE as soon as the ticket arrives.",
+      "source_ids": ["b2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "court_order_cs", "kind": "court_order", "requester": ["counsel", "court"], "entity": "binance-global",
+      "channel_keys": ["binance.support"],
+      "instrument": {"type": "court_order", "notes": "A court order behind a freezing or disclosure request; the page names no court or jurisdiction."},
+      "evidence": ["court_order", "tx_list_copyable", "receiving_account", "prior_ticket_ref", "loa"],
+      "expected_replies": ["acknowledged", "info_requested", "frozen"], "outcomes": ["frozen"],
+      "notes": "The one documented route for a legal representative: Customer Service escalates court-order freezing / disclosure requests to the legal team. Which courts Binance accepts is not stated.",
+      "source_ids": ["b4"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_request", "kind": "le_request", "requester": ["le"], "entity": "binance-global",
+      "channel_keys": ["binance.kodex", "binance.kodex_cn", "binance.ru_by_le"],
+      "instrument": {"type": "freezing_order",
+                     "notes": "An 'appropriate official freezing order' from law enforcement or a court of competent jurisdiction; disclosure 'as legally required'. Mark emergencies 'Exigent' as the legal process type."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "receiving_account", "trace_report_run", "prior_ticket_ref",
+                   "police_report", "urgency_stmt"],
+      "expected_replies": ["acknowledged", "info_requested", "frozen"], "outcomes": ["frozen"],
+      "on_refusal": "court_order_cs",
+      "conflict": "A DOJ memo reported in Jul 2026 said Binance would end courtesy freezes and require MLAT or formal process; Binance publicly denied any change (reported only, low confidence). Public reporting also describes partial or slow freezes in some cases.",
+      "notes": "Exigent cases are 'processed immediately'; no other SLA is published. The officer registers on Kodex with an official agency e-mail.",
+      "source_ids": ["b1", "b2", "b5"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "us_victim_report", "kind": "victim_report", "requester": ["victim", "pi", "counsel"], "entity": "binance-us",
+      "channel_keys": ["binance.us_support"],
+      "instrument": {"type": "none", "notes": "The guide also points victims to IC3."},
+      "evidence": ["incident_narrative", "tx_list_copyable", "receiving_account", "ic3_ref"],
+      "produces": ["prior_ticket_ref"],
+      "expected_replies": ["acknowledged", "le_process_required"],
+      "on_refusal": "us_freeze",
+      "notes": "Freezes and records are for US law enforcement only: file IC3 and hand off to the case officer.",
+      "source_ids": ["b3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "us_freeze", "kind": "le_request", "requester": ["le"], "entity": "binance-us",
+      "channel_keys": ["binance.us_lert"],
+      "instrument": {"type": "le_request", "issuer_jurisdictions": ["US"],
+                     "notes": "A formal freeze request from an official government e-mail domain, supported by probable cause that the funds are subject to seizure and forfeiture; name, position and direct contact of the requesting official."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "receiving_account", "trace_report_run", "urgency_stmt"],
+      "timing": {"hold_days": 14, "deadlines": [
+        {"key": "hold_lapses", "what": "hold_until", "days": 14, "starts": "hold_confirmed", "by": "le",
+         "action": "LERT may freeze the account for two weeks: serve a seizure warrant or court order before it lapses (follow-up inferred).",
+         "source_ids": ["b3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"}
+      ]},
+      "expected_replies": ["acknowledged", "hold_placed", "declined_no_assets"], "outcomes": ["hold_placed"],
+      "on_refusal": "us_seizure",
+      "notes": "Binance.US answers US law enforcement and government agencies (documented). Inferred, not stated by Binance.US: a non-US agency goes through a US agency or an MLAT.",
+      "source_ids": ["b3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "us_records", "kind": "data_disclosure", "requester": ["le", "court"], "entity": "binance-us",
+      "channel_keys": ["binance.us_lert"],
+      "instrument": {"type": "subpoena", "issuer_jurisdictions": ["US"],
+                     "notes": "Grand jury subpoena, court order, search warrant or seizure warrant (requirements vary by jurisdiction)."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "receiving_account"],
+      "expected_replies": ["acknowledged", "declined_no_assets"],
+      "notes": "Users are not told of government requests. A 'no records' confirmation comes back when nothing is found. Urgent productions are attempted, with no guaranteed time frame.",
+      "source_ids": ["b3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "us_seizure", "kind": "court_order", "requester": ["le", "court"], "entity": "binance-us",
+      "channel_keys": ["binance.us_lert"],
+      "instrument": {"type": "seizure_warrant", "issuer_jurisdictions": ["US"]},
+      "evidence": ["seizure_warrant", "tx_list_copyable", "receiving_account"],
+      "outcomes": ["frozen"],
+      "notes": "Seizure warrants are listed as valid legal process; the forfeiture route that follows (18 USC 981 / 982) is inferred.",
+      "source_ids": ["b3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "unable to unilaterally freeze", "means": "le_process_required", "instrument": "freezing_order", "path": "le_request",
+     "source_ids": ["b2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "official freezing order", "means": "le_process_required", "instrument": "freezing_order", "path": "le_request",
+     "source_ids": ["b2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "liaise directly with law enforcement", "means": "le_process_required", "path": "le_request",
+     "source_ids": ["b2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "For Government and Law Enforcement Agencies only", "means": "le_process_required", "instrument": "le_request",
+     "channel_key": "binance.kodex", "path": "le_request",
+     "source_ids": ["b1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "kodexglobal.com/binance", "means": "redirected", "channel_key": "binance.kodex", "path": "le_request",
+     "source_ids": ["b1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "escalate your case to the legal team", "means": "acknowledged", "channel_key": "binance.support",
+     "path": "court_order_cs", "source_ids": ["b4"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "no records", "means": "declined_no_assets", "channel_key": "binance.us_lert", "path": "us_records",
+     "source_ids": ["b3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "probable cause", "means": "le_process_required", "instrument": "le_request", "path": "us_freeze",
+     "source_ids": ["b3"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "tickets": [
+    {"system": "binance_support", "regex": null, "source_ids": ["b2"], "basis": "I", "confidence": "L",
+     "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "b1", "title": "Binance Government Law Enforcement Request System",
+     "url": "https://www.binance.com/en/support/law-enforcement", "retrieved_at": "2026-10-20"},
+    {"id": "b2", "title": "Binance FAQ: How to Report Stolen Funds Transferred to Binance",
+     "url": "https://www.binance.com/en/support/faq/how-to-report-stolen-funds-transferred-to-binance-360000006051",
+     "retrieved_at": "2026-10-20"},
+    {"id": "b3", "title": "Binance.US law enforcement guide",
+     "url": "https://support.binance.us/en/articles/9842980-binance-us-law-enforcement-guide", "retrieved_at": "2026-10-20"},
+    {"id": "b4", "title": "Binance Privacy Portal (court orders and law enforcement requests)",
+     "url": "https://www.binance.com/en/about-legal/privacy-portal", "retrieved_at": "2026-10-20"},
+    {"id": "b5", "title": "crypto.news: DOJ warning puts Binance freeze policy in the spotlight (reported)",
+     "url": "https://crypto.news/doj-warning-puts-binance-crypto-freeze-policy-in-the-spotlight/", "retrieved_at": "2026-10-20"}
+  ]
+}

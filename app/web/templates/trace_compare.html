@@ -1,0 +1,100 @@
+{# Diff between two runs (included by case/_tab_fund_flow.html). Context: runs, base, head, diff (app.tracing.diff.RunDiff|None),
+   base_summary, head_summary. #}
+<div class="panel">
+  <form method="get" action="/cases/{{ case.id }}" class="ff-compare-form">
+    <input type="hidden" name="tab" value="fund_flow">
+    <input type="hidden" name="view" value="compare">
+    <input type="hidden" name="run_id" value="{{ head.id }}">
+    <h2>Compare runs</h2>
+    <label class="ff-inline">From (base)
+      <select name="base">{% for s in runs %}<option value="{{ s.id }}" {% if base and s.id == base.id %}selected{% endif %}>#{{ s.id }}{% if s.label %} · {{ s.label }}{% endif %} · {{ s.at | dt }} · {{ s.provider_mode or 'default' }}</option>{% endfor %}</select></label>
+    <label class="ff-inline">To (head)
+      <select name="head">{% for s in runs %}<option value="{{ s.id }}" {% if s.id == head.id %}selected{% endif %}>#{{ s.id }}{% if s.label %} · {{ s.label }}{% endif %} · {{ s.at | dt }} · {{ s.provider_mode or 'default' }}</option>{% endfor %}</select></label>
+    <button class="btn small" type="submit">Compare</button>
+  </form>
+</div>
+
+{% if not diff %}
+<div class="panel ff-gap"><p class="muted">Only one run so far: re-run the trace to get a second version to compare against.</p></div>
+{% else %}
+{% set c = diff.counts() %}
+<div class="grid kpi ff-gap">
+  <div class="panel kpi"><div class="v">+{{ c.nodes_added }} / −{{ c.nodes_removed }}</div><div class="l">Addresses added / removed</div></div>
+  <div class="panel kpi"><div class="v">+{{ c.edges_added }} / −{{ c.edges_removed }}</div><div class="l">Movements added / removed</div></div>
+  <div class="panel kpi"><div class="v">{{ c.taint_changes }}</div><div class="l">Taint changes</div></div>
+  <div class="panel kpi"><div class="v accent">{{ c.new_touchpoints }}</div><div class="l">New VASP / service touchpoints</div></div>
+  <div class="panel kpi"><div class="v">{{ c.removed_touchpoints }}</div><div class="l">Touchpoints gone</div></div>
+  <div class="panel kpi"><div class="v">{{ c.unchanged_nodes }} / {{ c.unchanged_edges }}</div><div class="l">Unchanged addresses / movements</div></div>
+</div>
+{% if base_summary and head_summary %}
+<div class="panel ff-gap ff-table-wrap">
+  <table class="ff-table">
+    <thead><tr><th></th><th>Run</th><th>Mode</th><th>Finished</th><th class="num">Nodes</th><th class="num">Edges</th><th class="num">Hop</th><th class="num">VASPs</th><th class="num">Traced</th><th class="num">At VASPs</th></tr></thead>
+    <tbody>
+    {% for lbl, s in (('base', base_summary), ('head', head_summary)) %}
+    <tr><td class="muted">{{ lbl }}</td><td><a href="/cases/{{ case.id }}?tab=fund_flow&amp;run_id={{ s.id }}">#{{ s.id }}</a>{% if s.label %} · {{ s.label }}{% endif %}</td><td>{{ s.provider_mode or 'default' }}</td><td>{{ s.at | dt }}</td>
+      <td class="num">{{ s.nodes }}</td><td class="num">{{ s.edges }}</td><td class="num">{{ s.max_hop }}</td><td class="num">{{ s.vasp_touchpoints }}</td><td class="num mono">{{ s.total_taint_usd | usd }}</td><td class="num mono">{{ s.vasp_taint_usd | usd }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% if diff.is_empty %}<div class="panel ff-gap"><p class="muted">No difference between #{{ diff.base_id }} and #{{ diff.head_id }}.</p></div>{% endif %}
+
+{% macro node_rows(items, extra=None) %}
+<div class="ff-table-wrap"><table class="ff-table">
+  <thead><tr><th>Address</th><th>Chain</th><th>Entity / label</th><th class="num">Hop</th><th class="num">Taint USD</th><th>Terminal</th></tr></thead>
+  <tbody>{% for n in items %}
+  <tr><td class="mono"><span class="ff-addr" title="{{ n.address }}">{{ n.short }}</span><button type="button" class="ff-copy" data-copy="{{ n.address }}" title="Copy address" aria-label="Copy address">⧉</button></td>
+    <td>{{ n.chain }}</td><td>{{ n.entity or n.label or '' }}</td><td class="num">{{ n.hop }}</td><td class="num mono">{{ n.taint_usd | usd }}</td>
+    <td>{% if n.terminal %}<span class="tag {{ 'gold' if n.is_touchpoint else '' }}">{{ n.terminal_reason }}</span>{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% endmacro %}
+{% macro edge_rows(items) %}
+<div class="ff-table-wrap"><table class="ff-table">
+  <thead><tr><th>Tx hash</th><th>Chain</th><th class="num">Hop</th><th>From → to</th><th class="num">Amount</th><th class="num">Taint USD</th><th></th></tr></thead>
+  <tbody>{% for e in items %}
+  <tr><td class="mono"><span class="ff-addr" title="{{ e.tx_hash }}">{{ e.tx_hash[:10] ~ '…' ~ e.tx_hash[-6:] if e.tx_hash|length > 20 else e.tx_hash }}</span><button type="button" class="ff-copy" data-copy="{{ e.tx_hash }}" title="Copy tx hash" aria-label="Copy tx hash">⧉</button></td>
+    <td>{{ e.chain }}</td><td class="num">{{ e.hop }}</td>
+    <td class="mono"><span title="{{ e.from_address }}">{{ e.from_address[:6] ~ '…' ~ e.from_address[-4:] if e.from_address|length > 14 else e.from_address }}</span> → <span title="{{ e.to_address }}">{{ e.to_address[:6] ~ '…' ~ e.to_address[-4:] if e.to_address|length > 14 else e.to_address }}</span></td>
+    <td class="num mono">{{ (e.amount | amt) if e.amount is not none else '?' }} {{ e.asset }}</td><td class="num mono">{{ e.taint_usd | usd }}</td>
+    <td>{% if e.asserted %}<span class="tag amber">asserted</span>{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table></div>
+{% endmacro %}
+
+{% if diff.new_touchpoints or diff.removed_touchpoints %}
+<div class="panel ff-gap">
+  {% if diff.new_touchpoints %}<h2>New VASP / service touchpoints <small>in #{{ diff.head_id }}, not in #{{ diff.base_id }}</small></h2>{{ node_rows(diff.new_touchpoints) }}{% endif %}
+  {% if diff.removed_touchpoints %}<h2 class="ff-h-gap">Touchpoints no longer reached <small>in #{{ diff.base_id }} only</small></h2>{{ node_rows(diff.removed_touchpoints) }}{% endif %}
+</div>
+{% endif %}
+{% if diff.taint_changes %}
+<div class="panel ff-gap">
+  <h2>Taint changes per address <small>{{ diff.taint_changes | length }} addresses in both runs</small></h2>
+  <div class="ff-table-wrap"><table class="ff-table">
+    <thead><tr><th>Address</th><th>Chain</th><th>Entity / label</th><th class="num">Hop</th><th class="num">#{{ diff.base_id }}</th><th class="num">#{{ diff.head_id }}</th><th class="num">Δ USD</th></tr></thead>
+    <tbody>{% for ch in diff.taint_changes %}
+    <tr><td class="mono"><span class="ff-addr" title="{{ ch.node.address }}">{{ ch.node.short }}</span><button type="button" class="ff-copy" data-copy="{{ ch.node.address }}" title="Copy address" aria-label="Copy address">⧉</button></td>
+      <td>{{ ch.node.chain }}</td><td>{{ ch.node.entity or ch.node.label or '' }}</td><td class="num">{{ ch.node.hop }}</td>
+      <td class="num mono">{{ ch.before | usd }}</td><td class="num mono">{{ ch.after | usd }}</td>
+      <td class="num mono {{ 'ff-up' if ch.delta > 0 else 'ff-down' }}">{{ '+' if ch.delta > 0 else '' }}{{ ch.delta | usd }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</div>
+{% endif %}
+{% if diff.nodes_added or diff.nodes_removed or diff.new_terminals %}
+<div class="panel ff-gap">
+  {% if diff.nodes_added %}<h2>Addresses added <small>{{ diff.nodes_added | length }}</small></h2>{{ node_rows(diff.nodes_added) }}{% endif %}
+  {% if diff.nodes_removed %}<h2 class="ff-h-gap">Addresses removed <small>{{ diff.nodes_removed | length }}</small></h2>{{ node_rows(diff.nodes_removed) }}{% endif %}
+  {% if diff.new_terminals %}<h2 class="ff-h-gap">Other new terminals <small>max hops, dust, context …</small></h2>{{ node_rows(diff.new_terminals) }}{% endif %}
+</div>
+{% endif %}
+{% if diff.edges_added or diff.edges_removed %}
+<div class="panel ff-gap">
+  {% if diff.edges_added %}<h2>Movements added <small>{{ diff.edges_added | length }}</small></h2>{{ edge_rows(diff.edges_added) }}{% endif %}
+  {% if diff.edges_removed %}<h2 class="ff-h-gap">Movements removed <small>{{ diff.edges_removed | length }} (an asserted edge replaced by the observed transfer shows here and above)</small></h2>{{ edge_rows(diff.edges_removed) }}{% endif %}
+</div>
+{% endif %}
+{% endif %}

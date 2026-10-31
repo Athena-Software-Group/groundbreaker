@@ -1,0 +1,760 @@
+{
+  "_comment": "I0. Generic organisational channels only: no named people, verified=false. Unknown channels are value null ('to be confirmed'). Never invent addresses: an e-mail value needs a source_url on the organisation's own site and a generic local part (compliance, legal, abuse, lawenforcement, le-requests). Read at runtime by app/domain/directory.py (validated, cached by mtime); verifications and additions live in the entity_channels table, never here.",
+  "version": 1,
+  "orgs": [
+    {
+      "key": "kucoin",
+      "name": "KuCoin",
+      "aliases": [
+        "KuCoin"
+      ],
+      "category": "exchange",
+      "homepage": "https://www.kucoin.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "kucoin.web",
+          "kind": "website",
+          "value": "https://www.kucoin.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.kucoin.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "kucoin.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "rainbet",
+      "name": "Rainbet",
+      "aliases": [
+        "Rainbet"
+      ],
+      "category": "casino",
+      "homepage": "https://rainbet.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "rainbet.web",
+          "kind": "website",
+          "value": "https://rainbet.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://rainbet.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "rainbet.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "swft",
+      "name": "SWFT / Bridgers",
+      "aliases": [
+        "SWFT / Bridgers",
+        "SWFT",
+        "Bridgers"
+      ],
+      "category": "swap_service",
+      "homepage": "https://swft.pro",
+      "freeze_capable": false,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "swft.web",
+          "kind": "website",
+          "value": "https://swft.pro",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://swft.pro",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "swft.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "tether",
+      "name": "Tether (USDT issuer)",
+      "aliases": [
+        "Tether (USDT issuer)",
+        "Tether"
+      ],
+      "category": "stablecoin_issuer",
+      "homepage": "https://tether.to",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "tether.web",
+          "kind": "website",
+          "value": "https://tether.to",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://tether.to",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "tether.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "circle",
+      "name": "Circle (USDC issuer)",
+      "aliases": [
+        "Circle (USDC issuer)",
+        "Circle"
+      ],
+      "category": "stablecoin_issuer",
+      "homepage": "https://www.circle.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "circle.web",
+          "kind": "website",
+          "value": "https://www.circle.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.circle.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "circle.blocklisting",
+          "kind": "email",
+          "value": "circleblocklisting@circle.com",
+          "purpose": "freeze",
+          "role_default": "to",
+          "source_url": "https://www.circle.com/contact-us",
+          "label": "Freeze requests: addresses holding native USDC",
+          "notes": "Named by Circle's compliance@ auto-reply as the address for freezing an address holding native USDC; see Circle's Access Denial Policy. Replaces the legacy compliance@circle.com inbox."
+        },
+        {
+          "key": "circle.subpoenas",
+          "kind": "email",
+          "value": "subpoenas@circle.com",
+          "purpose": "legal",
+          "role_default": "to",
+          "source_url": "https://www.circle.com/contact-us",
+          "label": "Subpoenas / legal process for Circle records",
+          "notes": "Named by Circle's compliance@ auto-reply for subpoena submissions and questions about Circle records."
+        },
+        {
+          "key": "circle.contact",
+          "kind": "webform",
+          "value": "https://www.circle.com/contact-us",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.circle.com/contact-us",
+          "label": "Other inquiries (contact form)",
+          "notes": "Circle: other inquiries go through the contact form. compliance@circle.com is a LEGACY inbox (per its auto-reply) — do not use it for freeze requests."
+        }
+      ]
+    },
+    {
+      "key": "paxos",
+      "name": "Paxos (USDP / PYUSD / USDG issuer)",
+      "aliases": [
+        "Paxos (USDP / PYUSD / USDG issuer)",
+        "Paxos",
+        "Paxos Trust Company"
+      ],
+      "category": "stablecoin_issuer",
+      "homepage": "https://www.paxos.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "paxos.web",
+          "kind": "website",
+          "value": "https://www.paxos.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.paxos.com/contact",
+          "label": "Official website",
+          "notes": "Complaints and reports of illegal activity go through the support center; law-enforcement inquiries and subpoenas by e-mail (address to be confirmed from the contact page)."
+        }
+      ]
+    },
+    {
+      "key": "first-digital",
+      "name": "First Digital Labs (FDUSD issuer)",
+      "aliases": [
+        "First Digital Labs (FDUSD issuer)",
+        "First Digital Labs",
+        "FD121 Limited"
+      ],
+      "category": "stablecoin_issuer",
+      "homepage": "https://www.firstdigitallabs.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "first-digital.web",
+          "kind": "website",
+          "value": "https://www.firstdigitallabs.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.firstdigitallabs.com",
+          "label": "Official website",
+          "notes": "No public law-enforcement or freeze-request channel found (the legal pages refused automated reads, Oct 2026): confirm one on the site; never guess."
+        }
+      ]
+    },
+    {
+      "key": "coinbase",
+      "name": "Coinbase",
+      "aliases": [],
+      "category": "exchange",
+      "homepage": "https://www.coinbase.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "coinbase.web",
+          "kind": "website",
+          "value": "https://www.coinbase.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.coinbase.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "coinbase.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "kraken",
+      "name": "Kraken",
+      "aliases": [],
+      "category": "exchange",
+      "homepage": "https://www.kraken.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "kraken.web",
+          "kind": "website",
+          "value": "https://www.kraken.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.kraken.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "kraken.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "binance",
+      "name": "Binance",
+      "aliases": [],
+      "category": "exchange",
+      "homepage": "https://www.binance.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "binance.web",
+          "kind": "website",
+          "value": "https://www.binance.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.binance.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "binance.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "okx",
+      "name": "OKX",
+      "aliases": [],
+      "category": "exchange",
+      "homepage": "https://www.okx.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "okx.web",
+          "kind": "website",
+          "value": "https://www.okx.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.okx.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "okx.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "bybit",
+      "name": "Bybit",
+      "aliases": [],
+      "category": "exchange",
+      "homepage": "https://www.bybit.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "bybit.web",
+          "kind": "website",
+          "value": "https://www.bybit.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.bybit.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "bybit.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "mexc",
+      "name": "MEXC",
+      "aliases": [
+        "MEXC Global"
+      ],
+      "category": "exchange",
+      "homepage": "https://www.mexc.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "mexc.web",
+          "kind": "website",
+          "value": "https://www.mexc.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.mexc.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "mexc.le",
+          "kind": "webform",
+          "value": "https://www.mexc.com/support/requests/legal",
+          "purpose": "le_request",
+          "role_default": "to",
+          "source_url": "https://www.mexc.com/support/article/how-to-report-stolen-funds-transferred-into-an-mexc-account-17827791512560",
+          "label": "Law Enforcement Online Request System (LEORS)",
+          "notes": "Law enforcement and judicial bodies only; access is approved after review."
+        },
+        {
+          "key": "mexc.report",
+          "kind": "webform",
+          "value": "https://www.mexc.com/support/requests/report",
+          "purpose": "freeze",
+          "role_default": "to",
+          "source_url": "https://www.mexc.com/support/article/how-to-report-stolen-funds-transferred-into-an-mexc-account-17827791512560",
+          "label": "Report Abnormal Funds (victim ticket)",
+          "notes": "Victim report of stolen funds that reached an MEXC account; may lead to a temporary freeze."
+        }
+      ]
+    },
+    {
+      "key": "gate",
+      "name": "Gate",
+      "aliases": [
+        "Gate.io",
+        "Gate.com"
+      ],
+      "category": "exchange",
+      "homepage": "https://www.gate.com",
+      "freeze_capable": true,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "gate.web",
+          "kind": "website",
+          "value": "https://www.gate.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.gate.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "gate.le",
+          "kind": "email",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "source_url": "https://www.gate.com/legal/law-enforcement",
+          "label": "Law-enforcement request address",
+          "notes": "Published in Gate's Law Enforcement Request Guidelines (regulatory alias, from an official government domain only). Not catalogued: the alias is not on the reviewed list."
+        }
+      ]
+    },
+    {
+      "key": "hostinger",
+      "name": "Hostinger",
+      "aliases": [],
+      "category": "hosting",
+      "homepage": "https://www.hostinger.com",
+      "freeze_capable": false,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "hostinger.web",
+          "kind": "website",
+          "value": "https://www.hostinger.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.hostinger.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "hostinger.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        },
+        {
+          "key": "hostinger.abuse",
+          "kind": "webform",
+          "value": null,
+          "purpose": "abuse",
+          "role_default": "to",
+          "label": "Abuse report channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "supabase",
+      "name": "Supabase",
+      "aliases": [],
+      "category": "infra",
+      "homepage": "https://supabase.com",
+      "freeze_capable": false,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "supabase.web",
+          "kind": "website",
+          "value": "https://supabase.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://supabase.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "supabase.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "groq",
+      "name": "Groq",
+      "aliases": [],
+      "category": "infra",
+      "homepage": "https://groq.com",
+      "freeze_capable": false,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "groq.web",
+          "kind": "website",
+          "value": "https://groq.com",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://groq.com",
+          "label": "Official website",
+          "notes": "Find the current law-enforcement request channel here."
+        },
+        {
+          "key": "groq.le",
+          "kind": "portal",
+          "value": null,
+          "purpose": "le_request",
+          "role_default": "to",
+          "label": "Law-enforcement request channel",
+          "notes": "To be confirmed from the organisation's official site."
+        }
+      ]
+    },
+    {
+      "key": "uniswap",
+      "name": "Uniswap (Universal Router)",
+      "aliases": [
+        "Uniswap (Universal Router)",
+        "Uniswap"
+      ],
+      "category": "dex",
+      "homepage": "https://uniswap.org",
+      "freeze_capable": false,
+      "info_only": true,
+      "channels": [
+        {
+          "key": "uniswap.web",
+          "kind": "website",
+          "value": "https://uniswap.org",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://uniswap.org",
+          "label": "Official website",
+          "notes": "Information requests only: the protocol is non-custodial."
+        }
+      ],
+      "notes": "Non-custodial protocol: cannot freeze or hold funds; useful only to identify swap outputs from tx logs."
+    },
+    {
+      "key": "t3-fcu",
+      "name": "T3 Financial Crime Unit (Tether, TRON, TRM Labs)",
+      "aliases": [
+        "T3 Financial Crime Unit (Tether, TRON, TRM Labs)",
+        "T3 Financial Crime Unit",
+        "T3 FCU"
+      ],
+      "category": "law_enforcement",
+      "homepage": "https://t3fcu.org",
+      "freeze_capable": true,
+      "info_only": false,
+      "notes": "Public-private unit: takes requests from verified law-enforcement agencies only; Tether executes the freeze (USDT on TRON).",
+      "channels": [
+        {
+          "key": "t3-fcu.web",
+          "kind": "website",
+          "value": "https://t3fcu.org",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://t3fcu.org",
+          "label": "Official website",
+          "notes": "Returned 404 when checked (Oct 2026). The Law Enforcement Inquiry form is for verified agencies only."
+        }
+      ]
+    },
+    {
+      "key": "europol-ec3",
+      "name": "Europol European Cybercrime Centre (EC3)",
+      "aliases": [
+        "Europol European Cybercrime Centre (EC3)",
+        "Europol EC3",
+        "Europol"
+      ],
+      "category": "law_enforcement",
+      "homepage": "https://www.europol.europa.eu",
+      "freeze_capable": false,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "europol-ec3.web",
+          "kind": "website",
+          "value": "https://www.europol.europa.eu/report-a-crime/report-cybercrime-online",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.europol.europa.eu/faq/can-i-report-crime-to-europol",
+          "label": "Report cybercrime online (national reporting sites)",
+          "notes": "Europol takes no crime reports from citizens: report to the national police, who decide whether to involve Europol."
+        }
+      ]
+    },
+    {
+      "key": "usss",
+      "name": "US Secret Service",
+      "aliases": [
+        "US Secret Service",
+        "U.S. Secret Service",
+        "United States Secret Service",
+        "USSS",
+        "Secret Service"
+      ],
+      "category": "law_enforcement",
+      "homepage": "https://www.secretservice.gov",
+      "freeze_capable": false,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "usss.field-offices",
+          "kind": "website",
+          "value": "https://www.secretservice.gov/contact/field-offices",
+          "purpose": "complaint",
+          "role_default": "to",
+          "source_url": "https://www.secretservice.gov/investigations/financial",
+          "label": "Nearest field office (report a financial crime or scam)",
+          "notes": "By telephone for immediate assistance; no e-mail or web form for reports. USSS also points victims to IC3."
+        }
+      ]
+    },
+    {
+      "key": "fbi-ic3",
+      "name": "FBI Internet Crime Complaint Center (IC3)",
+      "aliases": [
+        "FBI Internet Crime Complaint Center (IC3)",
+        "FBI IC3",
+        "IC3"
+      ],
+      "category": "law_enforcement",
+      "homepage": null,
+      "freeze_capable": false,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "fbi-ic3.portal",
+          "kind": "portal",
+          "value": "https://www.ic3.gov",
+          "purpose": "complaint",
+          "role_default": "to",
+          "source_url": "https://www.ic3.gov",
+          "label": "IC3 online complaint portal",
+          "notes": "No e-mail channel: complaints and updates go through the portal."
+        }
+      ]
+    },
+    {
+      "key": "carabinieri",
+      "name": "Carabinieri",
+      "aliases": [
+        "Carabinieri"
+      ],
+      "category": "law_enforcement",
+      "homepage": "https://www.carabinieri.it",
+      "freeze_capable": false,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "carabinieri.web",
+          "kind": "website",
+          "value": "https://www.carabinieri.it",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.carabinieri.it",
+          "label": "Official website",
+          "notes": "Official website of the Arma dei Carabinieri."
+        },
+        {
+          "key": "carabinieri.station",
+          "kind": "postal",
+          "value": null,
+          "purpose": "complaint",
+          "role_default": "to",
+          "label": "In person at the local station (Stazione)",
+          "notes": "The case's station and officer are case-scoped LE contacts."
+        },
+        {
+          "key": "carabinieri.112",
+          "kind": "phone",
+          "value": "112",
+          "purpose": "general",
+          "role_default": "to",
+          "label": "EU emergency number",
+          "notes": "Emergencies only, not for case correspondence."
+        }
+      ]
+    },
+    {
+      "key": "procura",
+      "name": "Procura della Repubblica",
+      "aliases": [
+        "Procura della Repubblica",
+        "Procura"
+      ],
+      "category": "law_enforcement",
+      "homepage": "https://www.giustizia.it",
+      "freeze_capable": false,
+      "info_only": false,
+      "channels": [
+        {
+          "key": "procura.web",
+          "kind": "website",
+          "value": "https://www.giustizia.it",
+          "purpose": "general",
+          "role_default": "to",
+          "source_url": "https://www.giustizia.it",
+          "label": "Ministry of Justice website (office directory)",
+          "notes": "Each Procura is its own office: the case's prosecutor (PM) and its address are case-scoped LE contacts."
+        }
+      ]
+    }
+  ]
+}

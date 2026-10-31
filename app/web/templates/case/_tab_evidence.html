@@ -1,0 +1,191 @@
+{# Evidence tab — owner: app/web/routes_evidence.py (evidence_tab).
+   Context: ev_tree, ev_items (selected folder/section), ev_folder, ev_spec, ev_section, ev_flags, ev_contacts,
+   ev_alerts, ev_orders, ev_corr, ev_linked (virtual entries of the Stop orders & correspondence folder:
+   evidence.LinkedEntry), ev_uploads_ok/_reason, ev_reference_roots, ev_run, ev_msg/ev_err,
+   evidence_by_folder, evidence_count, helpers ev_fmt_size / ev_section_of / ev_folder_label / ev_integrity,
+   ev_text (complaint references and LE / PI contact details masked below view_restricted) #}
+{% import "evidence_macros.html" as evm with context %}
+{% import "evidence_intel_macros.html" as evi with context %}
+{% set base = '/cases/' ~ case.id ~ '?tab=evidence' %}
+<div class="ev-layout" id="evidence" data-ev-root>
+  <aside class="panel tight ev-tree" aria-label="Evidence folders">
+    <a class="ev-node {{ 'active' if not ev_folder else '' }}" href="{{ base }}">All evidence <span class="ev-count">{{ evidence_count }}</span></a>
+    {% for n in ev_tree %}
+      {% if n.locked %}
+        <span class="ev-node locked" title="restricted: case admins only">{{ n.label }} <span class="ev-count">admin only</span></span>
+      {% else %}
+        <a class="ev-node {{ 'active' if ev_folder and ev_folder.value == n.key and not ev_section else '' }}" href="{{ base }}&amp;folder={{ n.key }}" title="{{ n.spec.hint }}{% if n.linked %} · {{ n.count - n.linked }} evidence item(s) + {{ n.linked }} stop order(s) and letter(s) linked from the Authorities desk (not evidence items){% endif %}">{{ n.label }} <span class="ev-count">{% if n.linked %}{{ n.count - n.linked }} + {{ n.linked }} letters{% else %}{{ n.count }}{% endif %}</span></a>
+        {% for s in n.sections %}
+          <a class="ev-node ev-sub {{ 'active' if ev_folder and ev_folder.value == n.key and ev_section == s.key else '' }}" href="{{ base }}&amp;folder={{ n.key }}&amp;section={{ s.key }}">{{ s.label }} <span class="ev-count">{{ s.count }}</span></a>
+        {% endfor %}
+      {% endif %}
+    {% endfor %}
+    <div class="ev-tree-foot muted">Every item is fingerprinted (sha256) when it is added; a referenced original is never copied.{% if ev_tree | selectattr('linked') | list %} “Letters” are the stop orders and correspondence on the Authorities desk, counted apart from evidence items.{% endif %}</div>
+  </aside>
+
+  <div class="ev-main">
+    {% if ev_msg %}<div class="alert {{ 'high' if ev_err else 'info' }}" role="status">{{ ev_msg }}</div>{% endif %}
+    {% for e in ev_alerts %}
+      <div class="alert high">Integrity check failed ({{ ev_integrity(e) }}): <a href="/cases/{{ case.id }}/evidence/{{ e.id }}">#{{ e.id }} {{ ev_text(e.title) }}</a> — {{ ev_folder_label(e.folder) }}. Re-verify or investigate before relying on it.</div>
+    {% endfor %}
+
+    {% if ev_intel and (ev_intel.queue_count or not ev_folder) and ev_section != 'contacts' %}{{ evi.queue_panel(case, ev_intel) }}{% endif %}
+
+    {% set show_contacts = ev_flags.contacts and ((ev_folder and ev_folder.value == 'law_enforcement' and ev_section in (None, 'contacts'))) %}
+    {% set show_items = not (ev_section == 'contacts') %}
+
+    {% if show_items %}
+    <div class="panel" id="ev-items">
+      <h2>{% if ev_spec %}{{ ev_spec.label }}{% if ev_section %} · {% for s in ev_spec.sections if s.key == ev_section %}{{ s.label }}{% endfor %}{% endif %}{% else %}Evidence{% endif %}
+        <small>{{ ev_items | length }} item(s){% if ev_linked %} + {{ ev_linked | length }} linked stop order(s) &amp; letter(s){% endif %}{% if ev_spec and ev_spec.hint %} · {{ ev_spec.hint }}{% endif %}</small>
+        <span class="ev-head-actions">
+          <input type="search" class="ev-filter" placeholder="Filter…" aria-label="Filter items" data-ev-filter="#ev-items">
+          {% if ev_flags.verify and ev_items %}<form method="post" action="/cases/{{ case.id }}/evidence/verify-all" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" title="re-hash every item you can see">Verify all</button></form>{% endif %}
+        </span>
+      </h2>
+      {% if ev_spec and ev_spec.folder.value == 'chain_reports' and ev_flags.trace_report %}
+        <div class="ev-note">
+          {% if ev_run %}<form method="post" action="/cases/{{ case.id }}/evidence/trace-report" class="inline">{{ csrf_field() }}<button class="btn small primary" type="submit">Save latest trace (run #{{ ev_run.id }}) as evidence</button></form>
+          <span class="muted">Stores the graph summary and freeze candidates as an inline C1 report with its sha256.</span>
+          {% else %}<span class="muted">No trace run yet — run a trace on the Fund flow tab first.</span>{% endif %}
+        </div>
+      {% endif %}
+      {% set grouped = not ev_folder %}
+      <div class="ev-table-wrap">
+      <table class="ev-table">
+        <thead><tr><th>Title</th>{% if grouped %}<th>Folder</th>{% endif %}<th>Doc date</th><th>Source / received from</th><th>sha256</th><th class="right ev-lowval">Size</th><th class="ev-lowval">MIME</th><th>Class</th><th class="ev-lowval">Storage</th><th>Shared</th><th>Integrity</th></tr></thead>
+        <tbody>
+        {% for e in ev_items %}
+          {% set sec = ev_section_of(e) %}
+          <tr id="ev-{{ e.id }}" data-ev-row>
+            <td><a href="/cases/{{ case.id }}/evidence/{{ e.id }}"><b>{{ ev_text(e.title) }}</b></a>
+              {% if sec %}<span class="tag">{{ sec }}</span>{% endif %}
+              {% if e.description %}<div class="muted ev-desc">{{ ev_text(e.description) }}</div>{% endif %}
+              {% if e.tags %}<div class="ev-tags">{% for t in e.tags %}<span class="ev-tag {{ 'dup' if t in ('duplicate', 'has-duplicate') else '' }}">{{ ev_text(t) }}</span>{% endfor %}</div>{% endif %}</td>
+            {% if grouped %}<td class="nowrap">{{ ev_folder_label(e.folder) }}</td>{% endif %}
+            <td class="nowrap">{{ e.doc_date.strftime('%d %b %Y') if e.doc_date else '—' }}</td>
+            <td>{{ ev_source_label(e.source_type) or '—' }}{% if e.received_from %}<div class="muted">{{ ev_text(e.received_from) }}</div>{% endif %}</td>
+            <td class="mono muted" title="{{ e.sha256 or '' }}">{{ (e.sha256 or '—')[:12] }}</td>
+            <td class="right nowrap ev-lowval">{{ ev_fmt_size(e.size_bytes) }}</td>
+            <td class="mono muted ev-mime ev-lowval">{{ e.mime or '—' }}</td>
+            <td>{{ evm.cls_badge(e.classification) }}{% if e.tlp %}<div class="muted ev-tlp">{{ e.tlp }}</div>{% endif %}</td>
+            <td class="ev-lowval">{{ evm.storage_badge(e) }}</td>
+            <td>{% if e.shared_with_external %}<span class="tag blue" title="visible to external members">shared</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td>{{ evm.integrity_badge(e) }}</td>
+          </tr>
+        {% else %}
+          {% if not ev_linked %}<tr><td colspan="11" class="muted">{% if ev_folder %}Nothing filed here yet.{% else %}No evidence registered yet.{% endif %}</td></tr>{% endif %}
+        {% endfor %}
+        {% for l in ev_linked %}
+          <tr id="ev-{{ l.anchor }}" class="ev-linked" data-ev-row>
+            <td><a href="{{ l.href }}"><b>{{ l.title }}</b></a> <span class="tag" title="lives on the Authorities desk, not in the evidence register">{{ 'linked stop order' if l.kind == 'stop_order' else 'linked letter' }}</span>
+              <div class="muted ev-desc">{{ l.detail }}{% if l.counterparty %} · {{ l.counterparty }}{% endif %}</div>
+              {% if l.evidence_item_id %}<div class="ev-tags"><a href="/cases/{{ case.id }}/evidence/{{ l.evidence_item_id }}">evidence #{{ l.evidence_item_id }}</a></div>{% endif %}</td>
+            {% if grouped %}<td class="nowrap">{{ ev_folder_label('stop_orders_correspondence') }}</td>{% endif %}
+            <td class="nowrap">{{ l.at.strftime('%d %b %Y') if l.at else '—' }}</td>
+            <td>Authorities desk</td>
+            <td class="mono muted">—</td>
+            <td class="right nowrap ev-lowval">—</td>
+            <td class="mono muted ev-mime ev-lowval">—</td>
+            <td>{{ evm.cls_badge(l.classification) }}</td>
+            <td class="ev-lowval"><span class="muted">linked</span></td>
+            <td><span class="muted">—</span></td>
+            <td><span class="tag">{{ l.status }}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if show_contacts %}
+    <div class="panel" id="ev-contacts">
+      <h2>Law-enforcement contacts <small>{{ ev_contacts | length }} contact(s){% if ev_flags.contacts_masked %} · masked for your role{% endif %}</small></h2>
+      <div class="ev-table-wrap">
+      <table class="ev-table">
+        <thead><tr><th>Agency / unit</th><th>Role</th><th>Name</th><th>E-mail</th><th>Phone</th><th>Reference</th><th>Jurisdiction</th><th>Class</th>{% if ev_flags.manage_contacts %}<th></th>{% endif %}</tr></thead>
+        <tbody>
+        {% for c in ev_contacts %}
+          <tr id="ev-contact-{{ c.id }}">
+            <td><b>{{ c.agency }}</b>{% if c.unit %}<div class="muted">{{ c.unit }}</div>{% endif %}{% if c.notes %}<div class="muted ev-desc">{{ c.notes }}</div>{% endif %}</td>
+            <td>{{ c.role or '—' }}</td>
+            <td>{{ c.name or '—' }}</td>
+            <td class="mono">{{ c.email or '—' }}</td>
+            <td class="mono nowrap">{{ c.phone or '—' }}</td>
+            <td class="mono">{{ c.reference or '—' }}</td>
+            <td>{{ c.jurisdiction or '—' }}</td>
+            <td>{{ evm.cls_badge(c.classification) }}</td>
+            {% if ev_flags.manage_contacts %}
+            <td class="right">
+              <details class="ev-details">
+                <summary class="btn small">Edit</summary>
+                <form method="post" action="/cases/{{ case.id }}/evidence/le-contacts/{{ c.id }}" class="ev-form">{{ csrf_field() }}
+                  {{ evm.contact_fields(c.row) }}
+                  <button class="btn small primary" type="submit">Save contact</button>
+                </form>
+                <form method="post" action="/cases/{{ case.id }}/evidence/le-contacts/{{ c.id }}/delete" class="ev-form ev-danger">{{ csrf_field() }}
+                  <label class="ev-confirm"><input type="checkbox" name="confirm" value="yes" required> delete this contact</label>
+                  <button class="btn small danger" type="submit">Delete</button>
+                </form>
+              </details>
+            </td>
+            {% endif %}
+          </tr>
+        {% else %}
+          <tr><td colspan="9" class="muted">No law-enforcement contacts recorded.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% if ev_flags.manage_contacts %}
+      <details class="ev-details ev-add">
+        <summary class="btn small">Add contact</summary>
+        <form method="post" action="/cases/{{ case.id }}/evidence/le-contacts" class="ev-form">{{ csrf_field() }}
+          {{ evm.contact_fields() }}
+          <button class="btn small primary" type="submit">Add contact</button>
+        </form>
+      </details>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if ev_flags.add %}
+    <div class="panel" id="ev-add">
+      <h2>Add evidence <small>investigators and admins · every item is hashed (sha256) on ingest</small></h2>
+      <details class="ev-details">
+        <summary class="btn small">Upload a file</summary>
+        {% if ev_uploads_ok %}
+        <form method="post" action="/cases/{{ case.id }}/evidence/upload" enctype="multipart/form-data" class="ev-form">{{ csrf_field() }}
+          <label class="ev-wide">File <input type="file" name="file" required data-ev-file></label>
+          {{ evm.meta_fields(folder=ev_folder.value if ev_folder else 'other', section=ev_section if ev_section != 'contacts' else None) }}
+          <button class="btn small primary" type="submit">Upload to the vault</button>
+          <span class="muted">Stored under a random name in the case's evidence vault. Aegis reads it and suggests its type; you confirm it.</span>
+        </form>
+        {% else %}
+        <div class="alert warning">Uploads are disabled: {{ ev_uploads_reason }}.</div>
+        {% endif %}
+      </details>
+      <details class="ev-details">
+        <summary class="btn small">Reference an existing file</summary>
+        <form method="post" action="/cases/{{ case.id }}/evidence/reference" class="ev-form">{{ csrf_field() }}
+          <label class="ev-wide">Absolute path <input name="source_path" required placeholder="/path/to/original.pdf · /path/archive.zip!member.pdf · /path/Letter.rtfd" class="mono"></label>
+          {% if not ev_reference_roots %}<div class="alert warning">{% if me and me.is_system_admin %}The web UI accepts references only under AEGIS_EVIDENCE_ROOTS, which is not set. Use <span class="mono">python -m scripts.import_evidence</span> on the machine instead.{% else %}Referencing files from the browser is not set up on this server: an administrator can register them from the server.{% endif %}</div>{% endif %}
+          {{ evm.meta_fields(folder=ev_folder.value if ev_folder else 'other', section=ev_section if ev_section != 'contacts' else None) }}
+          <button class="btn small primary" type="submit">Register reference</button>
+          <span class="muted">The original is hashed read-only and never copied. Only case admins see its path.</span>
+        </form>
+      </details>
+      <details class="ev-details">
+        <summary class="btn small">Add a text note</summary>
+        <form method="post" action="/cases/{{ case.id }}/evidence/note" class="ev-form">{{ csrf_field() }}
+          <label class="ev-wide">Text <textarea name="text" rows="6" required></textarea></label>
+          {{ evm.meta_fields(folder=ev_folder.value if ev_folder else 'other', section=ev_section if ev_section != 'contacts' else None, cls='R2', title_required=True) }}
+          <button class="btn small primary" type="submit">Save note</button>
+        </form>
+      </details>
+    </div>
+    {% endif %}
+    {% if ev_intel and not ev_folder and ev_flags.restricted %}{{ evi.ai_panel(case, ev_intel) }}{% endif %}
+  </div>
+</div>

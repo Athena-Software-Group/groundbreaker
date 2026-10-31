@@ -1,0 +1,98 @@
+/* Block status (app/blocks; owner app/web/routes_blocks.py): the page, the Overview card and the
+   Authorities tab's status column. Uses the aegis.css tokens only. */
+
+.bk-head { align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.bk-head-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.bk-export { display: inline-flex; gap: 4px; align-items: center; color: var(--muted); font-size: var(--fs-sm); }
+.bk-small { font-size: var(--fs-xs); }
+.bk-hot { color: var(--warn); }
+
+/* status badge: one colour per outcome family */
+.bk-badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: var(--fs-xs); font-weight: 600;
+  border: 1px solid var(--border); color: var(--text); background: var(--panel-2); line-height: 1.45;
+  white-space: normal; text-decoration: none; overflow-wrap: anywhere; }
+a.bk-badge:hover { text-decoration: none; filter: brightness(1.15); }
+.bk-green { border-color: var(--ok); color: var(--ok); background: rgba(61, 220, 151, .1); }
+.bk-gold { border-color: var(--accent); color: var(--accent); background: rgba(201, 162, 39, .12); }
+.bk-red { border-color: var(--danger); color: var(--danger); background: rgba(255, 92, 92, .1); }
+.bk-amber { border-color: var(--warn); color: var(--warn); background: rgba(255, 181, 71, .1); }
+.bk-blue { border-color: var(--accent-2); color: var(--accent-2); background: rgba(79, 140, 255, .1); }
+.bk-purple { border-color: #b48cff; color: #c9adff; background: rgba(180, 140, 255, .1); }
+.bk-neutral { color: var(--muted); }
+
+/* summary + filters */
+.bk-summary { margin-bottom: 14px; }
+.bk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.bk-kpi { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; }
+.bk-kpi b { display: block; font-size: var(--fs-xl); }
+.bk-kpi span { color: var(--muted); font-size: var(--fs-xs); }
+.bk-kpi-hot b { color: var(--warn); }
+.bk-kpi-ok b { color: var(--ok); font-size: var(--fs-lg); }
+.bk-filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: var(--fs-sm); }
+.bk-filters label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+.bk-filters select { min-width: 0; }
+.bk-check { display: inline-flex; gap: 6px; align-items: center; }
+.bk-check input { width: auto; margin: 0; }
+.bk-count, .bk-reset { font-size: var(--fs-xs); }
+
+/* the table */
+.bk-table-panel { margin-bottom: 14px; }
+.bk-table { width: 100%; }
+.bk-table td { vertical-align: top; }
+.bk-table td.bk-who { min-width: 130px; max-width: 190px; }
+.bk-req { margin-top: 4px; font-size: var(--fs-sm); }
+.bk-table td.bk-sent { min-width: 170px; max-width: 230px; }
+.bk-table td.bk-last { min-width: 120px; }
+.bk-table td.bk-status { min-width: 150px; max-width: 200px; }
+.bk-table td.bk-status .bk-badge { white-space: nowrap; }
+.bk-table td.bk-status .bk-badge.bk-st-sent_review { white-space: normal; }
+.bk-detail { margin-top: 3px; font-weight: 600; font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.bk-table td.bk-evidence { min-width: 200px; max-width: 320px; }
+.bk-table td.bk-next { min-width: 210px; max-width: 290px; font-size: var(--fs-sm); }
+.bk-table tr.bk-row-hot td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+.bk-table tr:target td { background: rgba(201, 162, 39, .08); }
+.bk-addr { font-size: var(--fs-xs); color: var(--muted); overflow-wrap: anywhere; }
+.bk-wait { margin-top: 4px; font-size: var(--fs-sm); }
+.bk-evidence q { display: block; font-size: var(--fs-sm); color: var(--text); border-left: 2px solid var(--border);
+  padding-left: 8px; quotes: "\201C" "\201D"; overflow-wrap: anywhere; }
+.bk-note, .bk-ai { margin-top: 4px; overflow-wrap: anywhere; }
+.bk-onchain { margin-top: 6px; display: grid; gap: 3px; }
+.bk-replies summary { cursor: pointer; color: var(--muted); font-size: var(--fs-xs); }
+.bk-reply { margin-top: 3px; font-size: var(--fs-xs); }
+.bk-disclaimer { margin: 10px 0 0; }
+
+/* Confirm status */
+.bk-confirm { margin-top: 8px; }
+.bk-confirm-box > summary { list-style: none; display: inline-block; white-space: nowrap; }
+.bk-confirm-box > summary::-webkit-details-marker { display: none; }
+.bk-confirm-form { display: grid; gap: 7px; margin-top: 8px; padding: 10px; min-width: 240px; background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 8px; font-size: var(--fs-sm); }
+.bk-confirm-form label { display: grid; gap: 3px; color: var(--muted); }
+.bk-amount-row { display: grid; grid-template-columns: 1fr 80px; gap: 6px; }
+.bk-amount-row[hidden] { display: none; }
+.bk-confirm-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* AI setting */
+.bk-ai-panel p { max-width: 980px; }
+.bk-ai-form { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+/* Overview card */
+.bk-chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 10px; }
+.bk-chip { display: inline-flex; gap: 5px; align-items: center; text-decoration: none; color: var(--text); }
+.bk-chip:hover { text-decoration: none; }
+.bk-card-table td { vertical-align: top; }
+
+/* Authorities tab column */
+.bk-col { min-width: 190px; }
+.bk-col > div + div { margin-top: 4px; }
+.bk-col > div { display: flex; align-items: center; gap: 4px; }
+.bk-col .bk-reqno { font-size: var(--fs-xs); flex: none; }
+.bk-th-link { font-weight: 400; font-size: var(--fs-xs); margin-left: 4px; }
+/* a hold / freeze / return read from a reply or on-chain: a suggestion a person confirms (never a status) */
+.bk-suggestion { margin-bottom: 6px; padding: 4px 6px; border-left: 3px solid var(--warn); }
+.bk-warning { color: var(--warn); }
+/* what a reply says beyond its status (app.blocks.extract): advisory, every proposal one click */
+.bk-intel { margin-top: 6px; padding: 4px 6px; border-left: 3px solid var(--border); }
+.bk-intel > summary { cursor: pointer; }
+.bk-intel > div { margin-top: 3px; }
+.bk-intel form.inline { display: inline-flex; gap: 4px; align-items: center; margin-left: 4px; }

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{# Contact directory — owner: app/web/routes_mail.py (directory_page). Context: orgs (directory.DirectoryOrg:
+   catalogue organisations and global rows; I0, never case rows), catalogue, entities (system admins), is_sysadmin,
+   kinds, purposes, error (catalogue validation), msg / msg_err (the last form's result). #}
+{% block title %}Aegis · Directory{% endblock %}
+{% block content %}
+<div class="row case-head" style="margin-bottom:12px"><div><h1>Directory</h1>
+  <div class="sub">How to reach the organisations Aegis knows: the shipped catalogue of generic organisational channels
+    plus channels confirmed by system administrators. Case-specific contacts (an officer, a ticket desk) live on each
+    case's authority page.</div></div></div>
+
+{% if error %}<div class="alert critical">The catalogue is invalid and was not loaded: {{ error }}</div>{% endif %}
+{% if msg %}<div class="alert {{ 'critical' if msg_err else 'info' }}">{{ msg }}</div>{% endif %}
+<div class="alert info">Every catalogue channel starts <b>unverified</b>. Law-enforcement and compliance channels the
+  organisation has not published are listed as <b>to be confirmed</b>: find them on the organisation's own site and
+  record them here (system admins) or on the case (case admins).</div>
+
+<div class="mail-dir">
+{% for o in orgs %}
+  {% set anchor = o.org.key if o.org else o.name %}
+  <div class="panel mail-dir-org" id="org-{{ anchor }}">
+    <h2>{{ o.name }}
+      <small>{% if o.org %}{{ o.org.category | replace('_', ' ') }}{% if o.org.info_only %} · information requests only{% endif %}{% if o.org.freeze_capable %} · can freeze{% endif %}{% if o.org.portal_only %} · portal only{% endif %}{% else %}entity record{% endif %}</small></h2>
+    {% if o.org and o.org.notes %}<div class="muted" style="font-size:var(--fs-sm);margin-bottom:6px">{{ o.org.notes }}</div>{% endif %}
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th class="mail-dir-chan">Channel</th><th>Purpose</th><th>State</th><th>Source</th>{% if is_sysadmin %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+      {% for e in o.entries %}
+      <tr class="{{ 'mail-entry-off' if e.disabled else '' }}">
+        {% set src = e.source | replace('_', ' ') %}
+        <td class="mail-dir-chan"><span class="tag">{{ e.kind }}</span> {% if e.value %}{% if e.kind in ('website', 'portal', 'webform') %}<a class="mono" href="{{ e.value }}" target="_blank" rel="noopener noreferrer">{{ e.value }}</a>{% else %}<span class="mono">{{ e.value }}</span>{% endif %}{% else %}<span class="muted">to be confirmed</span>{% endif %}
+          {% if e.label %}<div class="muted" style="font-size:var(--fs-xs)">{{ e.label }}</div>{% endif %}
+          {% if e.notes %}<div class="muted" style="font-size:var(--fs-xs)">{{ e.notes }}</div>{% endif %}</td>
+        <td class="nowrap">{{ e.purpose | replace('_', ' ') }}</td>
+        <td>{% if e.disabled %}<span class="tag">disabled</span>{% elif e.verified %}<span class="tag green" title="{{ e.verified_at | dt }}{% if e.verification_note %}: {{ e.verification_note }}{% endif %}">✓ verified</span>{% elif e.value %}<span class="tag amber">⚠ unverified</span>{% else %}<span class="tag">to be confirmed</span>{% endif %}</td>
+        <td class="muted" style="font-size:var(--fs-xs)">{% if not (e.label and (e.label | lower).startswith(src)) %}{{ src }}{% else %}—{% endif %}{% if e.source_url %} · <a href="{{ e.source_url }}" target="_blank" rel="noopener noreferrer">site</a>{% endif %}{% if e.last_used_at %}<br>last used {{ e.last_used_at | dt }}{% endif %}</td>
+        {% if is_sysadmin %}
+        <td class="right nowrap">
+          {% if e.value and not e.disabled %}
+          <form method="post" action="/directory/channels/{{ e.id if e.id else e.catalogue_key }}/verify" class="inline">{{ csrf_field() }}<input type="hidden" name="verified" value="{{ '0' if e.verified else '1' }}"><button class="btn small" type="submit">{{ 'Unverify' if e.verified else 'Verify' }}</button></form>
+          {% endif %}
+        </td>
+        {% endif %}
+      </tr>
+      {% else %}<tr><td colspan="5" class="muted">No channels.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+{% else %}
+  <div class="panel muted">The directory is empty.</div>
+{% endfor %}
+</div>
+
+{% if is_sysadmin %}
+<div class="panel" id="add" style="margin-top:14px;max-width:760px">
+  <h2>Add a global channel <small>system administrators · I0: generic organisational channels only, never a named person</small></h2>
+  <form method="post" action="/directory/channels">
+    {{ csrf_field() }}
+    <label>Organisation</label>
+    <select name="target" required>
+      <optgroup label="Catalogue">{% for o in catalogue.orgs %}<option value="org:{{ o.key }}">{{ o.name }}</option>{% endfor %}</optgroup>
+      {% if entities %}<optgroup label="Entities">{% for e in entities %}<option value="entity:{{ e.id }}">{{ e.name }}</option>{% endfor %}</optgroup>{% endif %}
+    </select>
+    <div class="row">
+      <div style="flex:1"><label>Kind</label><select name="kind">{% for k in kinds %}<option value="{{ k }}">{{ k }}</option>{% endfor %}</select></div>
+      <div style="flex:1"><label>Purpose</label><select name="purpose">{% for p in purposes %}<option value="{{ p }}" {% if p == 'le_request' %}selected{% endif %}>{{ p | replace('_', ' ') }}</option>{% endfor %}</select></div>
+      <div style="flex:1"><label>Role</label><select name="role_default"><option value="to">to</option><option value="cc">cc</option></select></div>
+    </div>
+    <label>Value</label><input name="value" required maxlength="512" class="mono" placeholder="https://… or a generic address on the organisation's own domain">
+    <label>Label</label><input name="label" maxlength="255">
+    <label>Notes (where it is published)</label><input name="notes" maxlength="2000">
+    <label class="auth-check"><input type="checkbox" name="verified" value="1"> Verified on the organisation's own site</label>
+    <label>Verification note</label><input name="note" maxlength="512">
+    <div style="margin-top:8px"><button class="btn small primary" type="submit">Add channel</button></div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

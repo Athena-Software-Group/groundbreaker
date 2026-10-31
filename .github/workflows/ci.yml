@@ -1,0 +1,81 @@
+# CI for Aegis (GroundBreaker) — powered by Athena Software Group, Inc.
+# Runs on the demo fixture and synthetic test data only: PROVIDER_MODE=fixture, no provider keys.
+# A private denylist (AEGIS_DENYLIST) is not part of the repository: it is unset here, so pii_scan
+# runs its generic rules only.
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:   # manual "Run workflow" button
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: lint, tests, PII scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PROVIDER_MODE: fixture
+    steps:
+      # checkout v5 / setup-python v6 run on the Node 24 Actions runtime
+      - uses: actions/checkout@v5.0.0
+
+      - uses: actions/setup-python@v6.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Ruff
+        run: ruff check app tests scripts
+
+      - name: Pytest
+        run: pytest -q
+
+      - name: PII / secret scan (generic rules; a private denylist is not part of the repository)
+        run: python scripts/pii_scan.py
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v5.0.0
+        with:
+          fetch-depth: 0   # scan the full history, not just the tip
+
+      # The repo lives in an organisation, where gitleaks-action needs a paid licence, so CI runs the
+      # pinned gitleaks binary directly. The tarball is verified against the SHA-256 published in
+      # gitleaks_8.30.1_checksums.txt; the version matches the local check and the config syntax
+      # (per-rule [[rules.allowlists]]). --redact keeps secret values out of the job log, and no
+      # report artifact is uploaded.
+      - name: gitleaks (full history)
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          set -euo pipefail
+          tgz="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$tgz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$tgz"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$tgz" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git --no-banner --redact --config .gitleaks.toml .

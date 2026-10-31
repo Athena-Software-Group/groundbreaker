@@ -1,0 +1,45 @@
+{# Every run of the case (included by case/_tab_fund_flow.html). Context: runs (RunSummary list, newest first), run. #}
+<div class="panel">
+  <div class="ff-filters">
+    <h2>All runs <small>{{ runs | length }} versions · every run is kept; a re-run adds a version</small></h2>
+    <div class="spacer"></div>
+    {% if can('export') %}
+    <span class="ff-k">Listing</span>
+    <a class="btn small" href="/api/cases/{{ case.id }}/trace/runs/export.txt">.txt</a>
+    <a class="btn small" href="/api/cases/{{ case.id }}/trace/runs/export.csv">.csv</a>
+    <a class="btn small" href="/api/cases/{{ case.id }}/trace/runs/export.md">.md</a>
+    {% endif %}
+  </div>
+  <div class="ff-table-wrap">
+  <table class="ff-table">
+    <thead><tr><th>Run</th><th>Label</th><th>Status</th><th>Mode</th><th>Finished</th><th class="num">Hop</th><th class="num">Nodes</th><th class="num">Edges</th><th class="num">VASPs</th><th class="num">Traced</th><th class="num">At VASPs</th><th>Open</th>{% if can('export') %}<th>Download</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for s in runs %}
+    {% set prev = runs[loop.index] if loop.index < runs|length else none %}
+    <tr class="{{ 'ff-current' if run and s.id == run.id else '' }}">
+      <td><b>#{{ s.id }}</b></td>
+      <td>{{ s.label or '' }}{% if s.notes %} <span class="muted" title="{{ s.notes }}">✎</span>{% endif %}</td>
+      <td><span class="tag {{ 'green' if s.status == 'complete' else 'red' }}">{{ s.status }}</span></td>
+      <td>{{ s.provider_mode or 'default' }}</td>
+      <td class="mono">{{ s.at | dt }}</td>
+      <td class="num">{{ s.max_hop }}</td><td class="num">{{ s.nodes }}</td><td class="num">{{ s.edges }}</td><td class="num">{{ s.vasp_touchpoints }}</td>
+      <td class="num mono">{{ s.total_taint_usd | usd }}</td><td class="num mono">{{ s.vasp_taint_usd | usd }}</td>
+      <td class="ff-actions">
+        <a href="/cases/{{ case.id }}?tab=fund_flow&amp;run_id={{ s.id }}">graph</a>
+        <a href="/cases/{{ case.id }}?tab=fund_flow&amp;run_id={{ s.id }}&amp;view=movements">movements</a>
+        {% if prev %}<a href="/cases/{{ case.id }}?tab=fund_flow&amp;run_id={{ s.id }}&amp;view=compare&amp;base={{ prev.id }}&amp;head={{ s.id }}">diff vs #{{ prev.id }}</a>{% endif %}
+      </td>
+      {% if can('export') %}
+      <td class="ff-actions">
+        <a href="/api/cases/{{ case.id }}/trace/runs/{{ s.id }}/movements.txt">txt</a>
+        <a href="/api/cases/{{ case.id }}/trace/runs/{{ s.id }}/movements.csv">csv</a>
+        <a href="/api/cases/{{ case.id }}/trace/runs/{{ s.id }}/report.md">md</a>
+        <a href="/api/cases/{{ case.id }}/trace/runs/{{ s.id }}/report.docx">docx</a>
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>

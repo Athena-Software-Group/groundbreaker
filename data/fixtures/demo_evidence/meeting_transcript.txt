@@ -1,0 +1,9 @@
+SYNTHETIC DEMO ARTIFACT - fictional video-call transcript excerpt (case DEMO-2026-001).
+
+Call recorded by the victim, 2026-10-09 15:00 UTC, 18 minutes. Participants: Jordan Avery
+(Northbridge Analytics, Inc.) and a caller presenting as "Adrian Example, CFO" of Exempla Holding AG.
+
+00:02:10 Caller: We work only through our private settlement platform, for compliance reasons.
+00:05:45 Caller: The allocation is reserved for 72 hours. After that it goes to the next investor.
+00:11:30 Jordan Avery: Can we pay by bank wire instead?
+00:11:42 Caller: No. Stablecoin only, it settles the same day.

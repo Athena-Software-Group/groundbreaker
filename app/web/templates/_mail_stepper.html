@@ -1,0 +1,16 @@
+{# The guided send flow's stepper — owner: app/web/routes_mail.py. Included by mail_compose.html (steps:
+   mail_compose.compose_steps: 1 Recipients → 2 Letter → 3 Attachments → 4 Review & send, each with its state and a
+   one-line summary; js/mail.js keeps steps 1–3 current as the member edits) and mail_sending.html (every step done,
+   step 4 sending). Each step links to its section of the editor (`link`: false on the Sending… screen). #}
+<ol class="mail-stepper" id="mail-stepper" aria-label="Steps to send this e-mail">
+  {% for s in steps %}
+  <li class="mail-step is-{{ s.state }}" data-step="{{ s.key }}"{% if s.ready %} data-ready="{{ s.ready }}"{% endif %}{% if s.state == 'current' %} aria-current="step"{% endif %}>
+    {% if link %}<a href="#{{ s.anchor }}" class="mail-step-in">{% else %}<span class="mail-step-in">{% endif %}
+      <span class="mail-step-n" aria-hidden="true">{% if s.state == 'done' %}✓{% else %}{{ s.n }}{% endif %}</span>
+      <span class="mail-step-txt"><span class="mail-step-label"><span class="mail-sr">Step {{ s.n }}: </span>{{ s.label }}</span>
+        <span class="mail-step-state" data-step-state>{{ s.state_label }}</span>
+        <span class="mail-step-sum" data-step-sum>{{ s.summary }}</span></span>
+    {% if link %}</a>{% else %}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ol>

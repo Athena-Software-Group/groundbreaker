@@ -1,0 +1,60 @@
+{# Signature block. Context: sender (kind "athena": the case's sender profile; its signature_block, when set,
+   replaces the composed lines, one paragraph per line, every value Markdown-escaped by finalize) #}
+{% if sender.kind == "athena" %}
+Yours faithfully,
+
+{% if sender.signature_block %}
+{% for line in sender.signature_block.splitlines() if line.strip() %}
+{{ line.strip() }}
+
+{% endfor %}
+{% else %}
+{% if sender.signatory_name %}
+{{ sender.signatory_name }}
+
+{% endif %}
+{% if sender.signatory_title %}
+{{ sender.signatory_title }}
+
+{% endif %}
+{{ sender.firm }}, on behalf of {{ sender.on_behalf_of }}
+
+{% if sender.email %}
+{{ sender.email }}
+
+{% endif %}
+{% if sender.phone %}
+T. {{ sender.phone }}
+
+{% endif %}
+{% endif %}
+{% if sender.cc %}
+Cc: {{ sender.cc | join(', ') }}
+
+{% endif %}
+{% else %}
+Yours respectfully,
+
+{{ sender.contact }}
+
+{% if sender.firm %}
+{{ sender.firm }}
+
+{% endif %}
+{% if sender.address %}
+{{ sender.address }}
+
+{% endif %}
+{% if sender.phone %}
+T. {{ sender.phone }}
+
+{% endif %}
+{% if sender.email %}
+{{ sender.email }}
+
+{% endif %}
+{% if sender.cc %}
+Cc: {{ sender.cc | join(', ') }}
+
+{% endif %}
+{% endif %}

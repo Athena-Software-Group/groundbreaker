@@ -1,0 +1,155 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. KuCoin's Information Request System is for authorised law enforcement with proof of authority and a government-domain e-mail; requests are in English, signed or sealed (a digital signature / seal is refused), state the freeze duration (otherwise the account is unfrozen within 30 days of the freeze) and whether the user may be told. KuCoin EU (Austria) is a separate entity with its own LE inbox. Victims open a support ticket; KuCoin has reportedly required a formal LE case number before freezing.",
+  "key": "kucoin",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": null,
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "If a request is not clearly addressed to one KuCoin entity, list the possible entities. Cross-border requests attach the MLAT documents. Mark urgent requests 'URGENT REQUEST' in the subject. Identifiers (name, e-mail, phone, UID, TxIDs, addresses) go in copiable text (PDF, Word, Excel or the e-mail body), never as images only. The KuCoin EU LE inbox is not catalogued (each address needs its own review).",
+  "entities": [
+    {"key": "kucoin-global", "name": "KuCoin (global platform)", "source_ids": ["k1", "k2"]},
+    {"key": "kucoin-eu", "name": "KuCoin EU Exchange GmbH (KuCoin EU, MiCA CASP)", "jurisdiction": "AT", "separate": true,
+     "notes": "Authorised by the Austrian FMA under MiCA (Nov 2025); serves EEA residents except Malta. A reported 2026 restriction on its operations is unconfirmed.",
+     "source_ids": ["k3", "k6"]}
+  ],
+  "domains": {
+    "own": ["kucoin.com"],
+    "sibling": [
+      {"domain": "kucoin.eu", "entity": "kucoin-eu", "purpose": "KuCoin EU: law-enforcement requests by e-mail on this domain",
+       "source_ids": ["k3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+    ],
+    "vendor_portals": []
+  },
+  "channels": [
+    {
+      "key": "kucoin.request_system", "kind": "webform", "value": "https://www.kucoin.com/legal/requests", "purpose": "le_request",
+      "role_default": "to", "label": "KuCoin Information Request System (law enforcement)",
+      "notes": "Sign up or log in as an LE agency, pass the identity review, then submit. Authorised law-enforcement officials with proof of authority only. Aegis never registers or submits there: the officer does, with the pack.",
+      "source_url": "https://www.kucoin.com/legal/law-enforcement-request-guidelines",
+      "who": "le_only", "source_ids": ["k1", "k2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "kucoin.eu_le", "kind": "email", "value": null, "purpose": "le_request", "role_default": "to",
+      "label": "KuCoin EU law-enforcement inbox",
+      "notes": "An address on the kucoin.eu domain, for competent law-enforcement authorities after confirming the person is an existing KuCoin EU customer. Not catalogued until reviewed.",
+      "source_url": "https://www.kucoin.com/en-eu/support/48142946141295",
+      "who": "le_only", "source_ids": ["k3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "kucoin.ticket", "kind": "webform", "value": "https://www.kucoin.com/support/requests", "purpose": "general",
+      "role_default": "to", "label": "KuCoin support ticket (Submit a Ticket)",
+      "notes": "KuCoin's general support ticket form, linked from every support page. Whether a non-user can file without an account is not stated.",
+      "source_url": "https://www.kucoin.com/support/requests",
+      "who": "any", "source_ids": ["k2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "kucoin.le": {
+      "who": "le_only",
+      "notes": "KuCoin's LE channel is its Information Request System (kucoin.request_system); KuCoin EU: kucoin.eu_le.",
+      "source_ids": ["k1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "victim_report", "kind": "victim_report", "requester": ["victim", "pi", "counsel"], "entity": "kucoin-global",
+      "channel_keys": ["kucoin.ticket"],
+      "instrument": {"type": "none", "notes": "A police case number is effectively needed for any action (reported)."},
+      "evidence": ["incident_narrative", "tx_list_copyable", "receiving_account", "trace_report_run", "complaint_ref", "loa"],
+      "produces": ["prior_ticket_ref"],
+      "expected_replies": ["auto_reply", "acknowledged", "le_process_required", "hold_placed"],
+      "on_refusal": "le_freeze",
+      "timing": {"hold_days": 7, "deadlines": [
+        {"key": "restraint_lapses", "what": "hold_until", "days": 7, "starts": "hold_confirmed", "by": "le",
+         "action": "KuCoin's temporary restraint after a private report lasts 7 days: LE sends a signed or sealed document or freezing order through the Request System before it lapses, or the account is unfrozen.",
+         "source_ids": ["k5"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"}
+      ]},
+      "notes": "KuCoin reportedly told a project it needed a formal law-enforcement case number before freezing. It has also described proactive 'temporary restraining measures' (its own X post, found through search: x.com refuses fetches): a temporary hold of 7 days, never a legal freeze, lifted unless law enforcement sends a duly signed or sealed document or freezing order through the Request System before then. Get the officer's request in quickly.",
+      "source_ids": ["k4", "k5"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_freeze", "kind": "le_request", "requester": ["le"], "entity": "kucoin-global",
+      "channel_keys": ["kucoin.request_system"],
+      "instrument": {"type": "le_request", "signing": "not_digital", "language": ["en"],
+                     "notes": "An official request such as a subpoena, court order, warrant or equivalent, signed or sealed; a digital signature / seal is not accepted (a scanned signed copy may do). Documents and e-mails in English."},
+      "evidence": ["le_agency_identity", "le_letterhead_request", "tx_list_copyable", "receiving_account", "provider_ids",
+                   "trace_report_run", "freeze_duration_stmt", "non_disclosure_stmt", "english_version", "urgency_stmt"],
+      "timing": {"auto_lift_days": 30, "deadlines": [
+        {"key": "auto_unfreeze", "what": "auto_lift", "days": 30, "starts": "hold_confirmed", "by": "le",
+         "action": "Without a stated freeze duration KuCoin unfreezes the account within 30 days of the freeze: state the duration, or extend / serve a court order before then.",
+         "source_ids": ["k1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"}
+      ]},
+      "expected_replies": ["acknowledged", "info_requested", "frozen"], "outcomes": ["frozen"],
+      "on_refusal": "mlat",
+      "notes": "Proof of authority: photo evidence of the officer's authority, proof of authorisation and current position, a government-domain e-mail. Unless the request says otherwise, KuCoin tells the user the reason for a freeze: include a non-disclosure statement. Mark 'URGENT REQUEST' in the subject.",
+      "source_ids": ["k1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_records", "kind": "data_disclosure", "requester": ["le", "court"], "entity": "kucoin-global",
+      "channel_keys": ["kucoin.request_system"],
+      "instrument": {"type": "subpoena", "signing": "not_digital", "language": ["en"],
+                     "notes": "Subpoena, court order, warrant or equivalent, signed or sealed."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "provider_ids", "non_disclosure_stmt", "english_version"],
+      "expected_replies": ["acknowledged", "info_requested"],
+      "on_refusal": "mlat",
+      "notes": "Case by case; the data categories are not listed.",
+      "source_ids": ["k1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "mlat", "kind": "cross_border", "requester": ["le", "court"], "entity": "kucoin-global",
+      "channel_keys": ["kucoin.request_system"],
+      "instrument": {"type": "mlat", "signing": "not_digital", "language": ["en"],
+                     "notes": "Attach the Mutual Legal Assistance Treaty documents when cross-border law enforcement is involved."},
+      "evidence": ["domestic_order", "mlat_bundle", "tx_list_copyable", "freeze_duration_stmt", "english_version"],
+      "outcomes": ["frozen"],
+      "notes": "The guidelines name no issuing jurisdiction: when the agency's own request is refused as cross-border, add the MLAT bundle.",
+      "source_ids": ["k1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "eu_le_request", "kind": "le_request", "requester": ["le"], "entity": "kucoin-eu",
+      "channel_keys": ["kucoin.eu_le"],
+      "instrument": {"type": "le_request",
+                     "notes": "The requesting authority and, where available, a subpoena, court order, warrant or equivalent; a freeze states its reason with supporting documents. Handled under EU and national law."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "receiving_account", "provider_ids"],
+      "expected_replies": ["acknowledged", "info_requested", "frozen"], "outcomes": ["frozen"],
+      "notes": "First confirm the person is an existing KuCoin EU customer. Data is disclosed only to a competent authority and limited to what is needed. No response deadline; 'prompt processing' for freezes.",
+      "source_ids": ["k3"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "digital signature/seal is not accepted", "means": "info_requested", "instrument": "le_request", "path": "le_freeze",
+     "source_ids": ["k1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "within 30 days from the date of the freeze", "means": "hold_placed", "path": "le_freeze",
+     "source_ids": ["k1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "proof of authority", "means": "le_process_required", "instrument": "le_request",
+     "channel_key": "kucoin.request_system", "path": "le_freeze",
+     "source_ids": ["k1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "Mutual Legal Assistance Treaty", "means": "le_process_required", "instrument": "mlat", "path": "mlat",
+     "source_ids": ["k1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "temporary restraining measures", "means": "hold_placed", "path": "victim_report",
+     "source_ids": ["k5"], "basis": "R", "confidence": "L", "retrieved_at": "2026-10-20"},
+    {"phrase": "law enforcement case number", "means": "le_process_required", "instrument": "police_report", "path": "le_freeze",
+     "source_ids": ["k4"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "tickets": [
+    {"system": "kucoin_support", "regex": null, "source_ids": ["k2"], "basis": "I", "confidence": "L",
+     "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "k1", "title": "KuCoin Law Enforcement Request Guidelines (last updated Jul 2025)",
+     "url": "https://www.kucoin.com/legal/law-enforcement-request-guidelines", "retrieved_at": "2026-10-20"},
+    {"id": "k2", "title": "KuCoin Law Enforcement Requests form / Information Request System",
+     "url": "https://www.kucoin.com/legal/requests", "retrieved_at": "2026-10-20"},
+    {"id": "k3", "title": "KuCoin EU Law Enforcement Request Guidelines", "url": "https://www.kucoin.com/en-eu/support/48142946141295",
+     "retrieved_at": "2026-10-20"},
+    {"id": "k4", "title": "KuCoin News (syndicated): Shiba Inu hack victims allege team fails to pursue stolen funds on KuCoin",
+     "url": "https://www.kucoin.com/news/flash/shiba-inu-hack-victims-allege-team-fails-to-pursue-3m-stolen-funds-on-kucoin",
+     "retrieved_at": "2026-10-20"},
+    {"id": "k5", "title": "KuCoin on X (temporary restraining measures)", "url": "https://x.com/kucoincom/status/2043979158125195550",
+     "retrieved_at": "2026-10-20"},
+    {"id": "k6", "title": "CoinDesk: KuCoin's European arm wins MiCA licence in Austria",
+     "url": "https://www.coindesk.com/policy/2025/11/28/crypto-exchange-kucoin-s-european-arm-wins-mica-license-in-austria",
+     "retrieved_at": "2026-10-20"}
+  ]
+}

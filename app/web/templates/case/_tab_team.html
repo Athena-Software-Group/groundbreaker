@@ -1,0 +1,77 @@
+{# Team tab — owner: app/web/routes_team.py (team_tab).
+   Context: members, added_by {user id: User}, ROLES, admin_total, team_error, team_saved, invited,
+   one_time_password (only in the response to an invite), expired {member ids}, default_external_expiry, today #}
+{% set manage = can('manage_members') %}
+{% if one_time_password %}
+<div class="panel otp-panel" id="one-time-password">
+  <h2>Invitation created <small>{{ invited.display_name }} · {{ invited.email }}</small></h2>
+  <p>One-time password — give it to the user through a separate channel. It is shown <b>only now</b>; it is not stored in readable form and cannot be shown again.</p>
+  <div class="row"><code class="otp" data-team-otp>{{ one_time_password }}</code>
+    <button class="btn small" type="button" data-team-copy="one-time-password">Copy</button></div>
+</div>
+{% endif %}
+{% if team_error %}<div class="alert warning">{{ team_error }}</div>{% endif %}
+{% if team_saved %}<div class="alert info">Team updated.</div>{% endif %}
+{% if team_submitted %}<div class="alert info">{{ team_submitted }}</div>{% endif %}
+
+<div class="panel" id="team">
+  <div class="row">
+    <h2>Team <small>{{ members | length }} member(s) · {{ admin_total }} admin(s)</small></h2>
+    <div class="spacer"></div>
+    {% if can('view_audit') %}<a class="btn small" href="/cases/{{ case.id }}/audit">Audit log</a>{% endif %}
+    {% if current_user() and current_user().is_system_admin %}<a class="btn small" href="/admin/users">Users</a>{% endif %}
+  </div>
+  <div class="table-scroll">
+  <table class="team-table">
+    <thead><tr><th>Member</th><th>Role</th><th>Added</th><th>Expires</th>{% if manage %}<th class="right">Manage</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for m in members %}
+    {% set last_admin = m.role.value == 'admin' and admin_total <= 1 %}
+    <tr {% if m.id in expired %}class="team-expired"{% endif %}>
+      <td><b>{{ m.user.display_name }}</b>{% if m.user_id == access.user.id %} <span class="tag">you</span>{% endif %}{% if not m.user.is_active %} <span class="tag red">deactivated</span>{% endif %}
+        {% if not access.is_external %}<br><span class="muted mono">{{ m.user.email }}</span>{% endif %}</td>
+      <td><span class="tag {{ 'gold' if m.role.value == 'admin' else ('amber' if m.role.value == 'external' else '') }}">{{ m.role.value | replace('_', ' ') }}</span></td>
+      <td class="nowrap">{{ m.added_at | dt }}{% if m.added_by and added_by.get(m.added_by) %}<br><span class="muted">by {{ added_by[m.added_by].display_name }}</span>{% endif %}</td>
+      <td class="nowrap">{% if m.expires_at %}{{ m.expires_at | dt }}{% if m.id in expired %} <span class="tag red">expired</span>{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
+      {% if manage %}
+      <td class="right">
+        <form method="post" action="/cases/{{ case.id }}/team/members/{{ m.id }}" class="team-member-form" data-team-role-form>
+          {{ csrf_field() }}
+          <select name="role" aria-label="role" data-team-role>
+            {% for r in ROLES %}<option value="{{ r }}" {{ 'selected' if r == m.role.value else '' }} {{ 'disabled' if last_admin and r != 'admin' else '' }}>{{ r | replace('_', ' ') }}</option>{% endfor %}
+          </select>
+          <input type="date" name="expires_at" aria-label="expires" min="{{ today }}" max="{{ max_external_expiry }}" value="{{ m.expires_at.date().isoformat() if m.expires_at else '' }}" data-team-expiry {% if m.role.value != 'external' %}hidden{% endif %}>
+          <button class="btn small" type="submit">Save</button>
+        </form>
+        {% if not last_admin %}
+        <form method="post" action="/cases/{{ case.id }}/team/members/{{ m.id }}/remove" class="inline" data-team-confirm="Remove {{ m.user.display_name }} from this case?">
+          {{ csrf_field() }}<button class="btn small danger" type="submit">Remove</button>
+        </form>
+        {% else %}<span class="muted" title="promote another member to admin first">last admin</span>{% endif %}
+      </td>
+      {% endif %}
+    </tr>
+    {% else %}<tr><td colspan="{{ 5 if manage else 4 }}" class="muted">No members.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+{% if manage %}
+<div class="panel" id="team-add">
+  {% if may_invite %}<h2>Add or invite <small>an existing account is added; a new e-mail address creates an account with a one-time password</small></h2>
+  {% else %}<h2>Add a member <small>existing accounts only; a system administrator creates new accounts</small></h2>{% endif %}
+  <form method="post" action="/cases/{{ case.id }}/team/members" class="team-add" data-team-role-form>
+    {{ csrf_field() }}
+    <div><label for="team-email">E-mail</label><input id="team-email" name="email" type="email" required autocomplete="off"></div>
+    {% if may_invite %}<div><label for="team-name">Display name <span class="muted">(new accounts)</span></label><input id="team-name" name="display_name" autocomplete="off"></div>{% endif %}
+    <div><label for="team-role">Role</label>
+      <select id="team-role" name="role" data-team-role>
+        {% for r in ROLES %}<option value="{{ r }}" {{ 'selected' if r == 'investigator' else '' }}>{{ r | replace('_', ' ') }}</option>{% endfor %}
+      </select></div>
+    <div data-team-expiry hidden><label for="team-expiry">Expires <span class="muted">(external; default 30 days, at most {{ external_max_days }})</span></label><input id="team-expiry" type="date" name="expires_at" min="{{ today }}" max="{{ max_external_expiry }}" value="{{ default_external_expiry }}"></div>
+    <div><button class="btn primary" type="submit">Add to case</button></div>
+  </form>
+  <p class="muted small-print">Roles: <b>admin</b> manages the team, rules and audit log · <b>investigator</b> traces, drafts and sends letters, adds evidence · <b>read only</b> views everything except restricted content · <b>external</b> (e.g. an LE liaison) sees only items shared with externals and is time-boxed.</p>
+</div>
+{% endif %}

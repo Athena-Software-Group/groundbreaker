@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Aegis · Users{% endblock %}
+{% block content %}
+<div class="row case-head"><div><h1>Users</h1><div class="sub">System administration · {{ users | length }} account(s)
+  · <a href="/admin/audit">global audit log</a></div></div></div>
+{% if error %}<div class="alert warning">{{ error }}</div>{% endif %}
+{% if saved %}<div class="alert info">Saved.</div>{% endif %}
+{% if one_time_password %}
+<div class="panel otp-panel" id="one-time-password">
+  <h2>One-time password <small>for {{ otp_user.email }}</small></h2>
+  <p>Give it to the user through a separate channel. It is shown <b>only now</b> and is not stored in readable form.</p>
+  <div class="row"><code class="otp" data-team-otp>{{ one_time_password }}</code>
+    <button class="btn small" type="button" data-team-copy="one-time-password">Copy</button></div>
+</div>
+{% endif %}
+<div class="grid team-admin">
+<div class="panel">
+  <h2>New account</h2>
+  <form method="post" action="/admin/users" class="team-add">
+    {{ csrf_field() }}
+    <div><label for="u-email">E-mail</label><input id="u-email" name="email" type="email" required autocomplete="off"></div>
+    <div><label for="u-name">Display name</label><input id="u-name" name="display_name" required autocomplete="off"></div>
+    <div><label class="check"><input type="checkbox" name="system_admin"> system administrator</label></div>
+    <div><label class="check"><input type="checkbox" name="can_create_cases"> may open new cases</label></div>
+    <div><button class="btn primary" type="submit">Create with one-time password</button></div>
+  </form>
+</div>
+<div class="panel">
+  <div class="table-scroll">
+  <table>
+    <thead><tr><th>User</th><th>Status</th><th>Cases</th><th>Last sign-in</th><th></th></tr></thead>
+    <tbody>
+    {% for u in users %}
+    <tr>
+      <td><b>{{ u.display_name }}</b><br><span class="muted mono">{{ u.email }}</span>{% if u.id == me_id %} <span class="tag">you</span>{% endif %}</td>
+      <td>{% if u.is_system_admin %}<span class="tag gold">system admin</span>{% endif %}
+          {% if u.can_create_cases and not u.is_system_admin %}<span class="tag blue">case creator</span>{% endif %}
+          {% if u.is_active %}<span class="tag green">active</span>{% else %}<span class="tag red">deactivated</span>{% endif %}
+          {% if not u.password_hash %}<span class="tag">no password</span>{% endif %}</td>
+      <td>{% for m in u.memberships %}<a class="tag blue" href="/cases/{{ m.case_id }}?tab=team">{{ m.case.reference }} · {{ m.role.value | replace('_', ' ') }}</a>{% else %}<span class="muted">—</span>{% endfor %}</td>
+      <td class="nowrap">{{ u.last_login_at | dt }}</td>
+      <td class="right">
+        <form method="post" action="/admin/users/{{ u.id }}" class="team-user-actions">
+          {{ csrf_field() }}
+          <input name="display_name" value="{{ u.display_name }}" aria-label="display name">
+          <label class="check"><input type="checkbox" name="system_admin" {{ 'checked' if u.is_system_admin else '' }}> sys admin</label>
+          <label class="check"><input type="checkbox" name="can_create_cases" {{ 'checked' if u.can_create_cases else '' }}> opens cases</label>
+          <label class="check"><input type="checkbox" name="is_active" {{ 'checked' if u.is_active else '' }}> active</label>
+          <label class="check"><input type="checkbox" name="reset_password"> new one-time password</label>
+          <button class="btn small" type="submit">Save</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+</div>
+{% endblock %}

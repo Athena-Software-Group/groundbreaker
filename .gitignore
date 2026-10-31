@@ -1,0 +1,104 @@
+# --- Python / tooling -----------------------------------------------------
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+.coverage.*
+dist/
+build/
+*.egg-info/
+.DS_Store
+
+# --- Local config and secrets ----------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# --- Local databases --------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+.test_aegis.db
+
+# --- Case data: NEVER in git (see docs/data-handling.md) -------------------
+# Case fixtures, evidence, letters and exports live outside the repository
+# (AEGIS_FIXTURE_PATH / the case vault). These entries are a second line of
+# defence in case something is copied into the working tree by mistake.
+deliverables/
+data/cases/
+data/private/
+vault/
+evidence/
+case-data/
+*-private/
+exports/
+denylist*.txt
+masking-map*.json
+# Only the demo fixture may be tracked; any other fixture copied here stays untracked.
+data/fixtures/*
+!data/fixtures/demo_case.json
+# the synthetic demo evidence files (fictional text; tests keep them in sync with the fixture)
+!data/fixtures/demo_evidence/
+data/fixtures/demo_evidence/*
+!data/fixtures/demo_evidence/*.txt
+!data/fixtures/demo_evidence/fixture-section.json
+
+# Document, mail, image, video and archive formats are case-evidence shaped.
+*.docx
+*.doc
+*.pdf
+*.eml
+*.msg
+*.heic
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.mov
+*.zip
+
+# ...except the generated sample letters we ship on purpose. Re-include narrowly (path AND
+# extension): a broad `!dir/**` would also re-include .env, keys, databases and evidence there,
+# because in .gitignore the last matching pattern wins. Brand and static assets are .svg/.css/.js
+# and need no re-include.
+!docs/samples/stop-orders/[0-9][0-9]-*.docx
+
+# --- Hard rules, repeated AFTER the re-includes so no exception above can override them -----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+deliverables/
+vault/
+evidence/
+exports/
+case-data/
+*-private/
+denylist*.txt
+masking-map*.json
+*.doc
+*.pdf
+*.eml
+*.msg
+*.heic
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.mov
+*.zip

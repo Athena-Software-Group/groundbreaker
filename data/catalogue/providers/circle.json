@@ -1,0 +1,164 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. Circle acts on a US or French authority or court; an Italian (or other non-US/FR) authority goes cross-border: an EU freezing order / EIO to France (Circle's EU entity is a French-licensed e-money institution), an MLAT to the US, or US counsel. No return by burn-and-reissue.",
+  "key": "circle",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": "US",
+  "issuer_jurisdictions": ["US", "FR"],
+  "ground_truth": "onchain",
+  "notes": "Frozen is true only when the Blacklisted(address) event / isBlacklisted() of the native USDC or EURC contract says so (app/freeze). Bridged variants (e.g. USDC.e) are not controlled by Circle. Circle states it cannot burn and reissue USDC held in third-party wallets, so no funds_returned outcome is modelled; a general freeze-and-mint arrangement with US federal prosecutors for victims is reported (s6, medium), not documented by Circle.",
+  "entities": [
+    {"key": "circle-us", "name": "Circle (US entity)", "jurisdiction": "US", "source_ids": ["s2"]},
+    {"key": "circle-eu", "name": "Circle EU entity (French-licensed e-money institution, EURC / USDC under MiCA)",
+     "jurisdiction": "FR", "notes": "Medium confidence: from Circle's MiCA white paper.", "source_ids": ["s7"]}
+  ],
+  "domains": {"own": ["circle.com"], "sibling": [], "vendor_portals": []},
+  "channels_ext": {
+    "circle.blocklisting": {
+      "who": "counsel_with_order", "purpose": "freeze",
+      "notes": "Freeze requests for addresses holding native USDC, as named by Circle's own compliance@ auto-reply. Circle acts on a US or French authority or court order: a private notice here flags the addresses and draws the 'court order required' answer.",
+      "source_ids": ["o1", "s1"], "basis": "O", "confidence": "M", "retrieved_at": "2026-10"
+    },
+    "circle.subpoenas": {
+      "who": "counsel_with_order",
+      "notes": "Subpoenas and legal process for Circle records (named by the same auto-reply).",
+      "source_ids": ["o1"], "basis": "O", "confidence": "M", "retrieved_at": "2026-10"
+    },
+    "circle.contact": {
+      "who": "any", "source_ids": ["s8"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "private_notice", "kind": "private_notice", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["circle.blocklisting"],
+      "instrument": {"type": "none", "notes": "A police / IC3 reference strengthens the notice; it is not an instrument."},
+      "evidence": ["tx_list_copyable", "trace_report_run", "balance_reading", "native_vs_bridged_stmt", "complaint_ref",
+                   "loa", "non_disclosure_stmt"],
+      "expected_replies": ["auto_reply", "redirected", "le_process_required"],
+      "on_refusal": "court_order_us_fr",
+      "notes": "Expect a refusal or 'court order required': Circle acts only when legally compelled through lawful process. The value is the early flag while the funds sit, and the exact instrument and channel it names.",
+      "source_ids": ["s3", "s4", "s5"], "basis": "R", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_urgent", "kind": "le_request", "requester": ["le"], "entity": "circle-us",
+      "channel_keys": ["circle.blocklisting"],
+      "instrument": {"type": "le_request", "issuer_jurisdictions": ["US", "FR"],
+                     "notes": "Policy exception: an urgent request by a US or French authority pending a court order of competent jurisdiction."},
+      "evidence": ["le_agency_identity", "tx_list_copyable", "balance_reading", "urgency_stmt", "native_vs_bridged_stmt"],
+      "expected_replies": ["le_process_required", "frozen"], "outcomes": ["frozen"],
+      "on_refusal": "court_order_us_fr",
+      "notes": "Policy Part 3, exception 3: Circle 'may block individual addresses in response to (i) certain urgent law enforcement requests pending a valid court order from a court of competent jurisdiction'. The exception names no country: the US/FR limit is inferred from the policy's US or French courts. Prosecutors report Circle denied freeze requests made without a court order (s5): treat as discretionary and rarely granted.",
+      "source_ids": ["s1", "s5"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "court_order_us_fr", "kind": "court_order", "requester": ["le", "court", "counsel"],
+      "channel_keys": ["circle.blocklisting", "circle.subpoenas"],
+      "instrument": {"type": "us_or_fr_court_order", "issuer_jurisdictions": ["US", "FR"],
+                     "notes": "An order of a US court of competent jurisdiction (the policy names Delaware or Massachusetts) or a French court; private counsel can obtain one (US TRO / attachment). Circle 'reserves all rights to object' to an order it finds objectionable. Policy Part 3 (exception 2) also accepts another governmental authority with jurisdiction over Circle. Aegis advice: name each address precisely (over-broad orders have caused wrongful freezes)."},
+      "evidence": ["court_order", "tx_list_copyable", "trace_report_run", "balance_reading", "native_vs_bridged_stmt"],
+      "expected_replies": ["frozen"], "outcomes": ["frozen"],
+      "notes": "Fast once a valid order is served (same day in reported cases). Orders of other US state courts have been complied with in reported cases (a Wisconsin county court freeze, Aug 2025, s6: reported, medium) but Circle may object to them: prefer a Delaware or Massachusetts court, or a federal one there. A later burn-and-reissue warrant was refused. Over-broad orders have caused wrongful freezes: name addresses precisely.",
+      "source_ids": ["s1", "s2", "s6", "s9"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "eu_freezing_order_fr", "kind": "cross_border", "requester": ["le", "court"], "entity": "circle-eu",
+      "instrument": {"type": "eu_freezing_order", "issuer_jurisdictions": ["FR"],
+                     "notes": "An EU judicial authority (e.g. an Italian PM / GIP) issues a Reg. (EU) 2018/1805 freezing certificate to France, where Circle's EU entity is licensed; the French authority's order is then one Circle acts on."},
+      "evidence": ["domestic_order", "trace_report_run", "tx_list_copyable", "balance_reading", "native_vs_bridged_stmt",
+                   "urgency_stmt"],
+      "timing": {"deadlines": [
+        {"key": "recognition", "what": "recognise_by", "hours": 48, "starts": "certificate_received", "by": "court",
+         "action": "Only when the certificate states that immediate freezing is necessary (Reg. 2018/1805 Art. 9(3)): the French executing authority decides on recognition within 48 hours of receipt. Otherwise there is no fixed limit, only 'without delay' (Art. 9(1)): for live funds the issuing PM ticks immediate freezing.",
+         "source_ids": ["e1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+        {"key": "execution", "what": "execute_by", "hours": 48, "starts": "recognition", "by": "court",
+         "action": "The executing authority takes the concrete freezing measures within 48 hours of the recognition decision (Art. 9(4)), whether or not immediate freezing was certified; only the 48-hour recognition limit depends on that (Art. 9(3)).",
+         "source_ids": ["e1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"}
+      ]},
+      "outcomes": ["frozen"],
+      "notes": "Inferred route: the policy names French authorities; the EU entity's French licence is medium confidence. Not for civil proceedings.",
+      "source_ids": ["s1", "s7", "e1"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "eio_fr", "kind": "cross_border", "requester": ["le", "court"], "entity": "circle-eu",
+      "instrument": {"type": "eio", "issuer_jurisdictions": ["FR"],
+                     "notes": "European Investigation Order to France for Circle EU records."},
+      "evidence": ["domestic_order", "tx_list_copyable"],
+      "notes": "Evidence only (records), not a freeze.",
+      "source_ids": ["s7", "e1"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "mlat_us", "kind": "cross_border", "requester": ["le", "court"], "entity": "circle-us",
+      "instrument": {"type": "mlat", "issuer_jurisdictions": ["US"],
+                     "notes": "A foreign court order pending completion of the MLAT process is a policy exception (medium confidence)."},
+      "evidence": ["domestic_order", "mlat_bundle", "trace_report_run", "tx_list_copyable", "balance_reading"],
+      "outcomes": ["frozen"],
+      "notes": "Policy Part 3, exception 3 (iii): Circle may block addresses on 'certain court orders pending completion of the Mutual Legal Assistance Treaty process'. MLAT averaged about 10 months in 2013-14 data (old): too slow alone for live funds; pair it with US counsel or an EU freezing order.",
+      "source_ids": ["s1", "m1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "data_disclosure", "kind": "data_disclosure", "requester": ["le", "court", "counsel"],
+      "channel_keys": ["circle.subpoenas"],
+      "instrument": {"type": "subpoena"},
+      "evidence": ["court_order", "tx_list_copyable"],
+      "notes": "Inferred: only Circle account (Circle Mint) customers are onboarded with KYC under the USDC terms; self-custody holders have none.",
+      "source_ids": ["s2"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "release", "kind": "release", "requester": ["le", "court"],
+      "instrument": {"type": "judicial_decision",
+                     "notes": "Formal confirmation from the authority or court that ordered the block that it is lifted."},
+      "notes": "Lifting shows as UnBlacklisted on-chain. Restitution goes through the court proceedings, not a reissue.",
+      "source_ids": ["s1", "s6"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "court order", "means": "le_process_required", "instrument": "us_or_fr_court_order", "path": "court_order_us_fr",
+     "source_ids": ["s4", "s5"], "basis": "R", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "U.S. or French", "means": "le_process_required", "instrument": "us_or_fr_court_order", "path": "court_order_us_fr",
+     "source_ids": ["s1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "court of competent jurisdiction", "means": "le_process_required", "instrument": "court_order",
+     "path": "court_order_us_fr", "source_ids": ["s1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "legally compelled", "means": "le_process_required", "instrument": "court_order", "path": "court_order_us_fr",
+     "source_ids": ["s3"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "Delaware or Massachusetts", "means": "le_process_required", "instrument": "us_or_fr_court_order",
+     "path": "court_order_us_fr", "source_ids": ["s1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "reserves all rights to object", "means": "le_process_required", "instrument": "us_or_fr_court_order",
+     "path": "court_order_us_fr", "source_ids": ["s1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "Mutual Legal Assistance Treaty", "means": "le_process_required", "instrument": "mlat", "path": "mlat_us",
+     "source_ids": ["s1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "circleblocklisting@circle.com", "means": "redirected", "channel_key": "circle.blocklisting",
+     "source_ids": ["o1"], "basis": "O", "confidence": "M", "retrieved_at": "2026-10"}
+  ],
+  "tickets": [],
+  "sources": [
+    {"id": "s1", "title": "Circle Stablecoin Access Denial Policy (PDF)",
+     "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/Circle%20Stablecoin%20Access%20Denial%20Policy_pdf.pdf",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s2", "title": "Circle USDC Terms", "url": "https://www.circle.com/legal/usdc-terms", "retrieved_at": "2026-10-20"},
+    {"id": "s3", "title": "Circle blog: Why Open Systems Need Lawful Accountability",
+     "url": "https://www.circle.com/blog/when-open-systems-are-tested-accountability-rule-of-law-and-the-work-ahead",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s4", "title": "CoinDesk: Circle CEO says USDC freezes require legal orders",
+     "url": "https://www.coindesk.com/business/2026/04/13/circle-ceo-says-he-won-t-freeze-usdc-without-a-court-order-even-as-hackers-walk-away-with-millions",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s5", "title": "ICIJ: Circle rebuffed efforts to help scam victims, police say",
+     "url": "https://www.icij.org/investigations/coin-laundry/crypto-giant-circle-rebuffed-efforts-to-help-scam-victims-police-say/",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s6", "title": "Bitcoin.com News: Circle accused by New York and Wisconsin prosecutors of hindering USDC recovery",
+     "url": "https://news.bitcoin.com/circle-accused-by-new-york-and-wisconsin-prosecutors-of-hindering-usdc-recovery-for-scam-victims/",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s7", "title": "Circle MiCA USDC white paper", "url": "https://www.circle.com/legal/mica-usdc-whitepaper",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s8", "title": "Circle contact-us page", "url": "https://www.circle.com/contact-us", "retrieved_at": "2026-10-20"},
+    {"id": "s9", "title": "AMLBot: Circle froze 16 business hot wallets (sealed SDNY civil case)",
+     "url": "https://blog.amlbot.com/circle-froze-16-business-hot-wallets-including-a-blockchain-bridge-smart-contract/",
+     "retrieved_at": "2026-10-20"},
+    {"id": "e1", "title": "Regulation (EU) 2018/1805 on the mutual recognition of freezing and confiscation orders",
+     "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=celex%3A32018R1805", "retrieved_at": "2026-10-20"},
+    {"id": "m1", "title": "DOJ OIG audit of the handling of incoming MLA requests (21-097)",
+     "url": "https://oig.justice.gov/sites/default/files/reports/21-097.pdf", "retrieved_at": "2026-10-20"},
+    {"id": "o1", "title": "Circle compliance inbox auto-reply (observed auto-reply)", "observed": true,
+     "retrieved_at": "2026-10"}
+  ]
+}

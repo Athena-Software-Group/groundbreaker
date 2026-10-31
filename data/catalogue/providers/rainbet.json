@@ -1,0 +1,66 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced; LOW confidence throughout: rainbet.com refused automated reads (HTTP 403), so the facts come from search snippets of its own pages and from secondary sources. No law-enforcement channel is published: rainbet.le stays null. A compliance alias without a public source is never catalogued.",
+  "key": "rainbet",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": null,
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "Custodial crypto casino, so it can restrict, freeze or close accounts: its terms ask for KYC documents with 72 hours to respond, verification can take up to 7 business days, and failed KYC or falsified documents lead to closure and forfeiture. Sources disagree on the operator: the AML page names RBGAMING N.V. with a Curacao office, a review names an Anjouan licence and a different company name. The Comoros government calls the Anjouan licensing bodies fictitious, so a regulator complaint is weak.",
+  "entities": [
+    {"key": "rbgaming", "name": "RBGAMING N.V. (named as operator on the AML page)", "jurisdiction": null,
+     "notes": "Registration and licence details conflict between sources (Curacao office vs Anjouan licence).",
+     "source_ids": ["s3", "s4"]}
+  ],
+  "domains": {"own": ["rainbet.com"], "sibling": [], "vendor_portals": []},
+  "channels": [
+    {
+      "key": "rainbet.support", "kind": "email", "value": null, "purpose": "compliance", "role_default": "to",
+      "label": "Support desk (named on the AML and responsible-gambling pages for AML / KYC enquiries)",
+      "notes": "A 'support' alias on rainbet.com, seen only in search snippets of the AML page (the site refused automated reads): not a catalogue local part, so add it as a case channel after checking the page in a browser. Complaints escalate to a Compliance Manager (unconfirmed).",
+      "source_url": "https://rainbet.com/aml", "who": "any",
+      "source_ids": ["s1"], "basis": "D", "confidence": "L", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "rainbet.le": {
+      "who": "le_only",
+      "notes": "No law-enforcement channel is published. Leave null.",
+      "source_ids": ["s1", "s2"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "private_notice", "kind": "private_notice", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["rainbet.support"],
+      "instrument": {"type": "none", "notes": "A courtesy request; cite the police / IC3 reference."},
+      "evidence": ["receiving_account", "tx_list_copyable", "trace_report_run", "complaint_ref", "loa",
+                   "non_disclosure_stmt"],
+      "on_refusal": "le_request",
+      "notes": "Ask for a risk-control hold on the account that received the funds and preservation of its KYC and transaction records. No third-party victim process is published: any hold is discretionary. The site uses Elliptic screening and keeps KYC records 10 years after closure (snippets).",
+      "source_ids": ["s1", "s2"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_request", "kind": "le_request", "requester": ["le"], "channel_keys": ["rainbet.support"],
+      "instrument": {"type": "le_request"},
+      "evidence": ["le_agency_identity", "receiving_account", "tx_list_copyable"],
+      "notes": "Undocumented: no LE process is published. The AML policy says the AML compliance officer files a suspicious activity report with the relevant FIU where necessary (snippet).",
+      "source_ids": ["s1", "s3"], "basis": "I", "confidence": "L", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [],
+  "tickets": [],
+  "sources": [
+    {"id": "s1", "title": "Rainbet AML policy (site refused automated reads; search snippets)", "url": "https://rainbet.com/aml",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s2", "title": "Rainbet Terms and Conditions (search snippets)", "url": "https://rainbet.com/terms",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s3", "title": "Rainbet AML page on the dev host (search snippet)", "url": "https://dev.rainbet.com/aml",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s4", "title": "casinos.org: Rainbet review (operator and licence details)", "url": "https://casinos.org/rainbet/",
+     "retrieved_at": "2026-10-20"},
+    {"id": "s5", "title": "casino.org: Comoros calls Anjouan licensing bodies fictitious",
+     "url": "https://www.casino.org/news/comoros-calls-anjouan-licensing-bodies-fictitious-seeks-uk-assistance/",
+     "retrieved_at": "2026-10-20"}
+  ]
+}

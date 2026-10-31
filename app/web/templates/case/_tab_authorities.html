@@ -1,0 +1,216 @@
+{# Authorities tab — owner: app/web/routes_authorities.py (authorities_tab).
+   Context: authorities (app.domain.correspondence.Authority), unassigned, run, cands, orders, now,
+   order_state(o), hold_state(o), response_due(o), order_groups ([(stop order, earlier superseded drafts)], newest first:
+   app.blocks.freeze_board.order_groups), board (app.blocks.freeze_board.Board | None), board_flash ({drafted, skipped,
+   notices} | None), dup_orders ({stop order id: the board's duplicate flag}), block_status (the Block status column from the board's rows, or None: the Jinja global then),
+   mask (desk.ContactMask: contact details and complaint references in subjects, masked below manage_le_contacts). Externals: only authorities with correspondence shared with them.
+   E-mail desk: sender_profile (SenderProfile | None; investigators and up), mail_review_count (case admins),
+   mail_sync_flash ((text, is_warning) | None: the result of "Check mailbox now"), mail_inbound_problem (why
+   "Check mailbox now" is disabled, or None), mail_awaiting (prepared e-mails waiting for Send; investigators and up),
+   mail_manual (AEGIS_MAIL_TRANSPORT=manual, "Draft — you send": a person sends from Outlook and imports the reply). #}
+{% macro order_tag(o) -%}
+{%- set st = order_state(o) -%}
+<span class="tag {{ {'draft':'amber','sent':'blue','acknowledged':'blue','frozen':'green','declined':'red','released':'gold','superseded':''}.get(st, '') }}">{{ st }}</span>
+{%- endmacro %}
+{# a timestamp that may break between the date and the time (never inside either), so the stop-order table fits
+   at 1280 px; dt gives "%d %b %Y %H:%M UTC", the date part always 11 characters #}
+{% macro dt_wrap(v) -%}
+{%- if v %}{% set s = v | dt %}<span class="nowrap">{{ s[:11] }}</span> <span class="nowrap">{{ s[12:] }}</span>{% else %}—{% endif -%}
+{%- endmacro %}
+
+{# a board step's button: a POST form (the generator) or a link; only for a member whose role allows it #}
+{% macro fb_button(s, primary=False) -%}
+{%- if s.label and (s.perm == 'pack' and board.can_pack or s.perm != 'pack' and can(s.perm)) -%}
+{%- if s.post -%}<form method="post" action="{{ s.post }}" class="inline">{{ csrf_field() }}{% for k, v in s.fields.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}<button class="btn small{{ ' primary' if primary }}" type="submit">{{ s.label }}</button></form>
+{%- elif s.href -%}<a class="btn small{{ ' primary' if primary }}" href="{{ s.href | mail_return('freeze') }}">{{ s.label }}</a>{%- endif -%}
+{%- endif -%}
+{%- endmacro %}
+
+{# one board row (the Freeze & stop-order panel) #}
+{% macro fb_row(t, gkey) -%}
+    <tr id="fb-{{ t.key }}" class="fb-row fb-{{ gkey }}">
+      <td class="fb-who"><b>{% if t.authority %}<a href="/cases/{{ case.id }}/authorities/{{ t.key }}">{{ t.name }}</a>{% else %}{{ t.name }}{% endif %}</b>
+        <div class="muted fb-sub">{{ t.category | replace('_', ' ') }}{% if t.jurisdiction %} · {{ t.jurisdiction }}{% endif %}{% if t.kind %} · {{ t.kind | replace('_', ' ') }}{% endif %}</div>
+        {% for o in t.owners[:2] %}<div class="muted fb-owner" title="who owns this wallet (owner identification: the Recovery plan's Who owns these wallets)">owner: {{ mask.text(o.text) }}</div>{% endfor %}{% if t.owners | length > 2 %}<div class="muted fb-owner">+{{ t.owners | length - 2 }} more wallet{{ 's' if t.owners | length > 3 }}</div>{% endif %}
+        {% if t.rationale or t.identifiers or t.earlier or t.basis %}
+        <details class="fb-details"><summary>details</summary>
+          {% if t.basis %}<div class="fb-basis">{{ mask.text(t.basis) }}</div>{% endif %}
+          {% for r in t.rationale %}<div class="muted">• {{ r }}</div>{% endfor %}
+          {% for i in t.identifiers %}<div class="mono fb-ident" title="{{ i.address }}">{{ i.chain }} · {{ i.address[:10] }}…{{ i.address[-4:] }} <span class="muted">{{ i.address_type }}{% if i.taint_usd %} · {{ i.taint_usd | usd }}{% endif %}</span></div>{% endfor %}
+          {% if t.earlier %}<div class="fb-earlier-head muted">Other requests</div>{% for r in t.earlier %}<div class="fb-req"><a href="{{ r.href }}" class="mono">{{ r.no }}</a> <span class="bk-badge bk-{{ r.tone }}">{{ mask.text(r.status) }}</span>{% if r.at %} <span class="muted">{{ r.at | dt }}</span>{% endif %}</div>{% endfor %}{% endif %}
+        </details>
+        {% endif %}
+      </td>
+      <td class="right fb-money">
+        {% if t.owner_led and t.value %}<div title="the newly identified wallet the step asks about (the Recovery plan's owner move){% if t.basis %}: {{ mask.text(t.basis) }}{% endif %} (the basis is under details)"><b>{{ t.value | usd }}</b></div>{% if t.traced_usd %}<div class="muted" title="traced into the request's wallets: an upper bound">request: up to {{ t.traced_usd | usd }} traced</div>{% endif %}
+        {% elif t.move and t.move.moved_on and not t.value %}{% if t.traced_usd %}<div class="muted" title="what the trace put into the wallets, an upper bound: the trace saw it leave them, so nothing is counted here (the Recovery plan's value)">received up to {{ t.traced_usd | usd }}</div>{% endif %}<div><b>moved on</b>: {{ t.move.moved_on | join(', ') }} (balance unconfirmed: read it on-chain)</div>
+        {% elif t.traced_usd %}<div title="traced into this target: an upper bound">up to <b>{{ t.traced_usd | usd }}</b> traced</div>{% elif t.value %}<div><b>{{ t.value | usd }}</b></div>{% else %}<div class="muted">no funds traced</div>{% endif %}
+        {% set oc = t.onchain %}{% if oc %}
+        {% if oc.read %}<div class="fb-oc">on-chain now: {{ oc.usd | usd }} not frozen{% if oc.frozen_usd %} · <span class="fb-ok">{{ oc.frozen_usd | usd }} frozen</span>{% endif %}{% if oc.checked_at %}<br><span class="muted">checked {{ oc.checked_at | dt }}</span>{% endif %}{% if oc.unread %}<br><span class="muted">{{ oc.unread }} wallet{{ 's' if oc.unread != 1 }} not read</span>{% endif %}</div>
+        {% else %}<div class="muted fb-oc">not read on-chain yet</div>{% endif %}
+        {% endif %}
+        {% if t.held %}<div class="fb-ok">{{ t.held }}</div>{% endif %}
+      </td>
+      <td class="fb-status"><span class="bk-badge bk-{{ t.tone }}">{{ t.status_label }}</span>
+        {% if t.detail %}<div class="fb-detail">{{ mask.text(t.detail) }}</div>{% endif %}
+        {% set r = t.deciding %}{% if r %}<div class="fb-req muted" title="the request this row's status comes from">request <a href="{{ r.href }}" class="mono">{{ r.no }}</a> · {{ mask.text(r.status) }}{% if t.earlier %} <span title="other requests: open details">+{{ t.earlier | length }} other{{ 's' if t.earlier | length != 1 }}</span>{% endif %}</div>{% endif %}
+      </td>
+      <td class="fb-next">
+        {% if board.can_act %}{{ fb_button(t.step, True) }}{% endif %}
+        {% if t.step.text %}<div class="fb-text{{ ' muted' if board.can_act and t.step.label }}">{{ mask.text(t.step.lead) }}{% if t.step.more %}<details class="fb-more"><summary>more</summary>{{ mask.text(t.step.more) }}</details>{% endif %}</div>{% endif %}
+        {% if board.can_act and t.extra %}<div class="fb-extra">{% for s in t.extra %}{{ fb_button(s) }} {% endfor %}</div>{% endif %}
+        {% for d in t.pointless %}
+        <div class="alert warning fb-dup fb-pointless">{{ d.text }}
+          {% if board.can_discard and not d.busy %}<form method="post" action="{{ d.post }}" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" title="discard draft {{ d.no }}{% if d.prepared %} and cancel prepared e-mail #{{ d.prepared }}{% endif %} (audited)">Discard</button></form>{% elif not board.can_discard %}<span class="muted">(a case admin can discard it)</span>{% endif %}
+        </div>
+        {% endfor %}
+        {% for d in t.duplicates %}
+        <div class="alert warning fb-dup">{{ d.text }}
+          {% if board.can_discard %}<form method="post" action="/cases/{{ case.id }}/stop-orders/{{ d.order_id }}/discard" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" title="supersede draft {{ d.no }}{% if d.prepared %} and cancel prepared e-mail #{{ d.prepared }}{% endif %} (audited)">Discard</button></form>{% else %}<span class="muted">(a case admin can discard it)</span>{% endif %}
+        </div>
+        {% endfor %}
+      </td>
+      <td class="nowrap fb-due">{% if t.deadline %}{% if t.deadline < now %}<span class="tag red">passed</span><br>{% endif %}{{ dt_wrap(t.deadline) }}<br><span class="muted">{{ t.deadline_label }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+    </tr>
+{%- endmacro %}
+
+{% if not access.is_external and can('view_restricted') %}
+{% if mail_sync_flash %}<div class="alert {{ 'warning' if mail_sync_flash[1] else 'info' }}" role="status" style="margin-bottom:10px">{{ mail_sync_flash[0] }}{% if mail_review_count %} <a href="/cases/{{ case.id }}/mail/review">Review now</a>{% endif %}</div>{% endif %}
+<div class="row mail-tabline" style="margin-bottom:10px;gap:10px;flex-wrap:wrap;align-items:center">
+  <span class="muted" style="font-size:var(--fs-sm)">{% if sender_profile %}Sender profile: <b>{{ sender_profile.org_name }}</b> on behalf of <b>{{ sender_profile.on_behalf_of }}</b>{% else %}No sender profile: letters are signed with the PI-firm block{% endif %} · <a href="/cases/{{ case.id }}/sender-profile">{{ 'edit' if can('manage_sender_profile') else 'view' }}</a> · <a href="/directory">directory</a></span>
+  <span class="spacer"></span>
+  {% if can('log_correspondence') %}<a class="btn small" href="/cases/{{ case.id }}/mail/import" title="upload a reply saved from Outlook (.eml or .msg); it waits on Mail to review">Import reply</a>{% endif %}
+  {% if can('triage_mail') %}
+  {% if mail_review_count %}<a class="btn small" href="/cases/{{ case.id }}/mail/review">Mail to review ({{ mail_review_count }})</a>{% endif %}
+  {% if mail_manual and mail_inbound_problem %}{# "Draft — you send": replies come in through Import reply #}
+  {% elif mail_inbound_problem %}<button class="btn small" type="button" disabled title="not available: {{ mail_inbound_problem }}">Check mailbox now</button><span class="muted mail-off-hint">Inbound mail: {{ mail_inbound_problem }}</span>
+  {% else %}<form method="post" action="/cases/{{ case.id }}/mail/sync" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" title="read new replies from the case mailbox now">Check mailbox now</button></form>{% endif %}
+  {% endif %}
+</div>
+{% if mail_awaiting %}
+<div class="alert warning mail-awaiting" id="mail-awaiting" role="status">
+  {% if mail_manual %}<b>E-mail awaiting send from Outlook ({{ mail_awaiting | length }})</b>{% if not can('send_email') %} · a case admin sends it from the investigations mailbox and records it as sent{% endif %}:
+  {% else %}<b>E-mail awaiting Send ({{ mail_awaiting | length }})</b>{% if not can('send_email') %} · a case admin presses Send{% endif %}:{% endif %}
+  {% for m in mail_awaiting %}<a href="/cases/{{ case.id }}/mail/messages/{{ m.id }}">e-mail #{{ m.id }} for letter #{{ m.correspondence_id }}</a> <span class="muted">(valid until {{ m.expires_at | dt }})</span>{{ ' · ' if not loop.last }}{% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{# block status column: app/blocks (owner app/web/routes_blocks.py, Jinja global block_status_by_authority); not for externals #}
+{% if block_status is defined and block_status is not none %}{% set bks = block_status %}
+{% else %}{% set bks = block_status_by_authority(case, access) if block_status_by_authority is defined and not access.is_external else none %}{% endif %}
+{% if bks is not none %}<link rel="stylesheet" href="/static/css/blocks.css">{% endif %}
+<div class="panel auth-list" id="authorities" style="margin-bottom:14px">
+  <h2>Authorities &amp; counterparties <small>{{ authorities | length }} · every counterparty engaged on the case (stop orders, correspondence, LE contacts, complaints, PI firm) plus the services the latest trace{% if run %} (#{{ run.id }}){% endif %} reaches</small></h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Authority</th><th>Type</th><th>Last contact</th><th>Open stop orders</th>{% if bks is not none %}<th>Block status <a class="bk-th-link" href="/cases/{{ case.id }}/blocks">report</a></th>{% endif %}<th>Response due</th><th class="right" title="inbound / outbound / notes (drafts)">In · Out · Notes</th></tr></thead>
+    <tbody>
+    {% for a in authorities %}
+    {# the due date the board and Block status show (a sent follow-up resets the clock); else the request's own #}
+    {% set bdues = ((bks.get(a.key, []) if bks is not none else []) | selectattr('due') | map(attribute='due') | list) %}
+    {% set due = (bdues | min) if bdues else a.next_due() %}
+    <tr class="{{ 'auth-overdue' if due and due < now else '' }}">
+      <td><a href="/cases/{{ case.id }}/authorities/{{ a.key }}"><b>{{ a.name }}</b></a>
+        {% if not a.contacted %}<span class="tag">not contacted</span>{% endif %}
+        {% if a.candidate %}<span class="tag amber" title="freeze candidate in the latest trace (priority {{ a.candidate.priority }})">freeze candidate</span>{% endif %}
+        {% if a.trace_label == 'engaged earlier' %}<span class="tag" title="engaged on this case, but the latest trace run{% if run %} (#{{ run.id }}){% endif %} does not reach it">engaged earlier</span>{% elif a.trace_label and not a.candidate %}<span class="tag blue" title="an address of this service carries taint in the latest trace run">in latest trace</span>{% endif %}
+        {% if a.non_custodial %}<span class="tag" title="no freeze letter: information requests only">non-custodial</span>{% endif %}
+      </td>
+      <td class="muted">{{ a.type_label }}{% if a.jurisdiction %}<br><span style="font-size:var(--fs-xs)">{{ a.jurisdiction }}</span>{% endif %}</td>
+      <td class="nowrap">{{ a.last_contact | dt if a.last_contact else '—' }}</td>
+      <td>{% for o in a.open_orders %}<a href="/cases/{{ case.id }}/authorities/{{ a.key }}#o{{ o.id }}" class="mono" style="font-size:var(--fs-xs)">#{{ o.id }}</a> {% if bks is none %}{{ order_tag(o) }} {% endif %}{% else %}<span class="muted">—</span>{% endfor %}</td>
+      {# the request's status: the Block status column (one wording on every page), never the stop order's record state beside it #}
+      {% if bks is not none %}<td class="bk-col">{% set brows = bks.get(a.key, []) %}{% for b in brows %}<div>{% if brows | length > 1 %}<span class="mono muted bk-reqno" title="{{ b.request }}">{{ '#' if b.key[0] == 'o' else ('Outlook #' if b.kind == 'outlook' else 'letter #') }}{{ b.key[1:] }}</span>{% endif %}<a href="/cases/{{ case.id }}/blocks#{{ b.key }}" class="bk-badge bk-{{ b.tone }}" title="{{ b.request }}">{{ b.status_text }}</a>{% if b.confirm_tag %} <span class="tag amber">to confirm</span>{% endif %}{% if b.overdue %} <span class="tag red">overdue</span>{% endif %}</div>{% else %}<span class="muted">—</span>{% endfor %}</td>{% endif %}
+      <td class="nowrap">{% if due %}{% if due < now %}<span class="tag red">overdue</span> {% endif %}{{ due | dt }}{% else %}<span class="muted">—</span>{% endif %}</td>
+      {% set n = a.counts %}
+      <td class="right nowrap mono">{{ n['in'] }} · {{ n['out'] }} · {{ n['note'] }}{% if n['draft'] %} <span class="muted">({{ n['draft'] }} draft{{ 's' if n['draft'] != 1 }})</span>{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="{{ 7 if bks is not none else 6 }}" class="muted">{% if access.is_external %}Nothing has been shared with you on this case yet.{% else %}No counterparties yet — run a trace or log correspondence.{% endif %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if unassigned %}
+  <details class="auth-unassigned" style="margin-top:10px">
+    <summary class="muted">{{ unassigned | length }} case-level note{{ 's' if unassigned | length != 1 }} not tied to one counterparty</summary>
+    {% for c in unassigned %}
+    <div class="alert info"><b>{{ mask.text(c.subject) or c.kind.value }}</b> · {{ c.direction.value }} · {{ (c.occurred_at or c.created_at) | dt }} · <a href="/cases/{{ case.id }}/authorities/correspondence/{{ c.id }}">open</a></div>
+    {% endfor %}
+  </details>
+  {% endif %}
+</div>
+
+{% if not access.is_external %}
+{# Freeze & stop-order actions: app.blocks.freeze_board (board: Board | None; board_flash: what the generator did,
+   or its error: the board could not be built, nothing drafted) #}
+{% if board_flash and board_flash.error %}<div class="alert warning fb-flash" role="alert" id="freeze-error"><b>No request drafted.</b> {{ board_flash.error }}</div>{% endif %}
+{% if board %}
+<link rel="stylesheet" href="/static/css/freeze_board.css">
+{% if bks is none %}<link rel="stylesheet" href="/static/css/blocks.css">{% endif %}
+<div class="panel fb" id="freeze" style="margin-bottom:14px">
+  <h2>Freeze &amp; stop-order actions <small>one row per target · its status and the one next step{% if run %} · latest trace #{{ run.id }}{% endif %}</small>
+    {% if board.can_act and run %}{% set nd = board.draftable | length %}{% set gl = board.generate_label %}<form method="post" action="/cases/{{ case.id }}/stop-orders" class="inline fb-generate">{{ csrf_field() }}<button class="btn small{{ ' primary' if gl[1] }}" type="submit" {% if not nd %}disabled {% endif %}title="drafts a freeze request for each target no freeze was asked of yet; never a second one to a target already contacted, answered LE only / court order, declined, frozen or held, and never over a draft already made. An issuer that acts on LE process only gets a notice (it flags the wallets): its LE route, on its row, is what freezes the funds">{{ gl[0] }}</button></form>{% endif %}
+  </h2>
+  {% if board_flash and not board_flash.error %}
+  <div class="alert {{ 'warning' if board_flash.skipped and not board_flash.drafted else 'info' }} fb-flash" role="status">
+    {% set nn = board_flash.notices | length %}{% set na = board_flash.drafted - nn if board_flash.drafted > nn else 0 %}
+    <b>{% if board_flash.drafted %}Drafted {% if na %}{{ na }} freeze request{{ 's' if na != 1 }}{% endif %}{% if na and nn %} and {% endif %}{% if nn %}{{ nn }} notice{{ 's' if nn != 1 }}{% endif %}.{% else %}No new request drafted.{% endif %}</b>
+    {% if board_flash.notices %}<ul class="fb-notices">{% for line in board_flash.notices %}<li>{{ mask.text(line) }}</li>{% endfor %}</ul>{% endif %}
+    {% if board_flash.skipped %}<div>Skipped {{ board_flash.skipped | length }}:</div><ul class="fb-skipped">{% for line in board_flash.skipped %}<li>{{ mask.text(line) }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  {% endif %}
+  {% for g in board.groups %}
+  <h3 class="fb-group fb-g-{{ g.key }}">{{ g.label }} <span class="muted">{{ g.targets | length }} · {{ g.hint }}</span></h3>
+  <div class="table-wrap">
+  {% if g.main %}
+  <table class="fb-table">
+    <thead><tr><th>Target</th><th class="right">Money</th><th>Status</th><th>Next step</th><th>Deadline</th></tr></thead>
+    <tbody>
+    {% for t in g.main %}{{ fb_row(t, g.key) }}
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% if g.records %}
+  <details class="fb-records"{% if not g.main %} open{% endif %}><summary>Records / takedown requests ({{ g.records | length }}) <span class="muted">· no funds traced: nothing to freeze</span></summary>
+  <table class="fb-table">
+    <thead><tr><th>Target</th><th class="right">Money</th><th>Status</th><th>Next step</th><th>Deadline</th></tr></thead>
+    <tbody>
+    {% for t in g.records %}{{ fb_row(t, g.key) }}
+    {% endfor %}
+    </tbody>
+  </table>
+  </details>
+  {% endif %}
+  </div>
+  {% else %}<p class="muted">No targets yet — run a trace, or log a request to a provider.</p>{% endfor %}
+</div>
+{% endif %}
+
+<div class="panel" id="stop-orders">
+  <h2>Stop orders <small>{{ orders | length }} total{% set n_sup = orders | length - order_groups | length %}{% if n_sup > 0 %} · {{ n_sup }} superseded draft{{ 's' if n_sup != 1 }} folded into their successor{% endif %}</small></h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>#</th><th>Status</th><th>Kind</th><th>Origin</th><th>Entity / recipient</th><th>Subject</th><th>Created</th><th>Sent</th><th>Reply due</th><th></th></tr></thead>
+    <tbody>
+    {% for o, earlier in order_groups %}
+    {% set odue = namespace(v=None) %}{% if bks is not none %}{% for rows in bks.values() %}{% for b in rows %}{% if b.order_id == o.id and b.due %}{% set odue.v = b.due %}{% endif %}{% endfor %}{% endfor %}{% endif %}
+    {% set due = odue.v or (response_due(o) if o.status.value == 'sent' and not o.responded_at else None) %}
+    <tr>
+      <td class="mono">{{ o.id }}</td>
+      <td>{{ order_tag(o) }}{% set d = (dup_orders or {}).get(o.id) if dup_orders is defined else none %}{% if d %} <span class="tag red so-dup" title="{{ d.text }}">duplicate of {{ d.of }}{% if d.answer %} (answered {{ d.answer }}){% endif %}</span>{% endif %}{% set h = hold_state(o) %}{% if h.amount %}<br><span class="mono" style="font-size:var(--fs-xs)">{{ h.amount | amt }} {{ h.asset or '' }} held</span>{% endif %}
+        {% if earlier %}<details class="so-earlier"><summary>+{{ earlier | length }} {{ 'earlier' if earlier | selectattr('id', 'gt', o.id) | list | length == 0 else 'superseded' }} draft{{ 's' if earlier | length != 1 }}</summary>{% for e in earlier %}<div><a href="/cases/{{ case.id }}/stop-orders/{{ e.id }}" class="mono">#{{ e.id }}</a> <span class="muted">{{ 'discarded' if (e.identifiers or {}).get('discarded') else 'superseded' }} · {{ e.created_at | dt }}</span></div>{% endfor %}</details>{% endif %}</td>
+      <td>{{ o.kind }}</td>
+      <td>{{ o.origin.value }}</td>
+      <td>{% if o.entity %}<a href="/cases/{{ case.id }}/authorities/entity-{{ o.entity.id }}">{{ o.entity.name }}</a>{% else %}—{% endif %}<br><span class="muted mono" style="font-size:var(--fs-xs)">{{ mask.value(o.recipient_email or (o.identifiers or {}).get('recipient')) or '' }}</span></td>
+      <td>{{ mask.text(o.subject) }}</td>
+      <td>{{ dt_wrap(o.created_at) }}</td>
+      <td>{{ dt_wrap(o.sent_at) }}</td>
+      <td>{% if due %}{% if due < now %}<span class="tag red">overdue</span><br>{% endif %}{{ dt_wrap(due) }}{% else %}—{% endif %}</td>
+      <td class="right so-actions">{% if d %}{% if board and board.can_discard %}<form method="post" action="/cases/{{ case.id }}/stop-orders/{{ o.id }}/discard" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" title="supersede draft {{ d.no }}{% if d.prepared %} and cancel prepared e-mail #{{ d.prepared }}{% endif %} (audited)">Discard</button></form> {% else %}<span class="muted" style="font-size:var(--fs-xs)">a case admin can discard it</span> {% endif %}{% endif %}<a class="btn small" href="/cases/{{ case.id }}/stop-orders/{{ o.id }}">Open</a> {% if can('view_restricted') %}<a class="btn small" href="/api/cases/{{ case.id }}/stop-orders/{{ o.id }}/docx">.docx</a>{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="10" class="muted">None yet — draft requests from the board above.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}

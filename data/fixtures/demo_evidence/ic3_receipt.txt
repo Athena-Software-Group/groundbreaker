@@ -1,0 +1,8 @@
+SYNTHETIC DEMO ARTIFACT - fictional complaint receipt (case DEMO-2026-001).
+
+Internet Crime Complaint Center (IC3) - complaint submitted
+Complaint reference: IC3-DEMO-00000000
+Filed by: Jordan Avery, Northbridge Analytics, Inc.
+Type: investment fraud / business impersonation
+Reported loss: 399,247.92 USDC on 2026-10-12
+This receipt is not a real IC3 record.

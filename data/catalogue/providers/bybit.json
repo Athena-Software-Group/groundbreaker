@@ -1,0 +1,95 @@
+{
+  "_comment": "I0 provider playbook (schema: app/domain/playbook.py). Public facts only, every claim sourced. Bybit's victim intake is its 'Report Stolen Funds' self-service flow; a hold without a freezing order is discretionary (VIP users only for now), precautionary, and never a legal freeze. No public LE intake address or portal: LE deals with Bybit directly.",
+  "key": "bybit",
+  "version": 1,
+  "side": "provider",
+  "jurisdiction": null,
+  "issuer_jurisdictions": [],
+  "ground_truth": "reply",
+  "notes": "A temporary hold is 'a precautionary measure that does not constitute a legal freezing order' and may be lifted at any time without notice: record it as hold_placed, never frozen. Bybit shares nothing about its LE communications with the victim. bybitglobal.com is Bybit's own mirror of the help centre; look-alike domains have published fake 'Bybit law enforcement' pages: never treat another domain as Bybit's.",
+  "entities": [],
+  "domains": {
+    "own": ["bybit.com"],
+    "sibling": [
+      {"domain": "bybitglobal.com", "purpose": "help-centre mirror (same Report Stolen Funds article)",
+       "source_ids": ["by2"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+    ],
+    "vendor_portals": []
+  },
+  "channels": [
+    {
+      "key": "bybit.stolen_funds", "kind": "webform", "value": "https://www.bybit.com/en/help-center/s/webform?state=4",
+      "purpose": "freeze", "role_default": "to", "label": "Report Stolen Funds (police-report webform)",
+      "notes": "For funds that reached Bybit. Open 'Report Stolen Funds' from Help Center > Self Service, the Customer Support widget, or the Authenticity Check page; with a police report, submit the materials through this form. Allow up to 12 hours for a response.",
+      "source_url": "https://www.bybit.com/en/help-center/article/How-to-Report-Stolen-Assets",
+      "who": "victim_or_rep", "source_ids": ["by1", "by2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "channels_ext": {
+    "bybit.le": {
+      "who": "le_only",
+      "notes": "No public LE intake found on bybit.com: 'all communications and evidence sharing will occur directly between Bybit and the relevant law enforcement agency'. The page's form text also asks for freezing orders to be submitted 'through your law enforcement agency at the self-service portal' (low confidence). Leave null.",
+      "source_ids": ["by1"], "basis": "I", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  },
+  "paths": [
+    {
+      "key": "victim_report", "kind": "victim_report", "requester": ["victim", "pi", "counsel"],
+      "channel_keys": ["bybit.stolen_funds"],
+      "instrument": {"type": "police_report",
+                     "notes": "Bybit asks that a police report be filed and a freezing order obtained before continuing; without a freezing order the discretionary handling is limited to verified VIP users (it 'may extend' it to all users). Urgent cases may skip to the details step."},
+      "evidence": ["police_report", "incident_narrative", "tx_list_copyable", "receiving_account", "ownership_proof",
+                   "loa"],
+      "produces": ["prior_ticket_ref"],
+      "timing": {"response_days": 0.5},
+      "expected_replies": ["le_process_required", "acknowledged", "info_requested", "declined_other"],
+      "outcomes": ["le_process_required"],
+      "on_refusal": "le_freezing_order",
+      "notes": "Without a freezing order Bybit's discretionary hold is for verified VIP users (the vip_report path): for anyone else brief LE for the freezing order (le_freezing_order) at once; Bybit 'may extend' the hold to all users in the future. Where it does restrict an account, it is a temporary internal restriction at Bybit's sole discretion, no set duration, revocable without notice; Bybit may decline without reasons. The victim stays responsible for reporting to LE and obtaining an official freezing order. The page addresses the victim and does not say whether a representative may file: submit it with the victim (their details, their police report) and a letter of authority, then mark it sent with channel portal.",
+      "source_ids": ["by1", "by2"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "vip_report", "kind": "victim_report", "requester": ["victim"], "channel_keys": ["bybit.stolen_funds"],
+      "instrument": {"type": "none", "notes": "Bybit VIP clients only; no police report stated as a precondition."},
+      "evidence": ["incident_narrative", "tx_list_copyable", "receiving_account"],
+      "timing": {"ack_hours": 4},
+      "expected_replies": ["hold_placed", "le_process_required"], "outcomes": ["hold_placed"],
+      "on_refusal": "le_freezing_order",
+      "notes": "Bybit VIP clients only. A dedicated VIP 'Report Stolen Funds' portal for inflow cases, reviewed within 2-4 hours; temporary restrictions 'do not replace a legal freezing order'.",
+      "source_ids": ["by3"], "basis": "R", "confidence": "M", "retrieved_at": "2026-10-20"
+    },
+    {
+      "key": "le_freezing_order", "kind": "le_request", "requester": ["le"], "channel_keys": ["bybit.le"],
+      "instrument": {"type": "freezing_order",
+                     "notes": "An official court or law-enforcement freezing order (the only legally enforceable freeze Bybit names)."},
+      "evidence": ["le_agency_identity", "court_order", "tx_list_copyable", "receiving_account", "prior_ticket_ref"],
+      "expected_replies": ["acknowledged", "frozen"], "outcomes": ["frozen"],
+      "notes": "Bybit cooperates with competent authorities directly; requirements are not published. Updates go to the agency, not the victim.",
+      "source_ids": ["by1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"
+    }
+  ],
+  "reply_signals": [
+    {"phrase": "does not constitute a legal freezing order", "means": "hold_placed", "path": "victim_report",
+     "source_ids": ["by1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "contact the law enforcement agency directly", "means": "le_process_required",
+     "instrument": "freezing_order", "path": "le_freezing_order",
+     "source_ids": ["by1"], "basis": "D", "confidence": "H", "retrieved_at": "2026-10-20"},
+    {"phrase": "limited to verified Bybit VIP users", "means": "le_process_required", "instrument": "freezing_order",
+     "path": "le_freezing_order", "source_ids": ["by1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"},
+    {"phrase": "under no obligation to impose, maintain or explain any temporary restriction", "means": "declined_other",
+     "path": "victim_report", "source_ids": ["by1"], "basis": "D", "confidence": "M", "retrieved_at": "2026-10-20"}
+  ],
+  "tickets": [
+    {"system": "bybit_self_service", "regex": null, "source_ids": ["by1"], "basis": "I", "confidence": "L",
+     "retrieved_at": "2026-10-20"}
+  ],
+  "sources": [
+    {"id": "by1", "title": "Bybit Help Center: How to Report Stolen Assets (last updated Mar 2026)",
+     "url": "https://www.bybit.com/en/help-center/article/How-to-Report-Stolen-Assets", "retrieved_at": "2026-10-20"},
+    {"id": "by2", "title": "Bybit Help Center mirror (bybitglobal.com): How to Report Stolen Assets",
+     "url": "https://www.bybitglobal.com/en/help-center/article/How-to-Report-Stolen-Assets/", "retrieved_at": "2026-10-20"},
+    {"id": "by3", "title": "PR Newswire: Bybit launches dedicated VIP portal for stolen fund inflow reporting (Sep 2025)",
+     "url": "https://www.prnewswire.com/news-releases/bybit-launches-dedicated-vip-portal-for-stolen-fund-inflow-reporting-302569525.html",
+     "retrieved_at": "2026-10-20"}
+  ]
+}

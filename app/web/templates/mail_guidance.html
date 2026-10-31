@@ -1,0 +1,39 @@
+{# "How to email <authority>" — owner: the mail feature (app/domain/mail_guidance.py; the Jinja global
+   mail_guidance_for in app/web/routes_mail.py). Included by case/_contact_card.html on the authority page.
+   Context: case, access, authority, card; `g` = mail_guidance_for(authority) (None below view_restricted).
+   Advice only: the compose page applies it; nothing here sends anything. Import a reply: investigators and up. #}
+{% set g = mail_guidance_for(authority) %}
+{% if g %}
+<div class="panel mail-guide" id="mail-howto">
+  <h2>How to email {{ authority.name }} <small>next letter: {{ g.kind_label | lower }}</small></h2>
+  {% for w in g.warnings %}<div class="alert {{ {'critical': 'critical', 'warning': 'warning'}.get(w.level, 'info') }} mail-guide-warn" data-code="{{ w.code }}">{{ w.text }}</div>{% endfor %}
+  <div class="mail-group-h">To <span class="muted">(best first)</span></div>
+  {% if g.to %}
+  <ol class="mail-guide-list">
+    {% for s in g.to[:4] %}<li><span class="mono">{{ s.address }}</span>{% if s.verified %} <span class="tag green">✓</span>{% else %} <span class="tag amber">⚠</span>{% endif %}{% if s.recommended %} <span class="tag gold">suggested</span>{% endif %}<div class="muted mail-why">{{ s.why }}</div></li>{% endfor %}
+  </ol>{% if g.to | length > 4 %}<div class="muted mail-note">{{ g.to | length - 4 }} more on the compose page.</div>{% endif %}
+  {% else %}<div class="muted">No e-mail address on file.</div>{% endif %}
+  <div class="mail-group-h">Cc</div>
+  {% if g.cc %}
+  <ul class="mail-guide-list">
+    {% for s in g.cc[:4] %}<li><span class="mono">{{ s.address }}</span><div class="muted mail-why">{{ s.why }}</div></li>{% endfor %}
+  </ul>
+  {% elif g.warnings | selectattr('code', 'equalto', 'portal_only') | list %}<div class="muted">No Cc: a portal submission has no copies.</div>
+  {% else %}<div class="muted">Nobody needs a copy.</div>{% endif %}
+  {% if g.avoid %}<div class="mail-note muted">Not suggested: {% for s in g.avoid %}<span class="mono">{{ s.address }}</span> ({{ s.why }}){{ '; ' if not loop.last }}{% endfor %}.</div>{% endif %}
+  <div class="mail-group-h">Subject</div>
+  <div class="mono mail-guide-subject">{{ g.subject }}</div>
+  <div class="muted mail-note">Aegis fills in the letter number when you prepare the e-mail. {{ g.instruction }}</div>
+  {% if access.can('log_correspondence') %}
+  <details class="mail-add mail-import-inline">
+    <summary>Import a reply from {{ authority.name }} (.eml / .msg)</summary>
+    <form method="post" action="/cases/{{ case.id }}/mail/import" enctype="multipart/form-data">
+      {{ csrf_field() }}<input type="hidden" name="authority_key" value="{{ authority.key }}">
+      <input type="file" name="reply" accept=".eml,.msg,message/rfc822,application/vnd.ms-outlook" required aria-label="Reply file">
+      <div style="margin-top:6px"><button class="btn small primary" type="submit">Import for review</button></div>
+      <div class="muted mail-note">Save the reply from Outlook (File → Save As, or drag it to the desktop). It is checked like mailbox mail and waits on <b>Mail to review</b> for a case admin, with the letter it answers pre-selected; nothing is filed or changed until then.</div>
+    </form>
+  </details>
+  {% endif %}
+</div>
+{% endif %}

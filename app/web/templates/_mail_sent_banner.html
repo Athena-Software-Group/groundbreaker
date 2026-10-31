@@ -1,0 +1,7 @@
+{# The guided send flow's success banner — owner: app/web/mail_flow.py (mail_sent_banner). Included by base.html on
+   every page: shown only for ?mail_sent=<id> when that is a sent e-mail of this page's case (ids only, no address). #}
+{% set sent = mail_sent_banner() %}{% if sent %}
+<div class="alert success mail-sent-banner" id="mail-sent-banner" role="status"><b>✓ E-mail #{{ sent.id }} {{ 'recorded as sent' if sent.external else 'sent' }}</b> and filed as evidence.
+  {% if sent.letter %}Letter #{{ sent.letter }}{% if sent.order %} and stop order #{{ sent.order }}{% endif %} {{ 'are' if sent.order else 'is' }} marked sent{% if sent.due %}; the reply is due {{ sent.due | dt }}{% endif %}.{% endif %}
+  The To do list and Block status are updated. <a href="{{ sent.href }}">Open e-mail #{{ sent.id }}</a></div>
+{% endif %}

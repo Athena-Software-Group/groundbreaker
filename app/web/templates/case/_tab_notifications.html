@@ -1,0 +1,93 @@
+{# Notifications tab — owner: app/web/routes_notifications.py (notifications_tab).
+   Context: notifications, rules (notify.RuleSpec per event type), read_ids, channel_status, CHANNELS,
+   RECIPIENT_ROLES, AMOUNT_EVENTS, EVENT_LABELS, RESPONSE_OVERDUE, saved, rule_error #}
+{% set manage = can('manage_notifications') %}
+<div class="grid cols-2 notify-grid">
+  <div class="panel" id="notifications">
+    <div class="row">
+      <h2>Events <small>latest {{ notifications | length }}</small></h2>
+      <div class="spacer"></div>
+      <a class="btn small" href="/notifications">My inbox{% set n_unread = inbox_unread() %}{% if n_unread %} <span class="badge">{{ n_unread }}</span>{% endif %}</a>
+      {% if notifications %}
+      <form method="post" action="/cases/{{ case.id }}/notifications/read-all" class="inline">{{ csrf_field() }}<button class="btn small" type="submit">Mark all read</button></form>
+      {% endif %}
+    </div>
+    {% for n in notifications %}
+      <div class="alert {{ n.severity }} notify-item {{ 'is-read' if n.id in read_ids else 'is-unread' }}">
+        <div class="row">
+          <b>{{ n.title }}</b>
+          <span class="tag">{{ EVENT_LABELS.get(n.event_type, n.event_type) }}</span>
+          {% if n.severity in ('high', 'critical') %}<span class="tag red">{{ n.severity }}</span>{% endif %}
+          {% if n.usd is not none %}<span class="mono">{{ n.usd | usd }}</span>{% endif %}
+          <div class="spacer"></div>
+          <span class="muted nowrap">{{ n.created_at | dt }}</span>
+        </div>
+        {% if n.body %}<div class="notify-body">{{ n.body }}</div>{% endif %}
+        <div class="row notify-meta">
+          {% if n.link %}<a href="{{ n.link }}">open</a>{% endif %}
+          {% for d in n.deliveries or [] %}<span class="tag {{ 'green' if d.status in ('delivered', 'sent') else ('red' if d.status == 'failed' else '') }}" title="delivery">{{ d.channel | replace('_', '-') }}: {{ d.status | replace('_', ' ') }}</span>{% endfor %}
+          <div class="spacer"></div>
+          {% if n.id not in read_ids %}
+          <form method="post" action="/cases/{{ case.id }}/notifications/{{ n.id }}/read" class="inline">{{ csrf_field() }}<button class="btn small" type="submit">Mark read</button></form>
+          {% endif %}
+        </div>
+      </div>
+    {% else %}<div class="muted">No events yet. Watch polls, stop-order updates, correspondence, evidence and traces report here.</div>{% endfor %}
+  </div>
+
+  <div class="panel" id="notification-rules">
+    <div class="row">
+      <h2>Rules</h2>
+      <div class="spacer"></div>
+      <span class="tag green">in-app: on</span>
+      <span class="tag {{ 'green' if channel_status.email else 'amber' }}">e-mail: {{ 'configured' if channel_status.email else 'not configured' }}</span>
+      <span class="tag {{ 'green' if channel_status.slack else 'amber' }}">Slack: {{ 'configured' if channel_status.slack else 'not configured' }}</span>
+    </div>
+    <p class="muted small-print">The in-app inbox always receives. E-mail needs <code>SMTP_HOST</code> and <code>SMTP_FROM</code>; Slack needs <code>SLACK_WEBHOOK_URL</code>. Messages carry the case reference, the event, the amount, short addresses and a link, never names or e-mail addresses. Thresholds: an event passes when it meets the minimum USD <em>or</em> the minimum share of the loss{% if case.loss_usd %} ({{ case.loss_usd | usd }}){% endif %}.</p>
+    {% if saved %}<div class="alert info">{{ 'Rules reset to the defaults.' if saved == 'defaults' else EVENT_LABELS.get(saved, saved) ~ ' rule saved.' }}</div>{% endif %}
+    {% if rule_error %}<div class="alert warning">{{ rule_error }}</div>{% endif %}
+
+    {% if manage %}
+    {% for r in rules %}
+    <form method="post" action="/cases/{{ case.id }}/notifications/rules/{{ r.event_type }}" class="rule-card {{ 'is-off' if not r.enabled else '' }}" id="rule-{{ r.event_type }}" data-rule-form>
+      {{ csrf_field() }}
+      <div class="row">
+        <label class="check"><input type="checkbox" name="enabled" {{ 'checked' if r.enabled else '' }} data-rule-enabled> <b>{{ r.label }}</b></label>
+        <div class="spacer"></div>
+        {% if r.source != 'case' %}<span class="tag" title="not yet saved for this case">{{ r.source }}</span>{% endif %}
+        <button class="btn small primary" type="submit">Save</button>
+      </div>
+      <div class="rule-fields">
+        {% if r.event_type in AMOUNT_EVENTS %}
+        <div><label for="min_usd-{{ r.event_type }}">Min USD moved</label><input id="min_usd-{{ r.event_type }}" name="min_usd" inputmode="decimal" placeholder="any amount" value="{{ r.min_usd if r.min_usd is not none else '' }}"></div>
+        <div><label for="min_pct-{{ r.event_type }}">Min % of loss</label><input id="min_pct-{{ r.event_type }}" name="min_pct_of_loss" inputmode="decimal" placeholder="—" value="{{ r.min_pct_of_loss if r.min_pct_of_loss is not none else '' }}"></div>
+        {% endif %}
+        {% if r.event_type == RESPONSE_OVERDUE %}
+        <div><label for="days-{{ r.event_type }}">Overdue after (days)</label><input id="days-{{ r.event_type }}" name="overdue_days" inputmode="numeric" value="{{ r.overdue_days if r.overdue_days is not none else 7 }}"></div>
+        {% endif %}
+        <fieldset><legend>Channels</legend>
+          {% for ch in CHANNELS %}<label class="check"><input type="checkbox" name="channels" value="{{ ch }}" {{ 'checked' if ch in r.channels or ch == 'in_app' else '' }} {{ 'disabled' if ch == 'in_app' else '' }}> {{ {'in_app': 'in-app', 'email': 'e-mail', 'slack': 'Slack'}[ch] }}</label>{% endfor %}
+        </fieldset>
+        <fieldset><legend>Recipients</legend>
+          {% for role in RECIPIENT_ROLES %}<label class="check"><input type="checkbox" name="recipient_roles" value="{{ role }}" {{ 'checked' if role in r.recipient_roles else '' }}> {{ role | replace('_', ' ') }}</label>{% endfor %}
+        </fieldset>
+      </div>
+    </form>
+    {% endfor %}
+    <form method="post" action="/cases/{{ case.id }}/notifications/rules/reset" class="row" data-team-confirm="Reset every rule of this case to the defaults?">
+      {{ csrf_field() }}<div class="spacer"></div><button class="btn small danger" type="submit">Reset to defaults</button>
+    </form>
+    {% else %}
+    <div class="table-scroll">
+    <table><thead><tr><th>Event</th><th>On</th><th>Threshold</th><th>Channels</th><th>Recipients</th></tr></thead><tbody>
+    {% for r in rules %}<tr>
+      <td>{{ r.label }}</td><td>{{ 'yes' if r.enabled else 'no' }}</td>
+      <td class="nowrap">{% if r.min_usd is not none %}≥ {{ r.min_usd | usd }}{% endif %}{% if r.min_usd is not none and r.min_pct_of_loss is not none %} or {% endif %}{% if r.min_pct_of_loss is not none %}≥ {{ r.min_pct_of_loss }}% of loss{% endif %}{% if r.overdue_days %}after {{ r.overdue_days }} days{% endif %}{% if r.min_usd is none and r.min_pct_of_loss is none and not r.overdue_days %}<span class="muted">any</span>{% endif %}</td>
+      <td>{{ r.channels | join(', ') | replace('_', '-') }}</td><td>{{ r.recipient_roles | join(', ') | replace('_', ' ') }}</td>
+    </tr>{% endfor %}
+    </tbody></table>
+    </div>
+    <p class="muted">Only case admins can change the rules.</p>
+    {% endif %}
+  </div>
+</div>

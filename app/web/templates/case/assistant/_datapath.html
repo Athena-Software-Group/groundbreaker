@@ -1,0 +1,9 @@
+{# The compact "data path / mode" line next to the assistant sub-tabs (details on the AI mode sub-tab). #}
+<span class="assistant-infoline" id="assistant-infoline">
+  <span class="tag {{ 'green' if ai_mode.value == 'redacted' else ('red' if ai_mode.value == 'full' else '') }}" title="what may be sent to the model for this case">AI mode: {{ ai_mode.value }}</span>
+  {% if ai_mode.value == 'off' %}<span class="muted">Data path: none — nothing leaves Aegis; rule-based only</span>
+  {% elif ai_configured and not ai_full_unconfirmed %}<span class="muted">Data path: Aegis → <span class="assistant-destination">{{ ai_destination }}</span> · <span class="mono">{{ ai_model }}</span></span>
+  {% elif ai_full_unconfirmed %}<span class="tag amber">full mode not confirmed — rule-based</span>
+  {% else %}<span class="tag amber">AI not configured</span><span class="muted">Data path: none — rule-based on this server</span>{% endif %}
+  <a href="/cases/{{ case.id }}?tab=assistant&amp;sub=mode" data-sub-link="mode">details</a>
+</span>

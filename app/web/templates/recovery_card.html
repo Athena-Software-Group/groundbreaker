@@ -1,0 +1,16 @@
+{# Overview tab: Recovery plan card (app/blocks/recovery; owner app/web/routes_recovery.py). Context: rpc
+   (routes_recovery.recovery_card: moves (top 3), totals, n; or None). #}
+{% if rpc %}
+<link rel="stylesheet" href="/static/css/recovery.css">
+<div class="panel ov-block rp-card" id="recovery-plan">
+  <div class="row">
+    <h2>Recovery plan <small>{{ rpc.n }} move{{ 's' if rpc.n != 1 }} · ${{ '{:,.0f}'.format(rpc.totals.in_play_usd) }} in play{{ " (capped at the loss)" if rpc.totals.in_play_capped }}{% if rpc.totals.untouched %} · <span class="bk-hot">{{ rpc.totals.untouched }} target{{ 's' if rpc.totals.untouched != 1 }} not asked yet</span>{% endif %}</small></h2>
+    <div class="spacer"></div>
+    <a class="btn small" href="/cases/{{ case.id }}/recovery-plan">Recovery plan</a>
+  </div>
+  <ol class="rp-card-moves">
+  {% for m in rpc.moves %}<li><a href="/cases/{{ case.id }}/recovery-plan#m-{{ m.key }}"><b>{{ m.title }}</b></a> <span class="muted">· {{ m.value_fmt }}</span>{% if m.clock %} <span class="tag {{ 'red' if m.clock.passed or m.urgency >= 2 else 'amber' }}">{{ m.clock.label }} {{ m.clock.due_fmt }}</span>{% endif %}
+    <div class="muted ov-small">{{ m.reason }}</div></li>{% endfor %}
+  </ol>
+</div>
+{% endif %}

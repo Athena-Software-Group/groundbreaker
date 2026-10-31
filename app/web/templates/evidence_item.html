@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{# Evidence item page — owner: app/web/routes_evidence.py (item_page).
+   Context: case, access, item, ev_flags, can_open, preview ('text'|'image'|'pdf'|None), preview_text,
+   linked (correspondence rows citing the item), derivatives, parent, section, duplicates, ev_msg/ev_err,
+   ev_text (complaint references and LE / PI contact details in the metadata masked below view_restricted) #}
+{% import "evidence_macros.html" as evm with context %}
+{% import "evidence_intel_macros.html" as evi with context %}
+{% block title %}Aegis · {{ case.reference }} · evidence #{{ item.id }}{% endblock %}
+{% block content %}
+<div class="row" style="margin-bottom:12px">
+  <div>
+    <h1><span class="mono muted">#{{ item.id }}</span> &nbsp;{{ ev_text(item.title) }}</h1>
+    <div class="sub"><a href="/cases/{{ case.id }}?tab=evidence&amp;folder={{ item.folder.value }}">← {{ case.reference }} · {{ ev_folder_label(item.folder) }}</a>{% if section %} · {{ section }}{% endif %}</div>
+  </div>
+  <div class="spacer"></div>
+  {{ evm.cls_badge(item.classification) }} &nbsp;{{ evm.integrity_badge(item) }}
+</div>
+
+{% if ev_msg %}<div class="alert {{ 'high' if ev_err else 'info' }}" role="status">{{ ev_msg }}</div>{% endif %}
+
+<div class="grid cols-2 ev-item">
+  <div class="panel">
+    <h2>Record</h2>
+    <table class="ev-meta"><tbody>
+      <tr><th>Folder</th><td>{{ ev_folder_label(item.folder) }}{% if section %} · {{ section }}{% endif %}</td></tr>
+      <tr><th>Document date</th><td>{{ item.doc_date.strftime('%d %b %Y') if item.doc_date else '—' }}</td></tr>
+      <tr><th>Source type</th><td>{{ ev_source_label(item.source_type) or '—' }}</td></tr>
+      <tr><th>Received from</th><td>{{ ev_text(item.received_from) or '—' }}</td></tr>
+      <tr><th>Storage</th><td>{{ evm.storage_badge(item) }}{% if item.storage.value == 'reference' %} <span class="muted">original never copied</span>{% endif %}</td></tr>
+      {% if ev_flags.source_path and item.source_path %}<tr><th>Source path</th><td class="mono ev-path">{{ item.source_path }}</td></tr>{% endif %}
+      <tr><th>sha256</th><td class="mono ev-path">{{ item.sha256 or '—' }}</td></tr>
+      <tr><th>Size</th><td>{{ ev_fmt_size(item.size_bytes) }}{% if item.size_bytes %} <span class="muted">({{ item.size_bytes }} bytes)</span>{% endif %}</td></tr>
+      <tr><th>MIME</th><td class="mono">{{ item.mime or '—' }}</td></tr>
+      <tr><th>Classification</th><td>{{ evm.cls_badge(item.classification) }}{% if item.tlp %} · {{ item.tlp }}{% endif %}</td></tr>
+      <tr><th>Tags</th><td>{% for t in item.tags or [] %}<span class="ev-tag {{ 'dup' if t in ('duplicate', 'has-duplicate') else '' }}">{{ ev_text(t) }}</span>{% else %}—{% endfor %}</td></tr>
+      <tr><th>Shared with externals</th><td>{{ 'yes' if item.shared_with_external else 'no' }}</td></tr>
+      <tr><th>Registered</th><td>{{ item.created_at | dt }}</td></tr>
+      <tr><th>Last verified</th><td>{{ item.verified_at | dt }}{% set integ = (item.meta or {}).get('integrity') %}{% if integ %} <span class="muted">· last check {{ integ.status }}</span>{% endif %}</td></tr>
+      {% if parent %}<tr><th>Derived from</th><td><a href="/cases/{{ case.id }}/evidence/{{ parent.id }}">#{{ parent.id }} {{ ev_text(parent.title) }}</a></td></tr>{% endif %}
+      {% if derivatives %}<tr><th>Derivatives</th><td>{% for d in derivatives %}<div><a href="/cases/{{ case.id }}/evidence/{{ d.id }}">#{{ d.id }} {{ ev_text(d.title) }}</a> {{ evm.cls_badge(d.classification) }}</div>{% endfor %}</td></tr>{% endif %}
+      {% if duplicates %}<tr><th>Duplicates</th><td>{{ duplicates | length }} identical file(s) elsewhere{% if ev_flags.source_path %}{% for d in duplicates %}<div class="mono muted ev-path">{{ d }}</div>{% endfor %}{% endif %}</td></tr>{% endif %}
+      {% if item.description %}<tr><th>Description</th><td>{{ ev_text(item.description) }}</td></tr>{% endif %}
+    </tbody></table>
+    {% if linked %}
+    <h3 class="ev-h3">Cited by correspondence</h3>
+    {% for c in linked %}<div><a href="/cases/{{ case.id }}/authorities/correspondence/{{ c.id }}">{{ ev_text(c.subject) or c.kind.value }}</a> <span class="muted">{{ c.occurred_at | dt }}</span></div>{% endfor %}
+    {% endif %}
+    <div class="ev-actions">
+      {% if can_open %}<a class="btn small" href="/cases/{{ case.id }}/evidence/{{ item.id }}/download">Download</a>{% endif %}
+      {% if ev_flags.verify %}<form method="post" action="/cases/{{ case.id }}/evidence/{{ item.id }}/verify" class="inline">{{ csrf_field() }}<button class="btn small" type="submit">Verify integrity</button></form>{% endif %}
+      {% if ev_flags.share %}<form method="post" action="/cases/{{ case.id }}/evidence/{{ item.id }}/share" class="inline">{{ csrf_field() }}<input type="hidden" name="shared" value="{{ '0' if item.shared_with_external else '1' }}"><button class="btn small" type="submit">{{ 'Stop sharing with externals' if item.shared_with_external else 'Share with external members' }}</button></form>{% endif %}
+    </div>
+    <div class="muted ev-hint">Downloads and previews are recorded in the audit log and re-check the sha256 first.</div>
+  </div>
+
+  <div class="panel">
+    <h2>Content</h2>
+    {% if not can_open %}
+      <div class="alert warning">Restricted ({{ item.classification.value }}): your role can see this item's metadata only.</div>
+    {% elif preview == 'text' %}
+      {% if preview_status == 'mismatch' %}<div class="alert high">Integrity mismatch: the bytes no longer match the recorded sha256, so the preview is withheld. Re-verify the item and check the original.</div>
+      {% elif preview_status == 'missing' or preview_text is none %}<div class="alert warning">The original could not be read (moved, renamed or unavailable).</div>
+      {% else %}<pre class="ev-pre">{{ preview_text }}</pre>{% endif %}
+    {% elif preview == 'image' %}
+      <img class="ev-img" src="/cases/{{ case.id }}/evidence/{{ item.id }}/content" alt="evidence #{{ item.id }}">
+    {% elif preview == 'pdf' %}
+      <iframe class="ev-pdf" src="/cases/{{ case.id }}/evidence/{{ item.id }}/content" title="evidence #{{ item.id }} (PDF)"></iframe>
+    {% else %}
+      <div class="muted">No inline preview for this file type{% if item.mime %} ({{ item.mime }}){% endif %}. Download it to open it locally.</div>
+    {% endif %}
+  </div>
+</div>
+
+{% if intel and not access.is_external %}<div style="margin-top:14px">{{ evi.item_panel(case, item, intel) }}</div>{% endif %}
+
+{% if ev_flags.add %}
+<div class="panel" style="margin-top:14px">
+  <details class="ev-details">
+    <summary class="btn small">Edit metadata</summary>
+    <form method="post" action="/cases/{{ case.id }}/evidence/{{ item.id }}/edit" class="ev-form">{{ csrf_field() }}
+      {{ evm.meta_fields(item=item, section=section, title_required=True) }}
+      <button class="btn small primary" type="submit">Save</button>
+      <span class="muted">The bytes and the recorded hash never change.</span>
+    </form>
+  </details>
+  {% if ev_flags.delete %}
+  <details class="ev-details">
+    <summary class="btn small danger">Remove from the register</summary>
+    <form method="post" action="/cases/{{ case.id }}/evidence/{{ item.id }}/delete" class="ev-form ev-danger">{{ csrf_field() }}
+      <label class="ev-confirm"><input type="checkbox" name="confirm" value="yes" required> I understand this removes the record (the original and any vault copy stay where they are)</label>
+      <button class="btn small danger" type="submit">Remove</button>
+    </form>
+  </details>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

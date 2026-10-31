@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{# Stop-order letter page. Context: order, statuses (status form choices), access, authority_key, can_prepare_email
+   (a draft the member may e-mail from Aegis: app/web/routes_mail.py), duplicate (the Freeze & stop-order board's flag
+   for a draft repeating a request already sent: {no, of, answer, prepared, text, …} | None: no e-mail, no "sent"),
+   can_discard (a case admin may discard that duplicate), added (the addresses the request gate just added to this
+   draft: app.domain.request_gate.add_to_draft),
+   mask (desk.ContactMask: known LE / PI contact details and complaint references masked below
+   manage_le_contacts).
+   The letter body is R3: shown only with view_restricted (read-only members see the metadata). #}
+{% block title %}Aegis · Stop order #{{ order.id }}{% endblock %}
+{% block content %}
+{% set restricted = access.can('view_restricted') %}
+{% set state = order_state %}
+<div class="row" style="margin-bottom:12px">
+  <div>
+    <h1>Stop order #{{ order.id }} <span class="tag {{ {'draft':'amber','sent':'blue','acknowledged':'blue','frozen':'green','declined':'red','superseded':'','released':'gold'}.get(state, '') }}">{{ state }}</span></h1>
+    <div class="sub"><a href="/cases/{{ order.case.id }}?tab=authorities">← {{ order.case.reference }}</a> · {{ order.origin.value }} · {{ order.kind }} · to <b>{{ order.entity.name if order.entity else '—' }}</b>
+      <span class="mono">{{ mask.value(order.recipient_email or (order.identifiers or {}).get('recipient')) or 'LE portal — contact in case vault' }}</span>
+      {% set ids = order.identifiers or {} %}
+      {% if ids.get('priority') is not none %}· priority {{ ids.get('priority') }}{% endif %}
+      {% if ids.get('total_taint_usd') %}· tainted (upper bound) {{ ids.get('total_taint_usd') | usd }}{% endif %}</div>
+  </div>
+  <div class="spacer"></div>
+  {% if authority_key %}<a class="btn" href="/cases/{{ order.case.id }}/authorities/{{ authority_key }}#o{{ order.id }}">Authority timeline</a>{% endif %}
+  {% if can_prepare_email %}<form method="post" action="/cases/{{ order.case.id }}/stop-orders/{{ order.id }}/email" class="inline">{{ csrf_field() }}<input type="hidden" name="return_to" value="{{ mail_return_to() or request.url.path }}"><button class="btn primary" type="submit">{% if access.can('send_email') %}Edit &amp; send e-mail{% else %}E-mail…{% endif %}</button></form>{% endif %}
+  {% if restricted and can_export %}
+  <a class="btn" href="/api/cases/{{ order.case.id }}/stop-orders/{{ order.id }}/docx">⬇ Download .docx</a>
+  <button class="btn" type="button" id="copy-md">Copy Markdown</button>
+  {% endif %}
+</div>
+{% if added and state == 'draft' %}<div class="alert info" id="letter-added" role="status" style="margin-bottom:12px">Added to this draft (one open request per provider, never a second letter): {{ added }} — its identifiers and a sentence before the signature. Check it, then send it.</div>{% endif %}
+{% if pointless %}
+<div class="alert warning so-pointless-warning" id="draft-pointless" role="alert" style="margin-bottom:12px">{{ pointless.text }}
+  {% if can_discard and not pointless.busy %}<form method="post" action="{{ pointless.post }}" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" title="supersede draft {{ pointless.no }}{% if pointless.prepared %} and cancel prepared e-mail #{{ pointless.prepared }}{% endif %} (audited)">Discard</button></form>{% elif not can_discard %}<span class="muted">A case admin can discard it.</span>{% endif %}
+</div>
+{% endif %}
+{% if duplicate %}
+<div class="alert warning so-dup-warning" role="alert" style="margin-bottom:12px">{{ duplicate.text }}
+  {% if can_discard %}<form method="post" action="/cases/{{ order.case.id }}/stop-orders/{{ order.id }}/discard" class="inline">{{ csrf_field() }}<button class="btn small" type="submit" title="supersede draft {{ duplicate.no }}{% if duplicate.prepared %} and cancel prepared e-mail #{{ duplicate.prepared }}{% endif %} (audited)">Discard</button></form>{% else %}<span class="muted">A case admin can discard it.</span>{% endif %}
+  <div class="muted" style="font-size:var(--fs-xs-up);margin-top:4px">Not sendable from here: a follow-up is a status request on the earlier request (its Authorities page).</div>
+</div>
+{% endif %}
+
+<div class="grid so-layout">
+  {% if restricted %}
+  <div class="letter">{{ order.body_markdown | md }}</div>
+  {% else %}
+  <div class="panel"><h2>Letter</h2><p class="muted">The letter text is restricted (R3). Your role sees its subject and status only.</p>
+    <div><b>{{ mask.text(order.subject) }}</b></div></div>
+  {% endif %}
+  <div>
+    <div class="panel">
+      <h2>Status</h2>
+      {% if order.status.value == 'superseded' %}
+      <p class="muted" id="so-superseded">Superseded by a newer draft: it is no request any more, so no status is recorded on it. Record the status on the newer stop order.</p>
+      {% elif access.can('log_correspondence') %}
+      <form method="post" action="/cases/{{ order.case.id }}/stop-orders/{{ order.id }}/status">
+        {{ csrf_field() }}
+        <label>Set status</label>
+        <select name="status">{% for s in statuses %}<option value="{{ s }}" {% if s == state %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+        <div class="grid cols-2">
+          <div><label>Amount held</label><input name="amount_held" inputmode="decimal" placeholder="e.g. 5.0416"></div>
+          <div><label>Asset</label><input name="asset" placeholder="ETH, USDT…"></div>
+        </div>
+        <label>Recipient ticket / reference</label><input name="external_ref" value="{{ order.external_ref or '' }}">
+        <label>Note</label><textarea name="notes" rows="3"></textarea>
+        <div style="margin-top:10px"><button class="btn primary" type="submit">Update</button></div>
+        <div class="muted" style="font-size:var(--fs-xs-up);margin-top:6px">Each change is logged on the authority timeline. “sent” needs the send-letter right; “released” only follows “frozen”.</div>
+      </form>
+      {% endif %}
+      <div class="muted" style="margin-top:10px;font-size:var(--fs-sm)">Created {{ order.created_at | dt }}<br>Sent {{ order.sent_at | dt }}{% if order.sent_via %} via {{ order.sent_via }}{% endif %}<br>Reply due {{ order.response_due_at | dt }}<br>Responded {{ order.responded_at | dt }}</div>
+      {% set hold = (order.identifiers or {}).get('hold') %}
+      {% if hold %}<div style="margin-top:8px"><span class="tag green">hold: {{ hold.state }}</span>{% if hold.amount %} {{ hold.amount }} {{ hold.asset or '' }}{% endif %}</div>{% endif %}
+      {% if order.notes and restricted %}<pre class="so-notes {{ 'defect' if 'KNOWN DEFECT' in order.notes or 'FOLLOW-UP' in order.notes else '' }}">{{ order.notes }}</pre>{% endif %}
+    </div>
+    {% if (order.identifiers or {}).get('rationale') %}
+    <div class="panel" style="margin-top:14px">
+      <h2>Why this recipient</h2>
+      {% for r in order.identifiers.rationale %}<div style="margin-bottom:6px">• {{ r }}</div>{% endfor %}
+      {% if order.entity and order.entity.le_contact_notes %}<h2 style="margin-top:14px">Contact notes</h2><div class="muted">{{ mask.text(order.entity.le_contact_notes) }}</div>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% if restricted %}<pre id="md" hidden>{{ order.body_markdown }}</pre>{% endif %}
+{% endblock %}

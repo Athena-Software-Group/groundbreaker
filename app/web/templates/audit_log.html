@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{# Audit log — owner: app/web/routes_team.py (case_audit: GET /cases/{id}/audit, case admins;
+   global_audit: GET /admin/audit, system admins).
+   Context: events, total, page, pages, actions, users {id: User}, cases {id: Case}, filters, chain_broken,
+   scope_case (Case or None), all_cases (global only) #}
+{% set base = '/cases/' ~ scope_case.id ~ '/audit' if scope_case else '/admin/audit' %}
+{% block title %}Aegis · Audit log{% if scope_case %} · {{ scope_case.reference }}{% endif %}{% endblock %}
+{% block content %}
+<div class="row case-head">
+  <div>
+    <h1>Audit log {% if scope_case %}<span class="mono muted">{{ scope_case.reference }}</span>{% else %}<small class="muted">all cases</small>{% endif %}</h1>
+    <div class="sub">
+      {% if scope_case %}<a href="/cases/{{ scope_case.id }}?tab=team">← back to the case team</a> · {% else %}<a href="/admin/users">users</a> · {% endif %}
+      append-only, hash-chained · details hold ids and field names only
+    </div>
+  </div>
+  <div class="spacer"></div>
+  {% if chain_broken %}<span class="tag red" title="first row whose hash does not match">chain broken at #{{ chain_broken }}</span>
+  {% else %}<span class="tag green">hash chain intact</span>{% endif %}
+</div>
+
+<form method="get" action="{{ base }}" class="panel audit-filters">
+  <div><label for="f-action">Action</label>
+    <select id="f-action" name="action"><option value="">any</option>
+      {% for a in actions %}<option value="{{ a }}" {{ 'selected' if a == filters.action else '' }}>{{ a }}</option>{% endfor %}
+    </select></div>
+  <div><label for="f-outcome">Outcome</label>
+    <select id="f-outcome" name="outcome"><option value="">any</option>
+      {% for o in ('allowed', 'denied') %}<option value="{{ o }}" {{ 'selected' if o == filters.outcome else '' }}>{{ o }}</option>{% endfor %}
+    </select></div>
+  <div><label for="f-actor">Actor</label>
+    <select id="f-actor" name="actor"><option value="">anyone</option>
+      {% for uid, u in users | dictsort %}<option value="{{ uid }}" {{ 'selected' if uid == filters.actor else '' }}>{{ u.display_name }}</option>{% endfor %}
+    </select></div>
+  <div><label for="f-object">Object type</label><input id="f-object" name="object_type" value="{{ filters.object_type }}" placeholder="e.g. stop_orders"></div>
+  {% if not scope_case %}
+  <div><label for="f-case">Case</label>
+    <select id="f-case" name="case"><option value="">any</option>
+      {% for c in all_cases %}<option value="{{ c.id }}" {{ 'selected' if c.id == filters.case_id else '' }}>{{ c.reference }}</option>{% endfor %}
+    </select></div>
+  {% endif %}
+  <div><label for="f-since">From</label><input id="f-since" type="date" name="since" value="{{ filters.since }}"></div>
+  <div><label for="f-until">To</label><input id="f-until" type="date" name="until" value="{{ filters.until }}"></div>
+  <div class="audit-filter-buttons"><button class="btn primary" type="submit">Filter</button> <a class="btn" href="{{ base }}">Clear</a></div>
+</form>
+
+<div class="panel">
+  <h2>Events <small>{{ total }} matching · page {{ page }} of {{ pages }}</small></h2>
+  <div class="table-scroll">
+  <table class="audit-table">
+    <thead><tr><th>#</th><th>Time</th><th>Actor</th>{% if not scope_case %}<th>Case</th>{% endif %}<th>Action</th><th>Object</th><th>Outcome</th><th>Detail</th><th>Source</th></tr></thead>
+    <tbody>
+    {% for e in events %}
+    <tr class="{{ 'audit-denied' if e.outcome == 'denied' else '' }}">
+      <td class="mono muted">{{ e.id }}</td>
+      <td class="nowrap">{{ e.ts | dt }}</td>
+      <td>{% if e.actor_user_id and users.get(e.actor_user_id) %}{{ users[e.actor_user_id].display_name }}{% elif e.actor_user_id %}user #{{ e.actor_user_id }}{% else %}<span class="muted">anonymous / system</span>{% endif %}</td>
+      {% if not scope_case %}<td>{% if e.case_id and cases.get(e.case_id) %}<a href="/cases/{{ e.case_id }}">{{ cases[e.case_id].reference }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>{% endif %}
+      <td><span class="tag {{ 'red' if e.action in ('ACCESS_DENIED', 'LOGIN_FAILED') else ('gold' if e.action in ('ROLE_GRANT', 'ROLE_REVOKE') else '') }}">{{ e.action }}</span></td>
+      <td class="mono">{{ e.object_type or '' }}{% if e.object_id %} #{{ e.object_id }}{% endif %}</td>
+      <td>{{ e.outcome }}</td>
+      <td class="mono audit-detail">{% for k, v in (e.detail or {}) | dictsort %}<span>{{ k }}={{ v | tojson if v is not string else v }}</span> {% endfor %}</td>
+      <td class="mono muted nowrap">{{ e.ip or '' }}{% if e.request_id %}<br>{{ e.request_id }}{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="9" class="muted">No events match.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if pages > 1 %}
+  {% set qs = 'action=' ~ (filters.action | urlencode) ~ '&outcome=' ~ filters.outcome ~ '&actor=' ~ (filters.actor or '') ~ '&object_type=' ~ (filters.object_type | urlencode) ~ '&since=' ~ filters.since ~ '&until=' ~ filters.until ~ ('&case=' ~ (filters.case_id or '') if not scope_case else '') %}
+  <div class="row audit-pages">
+    {% if page > 1 %}<a class="btn small" href="{{ base }}?{{ qs }}&page={{ page - 1 }}">← newer</a>{% endif %}
+    <div class="spacer"></div>
+    {% if page < pages %}<a class="btn small" href="{{ base }}?{{ qs }}&page={{ page + 1 }}">older →</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

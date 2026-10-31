@@ -1,0 +1,90 @@
+{# "How to contact" card — owner: the mail feature (app/domain/directory.py, routes in app/web/routes_mail.py).
+   Included by authority_detail.html above the timeline. Context: case, access, authority, card
+   (directory.ContactCard: org, entries, can_manage (case admin), can_manage_global (system admin), masked),
+   ch_err (an error message from the last channel form, or None). Never rendered for external members.
+   Followed by the "How to email" guidance panel (mail_guidance.html: who to write to / copy, the subject, import a
+   reply). #}
+{% if card and card.visible %}
+{% set akey = authority.key %}
+<div class="panel mail-card" id="contact">
+  <h2>How to contact <small>{% if card.org %}directory: {{ card.org.name }}{% else %}no catalogue entry{% endif %}{% if card.masked %} · case-only contacts masked for your role{% endif %}</small></h2>
+  {% if ch_err %}<div class="alert critical">{{ ch_err }}</div>{% endif %}
+  {% if card.info_only %}
+  <div class="alert warning"><b>Non-custodial: information requests only.</b> {{ card.org.notes or 'This counterparty cannot freeze or hold funds.' }}</div>
+  {% endif %}
+  {% if card.portal_only %}
+  <div class="alert info"><b>Portal only:</b> prepare the letter, submit it at <a href="{{ card.portal_url }}" target="_blank" rel="noopener noreferrer" class="mono">{{ card.portal_url }}</a>, then <b>Mark sent</b> with channel <span class="mono">portal</span>.</div>
+  {% endif %}
+  {% for group, rows in card.groups() %}
+  <div class="mail-group">
+    <div class="mail-group-h">{{ group }}</div>
+    {% for e in rows if not demo_hidden(case, e.value) %}
+    <div class="mail-entry{{ ' mail-entry-off' if e.disabled else '' }}">
+      <div class="mail-entry-main">
+        {% if e.verified %}<span class="tag green" title="verified{% if e.verified_at %} {{ e.verified_at | dt }}{% endif %}{% if e.verification_note %}: {{ e.verification_note }}{% endif %}">✓ verified</span>{% elif e.value %}<span class="tag amber" title="not verified: confirm it belongs to the counterparty before relying on it">⚠ unverified</span>{% endif %}
+        <span class="tag">{{ e.kind }}</span>
+        {% if e.value %}
+          {% if e.kind in ('website', 'portal', 'webform') and not e.masked %}<a class="mono mail-value" href="{{ e.value }}" target="_blank" rel="noopener noreferrer">{{ e.value }}</a>
+          {% else %}<span class="mono mail-value">{{ e.value }}</span>{% endif %}
+        {% else %}<span class="muted">to be confirmed</span>{% endif %}
+        {% if e.label %}<span class="muted">· {{ e.label }}</span>{% endif %}
+        {% if e.role_default == 'cc' %}<span class="tag" title="usually copied, not addressed">cc</span>{% endif %}
+        {% if e.le_only %}<span class="tag red" title="the provider reserves this channel for law enforcement">LE only: send the officer the pack</span>{% endif %}
+      </div>
+      <div class="mail-entry-sub muted">
+        {%- set src = e.source | replace('_', ' ') -%}
+        {%- set scope_text = {'global': 'all cases', 'case': 'this case only'}.get(e.scope, '') -%}
+        {{ e.purpose | replace('_', ' ') }}{% if not (e.label and (e.label | lower).startswith(src)) %} · source {{ src }}{% endif %}{% if scope_text %} · {{ scope_text }}{% endif %}{% if e.last_used_at %} · last used {{ e.last_used_at | dt }}{% endif %}{% if e.meta.seen %} · seen in {{ e.meta.seen['in'] }} / out {{ e.meta.seen['out'] }}{% endif %}{% if e.source_url %} · <a href="{{ e.source_url }}" target="_blank" rel="noopener noreferrer">where it is published</a>{% endif %}
+        {% if e.notes %}<div>{{ e.notes }}</div>{% endif %}
+      </div>
+      {% if not e.masked %}
+      <div class="mail-entry-actions">
+        {% if e.id and ((e.scope == 'case' and card.can_manage) or (e.scope != 'case' and card.can_manage_global)) %}
+          {% if e.value %}
+          <form method="post" action="/cases/{{ case.id }}/channels/{{ e.id }}/verify" class="inline">{{ csrf_field() }}<input type="hidden" name="back" value="{{ akey }}"><input type="hidden" name="verified" value="{{ '0' if e.verified else '1' }}"><button class="btn small" type="submit">{{ 'Unverify' if e.verified else 'Verify' }}</button></form>
+          {% endif %}
+          <form method="post" action="/cases/{{ case.id }}/channels/{{ e.id }}/disable" class="inline">{{ csrf_field() }}<input type="hidden" name="back" value="{{ akey }}">{% if e.disabled %}<input type="hidden" name="enable" value="1">{% endif %}<button class="btn small" type="submit">{{ 'Enable' if e.disabled else 'Disable' }}</button></form>
+        {% elif e.catalogue_key and not e.id and e.value and card.can_manage_global %}
+          <form method="post" action="/cases/{{ case.id }}/channels/catalogue/{{ e.catalogue_key }}/verify" class="inline">{{ csrf_field() }}<input type="hidden" name="back" value="{{ akey }}"><input type="hidden" name="verified" value="1"><button class="btn small" type="submit" title="for every case (global directory)">Verify (global)</button></form>
+        {% elif not e.id and not e.catalogue_key and e.value and card.can_manage and card.attachable %}
+          <form method="post" action="/cases/{{ case.id }}/authorities/{{ akey }}/channels" class="inline">{{ csrf_field() }}
+            <input type="hidden" name="kind" value="{{ e.kind }}"><input type="hidden" name="value" value="{{ e.value }}">
+            <input type="hidden" name="purpose" value="{{ e.purpose }}"><input type="hidden" name="role_default" value="{{ e.role_default }}">
+            <input type="hidden" name="label" value="{{ e.label or '' }}"><input type="hidden" name="source" value="{{ e.source }}">
+            <input type="hidden" name="scope" value="case"><input type="hidden" name="verified" value="1">
+            <button class="btn small" type="submit" title="save it for this case as verified">Verify for this case</button></form>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="muted">No channel on file yet{% if card.can_manage %}: add one below{% endif %}.</div>
+  {% endfor %}
+  {% if card.can_manage and card.attachable %}
+  <details class="mail-add">
+    <summary>Add channel</summary>
+    <form method="post" action="/cases/{{ case.id }}/authorities/{{ akey }}/channels">
+      {{ csrf_field() }}
+      <div class="row">
+        <div style="flex:1"><label>Kind</label><select name="kind">{% for k in ('email', 'portal', 'webform', 'website', 'phone', 'postal') %}<option value="{{ k }}">{{ k }}</option>{% endfor %}</select></div>
+        <div style="flex:1"><label>Purpose</label><select name="purpose">{% for p in ('le_request', 'freeze', 'compliance', 'legal', 'abuse', 'complaint', 'general') %}<option value="{{ p }}" {% if p == 'compliance' %}selected{% endif %}>{{ p | replace('_', ' ') }}</option>{% endfor %}</select></div>
+        <div style="flex:1"><label>Role</label><select name="role_default"><option value="to">to</option><option value="cc">cc</option></select></div>
+      </div>
+      <label>Value (address, https:// URL, phone; empty = to be confirmed)</label><input name="value" maxlength="512" class="mono" autocomplete="off">
+      <label>Label</label><input name="label" maxlength="255" placeholder="e.g. Compliance desk (from their reply of 19.10.2026)">
+      <label>Notes / where it comes from</label><input name="notes" maxlength="2000">
+      <label class="auth-check"><input type="checkbox" name="verified" value="1"> I verified this channel belongs to {{ authority.name }}</label>
+      <label>Verification note</label><input name="note" maxlength="512" placeholder="how it was verified">
+      {% if card.can_manage_global %}
+      <label>Scope</label><select name="scope"><option value="case">this case only (R2)</option><option value="global">every case (global directory, I0: generic organisational channels only)</option></select>
+      {% else %}<input type="hidden" name="scope" value="case">{% endif %}
+      <div style="margin-top:8px"><button class="btn small primary" type="submit">Add channel</button></div>
+    </form>
+  </details>
+  {% endif %}
+  <div class="muted mail-foot">Catalogue: generic organisational channels only (data/catalogue/channels.json), unverified until an admin confirms them. <a href="/directory">Directory</a></div>
+</div>
+{% include "mail_guidance.html" %}
+{% endif %}

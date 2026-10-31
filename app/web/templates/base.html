@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Aegis{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/brand/favicon.svg">
+  <link rel="stylesheet" href="/static/aegis.css">
+  {# one stylesheet per feature (static/css/<feature>.css), each owned by its feature #}
+  {% for f in FEATURES %}<link rel="stylesheet" href="/static/css/{{ f }}.css">
+  {% endfor %}
+  {% block head %}{% endblock %}
+</head>
+<body>
+{% set me = current_user() %}
+<header class="top">
+  <a class="brand-link" href="/" aria-label="GroundBreaker home"><img src="/static/brand/mark.svg" alt="" width="34" height="34" class="brand-mark"></a>
+  <div class="brand"><span class="brand-light">Ground</span>Breaker<small>Aegis · powered by <b class="athena">Athena Software Group, Inc.</b></small></div>
+  {% if me %}
+  {% set path = request.url.path %}
+  <nav>
+    <a href="/" {% if path == '/' or path.startswith('/cases/') and path != '/cases/new' %}class="active"{% endif %}>Cases</a>
+    {% if may_create_cases(me) %}<a href="/cases/new" {% if path == '/cases/new' %}class="active"{% endif %}>New case</a>{% endif %}
+    {% set n_unread = inbox_unread() %}
+    <a id="nav-inbox" href="/notifications" {% if path == '/notifications' %}class="active"{% endif %} title="Notifications addressed to you">Inbox <span class="badge" data-inbox-count {% if not n_unread %}hidden{% endif %}>{{ '99+' if n_unread > 99 else n_unread }}</span></a>
+    <a href="/directory" {% if path == '/directory' %}class="active"{% endif %} title="Authorities and how to contact them">Directory</a>
+    {% if me.is_system_admin %}
+    {% set n_mail = mail_unassigned_count() %}
+    <a id="nav-mail" href="/admin/mail" {% if path == '/admin/mail' or path.startswith('/admin/mail/') %}class="active"{% endif %} title="Case mailbox: transport, sync and unassigned replies">Mail{% if n_mail %} <span class="badge">{{ '99+' if n_mail > 99 else n_mail }}</span>{% endif %}</a>
+    <a href="/admin/users" {% if path == '/admin/users' %}class="active"{% endif %}>Users</a>
+    <a href="/admin/audit" {% if path == '/admin/audit' %}class="active"{% endif %}>Audit</a>
+    <a href="/admin/ai" {% if path == '/admin/ai' or path.startswith('/admin/ai/') %}class="active"{% endif %}>AI</a>
+    <a href="/api/docs" target="_blank" rel="noopener">API</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+  {# the environment line is developer text: shown only when AEGIS_SHOW_ENV_BADGE asks for it (dev / staging) #}
+  {% if app_info.show_env %}<div class="env" title="env: {{ app_info.env }} · providers: {{ app_info.provider_mode }} · db: {{ app_info.db }}"><span class="env-full">env: <b>{{ app_info.env }}</b> · providers: <b>{{ app_info.provider_mode }}</b> · db: {{ app_info.db }}</span><span class="env-short"><b>{{ app_info.env }}</b> · <b>{{ app_info.provider_mode }}</b></span></div>{% endif %}
+  {% if me %}
+  <div class="user-menu">
+    <span class="user-name muted" title="{{ me.display_name }}">{{ me.display_name }}{% if me.is_system_admin %} <span class="tag gold">system admin</span>{% endif %}</span>
+    <form method="post" action="/logout" class="inline">{{ csrf_field() }}<button class="btn small" type="submit">Sign out</button></form>
+  </div>
+  {% endif %}
+</header>
+<main>
+{% include "_mail_sent_banner.html" %}
+{% set _notice = pop_notice(request) if pop_notice is defined and request is defined else none %}
+{% if _notice %}<dialog open class="notice-dialog" role="alertdialog" aria-labelledby="notice-title" id="notice-dialog">
+  <h2 id="notice-title">{{ _notice.title }}</h2>
+  <p>{{ _notice.text }}</p>
+  <form method="dialog" class="notice-actions"><button class="btn primary" type="submit" autofocus>OK</button></form>
+</dialog>{% endif %}
+{% block content %}{% endblock %}
+</main>
+<footer>Aegis · powered by Athena Software Group, Inc. · fund-flow tracer &amp; stop-order desk · for investigative use — every asserted link is labelled; verify before filing.</footer>
+{% block scripts %}{% endblock %}
+<script src="/static/ui.js"></script>
+{# one script per feature (static/js/<feature>.js); each must no-op on pages without its elements #}
+{% for f in FEATURES %}<script src="/static/js/{{ f }}.js"></script>
+{% endfor %}
+</body>
+</html>

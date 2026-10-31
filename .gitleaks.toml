@@ -1,0 +1,52 @@
+# gitleaks configuration for Aegis: the built-in rule set plus additional provider key formats
+# (Groq, Supabase). Case-specific identifiers are covered by scripts/pii_scan.py with an optional
+# out-of-repo denylist, not here.
+title = "aegis"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "groq-api-key"
+description = "Groq API key"
+regex = '''\bgsk_[A-Za-z0-9]{20,}\b'''
+keywords = ["gsk_"]
+
+[[rules]]
+id = "supabase-jwt"
+description = "Supabase anon / service-role key (JWT)"
+regex = '''\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b'''
+keywords = ["eyj"]
+
+[[rules]]
+id = "supabase-secret-key"
+description = "Supabase secret / personal access token"
+regex = '''\b(?:sb_secret_[A-Za-z0-9_-]{20,}|sbp_[a-f0-9]{40})\b'''
+keywords = ["sb_secret_", "sbp_"]
+
+[allowlist]
+# Global: matched against the secret itself (gitleaks' default regexTarget = "match"), so a real
+# secret elsewhere on the same line is still reported.
+description = "Demo placeholders and public token contract addresses"
+regexes = [
+  '''gsk_DEMO''',
+  '''demo0000project''',
+  # Public stablecoin contracts (USDC on Ethereum, USDT on TRON) — not secrets.
+  '''(?i)0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48''',
+  '''TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t''',
+]
+paths = ['''app/web/static/vendor/''']
+
+# Fixture cross-reference slugs ("key": "kucoin-preservation-…") look like generic API keys to the
+# built-in generic-api-key rule (gitleaks 8.30 reports 14 of them; its match includes the `key": "`
+# prefix). The exemption is scoped to that one rule and anchored to the whole match, so another
+# secret on the same line is still reported (a global regexTarget = "line" would exempt it).
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Fixture cross-reference slugs, not credentials"
+regexTarget = "match"
+regexes = [
+  '''^(?:stop_order_|thread_|in_reply_to_)?key":\s*"[a-z0-9]+(?:-[a-z0-9]+)+"?$''',
+]

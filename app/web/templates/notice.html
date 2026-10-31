@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ notice.title }} — Aegis{% endblock %}
+{% block content %}
+<dialog open class="notice-dialog notice-page" role="alertdialog" aria-labelledby="notice-title">
+  <h2 id="notice-title">{{ notice.title }}</h2>
+  <p>{{ notice.text }}</p>
+  <div class="notice-actions"><a class="btn primary" href="{{ back }}">Back</a></div>
+</dialog>
+{% endblock %}

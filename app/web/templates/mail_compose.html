@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{# Compose an e-mail from a draft letter — owner: app/web/routes_mail.py (compose_page / compose_prepare).
+   Context: case, access, corr, authority, opts (mail_compose.ComposeOptions: recipients, subject, tag, attachments,
+   draft_hash, in_reply_to, mailbox, transport, errors), transport (TransportStatus | None), transport_problem,
+   vault ((enabled, reason)), error, mask; opts.sender (mail_compose.SenderCheck: the sender of record) and opts.busy /
+   opts.busy_text (another e-mail of this letter is sending / sent / unknown: prepare is refused); opts.manual ("Draft —
+   you send": the tag goes at the end of the subject, the case mailbox may be a Cc, the preview is a checklist) and
+   opts.guidance (mail_guidance.Guidance | None: ranked To / Cc with a reason each, warnings, the standard subject).
+   opts.redirect (mail_compose.redirect_hint: the authority's reply named another address for this request).
+   The editor: opts.body (the letter text, Markdown) with body_preview (its HTML as the e-mail renders it; js/mail.js
+   refreshes it live through …/email/preview), opts.bcc_other, opts.saved_at, uploaded attachments (a.uploaded),
+   can_edit_body (draft_letter), can_upload (add_evidence), upload_max_files / upload_max_mb, can_send (send_email),
+   notice. Buttons post `action`: save | upload | prepare | send_now (case admins). confirm (MailMessage | None: the
+   e-mail "Send now" prepared, waiting for the confirmation on this page) with the Send form's context
+   (_mail_send_form.html: mm, pv, confirm_rows, att_evidence, visible_atts, n_restricted, bcc, sender_check,
+   busy_send). Nothing is sent from this page except through that form (the preview's Send route). While that
+   confirmation waits, the editor below is locked (a disabled fieldset; js/mail.js also disables Send on any edit):
+   what is sent is exactly what the panel shows, its text included; "Edit" cancels the prepared e-mail (the preview's
+   Edit route) and reopens the editor. While another e-mail of the letter is in flight or sent (opts.busy) the editor
+   is locked too: the letter text stays what went out. opts.checklist / opts.checklist_text (an open old "Draft — you
+   send" checklist while Aegis sends: the editor is locked and every button refused until a case admin retires it or
+   records it as sent on the checklist itself) and opts.waiting (other prepared, unexpired e-mails of the letter,
+   which a Save / Send here cancels). stale_body (the letter's
+   current text after a "changed while you were editing" refusal; opts.draft_hash stays the one the page was based on,
+   so another Save is refused again). opts.cc_offers / opts.cc_note (mail_compose.cc_offers: "Cc the sender of record",
+   "Cc me" boxes, `cc_add`, remembered in meta.mail_draft; the note when the sender's e-mail is the case mailbox);
+   opts.sender.fixable: the "Use the sender profile's signature" button (action use_signature); sender_help.
+   The guided flow: steps (mail_compose.compose_steps, the stepper _mail_stepper.html: 1 Recipients → 2 Letter →
+   3 Attachments → 4 Review & send) and return_to (mail_flow.safe_return: the page the editor was opened from; every
+   form here carries it, and after Send the "Sending…" screen goes back there). #}
+{% block title %}Aegis · E-mail letter #{{ corr.id }} · {{ case.reference }}{% endblock %}
+{% block content %}
+<div class="row case-head" style="margin-bottom:12px"><div><h1>E-mail <small class="muted">letter #{{ corr.id }}</small></h1>
+  <div class="sub"><a href="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}">← {{ mask.text(corr.subject) or 'Letter' }}</a>
+    · to <a href="/cases/{{ case.id }}/authorities/{{ authority.key }}">{{ authority.name }}</a>
+    · from <span class="mono">{{ opts.mailbox or 'no mailbox configured' }}</span>{% if return_to %} · <a href="{{ return_to }}" id="mail-return-link">back to where you were</a>{% endif %}</div></div></div>
+{% set link = true %}{% include "_mail_stepper.html" %}
+
+{% if error %}<div class="alert critical" id="mail-error">{{ error }}</div>{% endif %}
+{% if notice %}<div class="alert info" id="mail-notice">{{ notice }}</div>{% endif %}
+{% if opts.manual %}<div class="alert info" id="mail-manual-mode"><b>Draft — you send.</b> Aegis prepares this e-mail (To, Cc, subject, body, attachments, an Outlook draft) and you send it from the investigations mailbox{% if opts.mailbox %} (<span class="mono">{{ opts.mailbox }}</span>){% endif %} in Outlook, then record it as sent. {% if not opts.mailbox %}No case mailbox is configured (AEGIS_MAIL_FROM): the draft has no From, so Outlook uses your default account.{% endif %}</div>
+{% elif not opts.mailbox %}<div class="alert critical">No sending mailbox is configured (AEGIS_MAIL_FROM). Ask a system administrator; until then use <b>Mark sent</b> on the letter after sending it yourself.</div>
+{% elif transport_problem %}<div class="alert warning">Sending from Aegis is not available right now ({{ transport_problem }}). You can still prepare the e-mail: a case admin can download the exact .eml to send it manually.</div>{% endif %}
+{% if opts.busy %}<div class="alert critical" id="mail-letter-busy"><b>One e-mail per letter.</b> {{ opts.busy_text }} <a href="/cases/{{ case.id }}/mail/messages/{{ opts.busy.id }}">Open e-mail #{{ opts.busy.id }}</a></div>{% endif %}
+{% if opts.sender and opts.sender.needs_ack %}<div class="alert warning" id="mail-sender-warning"><b>Sender of record does not match</b> <span class="mail-help-tip" title="{{ sender_help }}">?</span> {{ opts.sender.text }}
+  <div class="mail-note mail-sender-fix">{% if opts.sender.fixable and can_edit_body and not (confirm or opts.busy or opts.checklist) %}<button class="btn small primary" type="submit" form="mail-compose-form" name="action" value="use_signature" id="mail-use-signature" title="replaces the letter's opening (“We write as …, on behalf of …”) and its closing signature with the sender profile's; saved like any edit (the previous text is kept as a version)">Use the sender profile's signature</button> {% endif %}<a href="/cases/{{ case.id }}/sender-profile">Sender profile</a>{% if access.can('send_email') %} · or send it as it is: one tick in the confirmation step{% else %} · or a case admin ticks the acknowledgement before sending{% endif %}.</div></div>
+{% elif opts.sender and opts.sender.problem == 'no_profile' %}<div class="alert info mail-note" id="mail-sender-note">{{ opts.sender.text }} <a href="/cases/{{ case.id }}/sender-profile">Set up the sender profile</a></div>{% endif %}
+{% if not vault[0] %}<div class="alert critical">AEGIS_VAULT_DIR must be set: every sent e-mail is filed as evidence.</div>{% endif %}
+{% if opts.card.info_only %}<div class="alert warning"><b>Non-custodial: information requests only.</b> Do not ask {{ authority.name }} to freeze funds.</div>{% endif %}
+{% if opts.card.portal_only %}<div class="alert info"><b>Portal only:</b> {{ authority.name }} takes no e-mail; submit the letter at <span class="mono">{{ opts.card.portal_url }}</span> and use <b>Mark sent</b> with channel portal.</div>{% endif %}
+
+{% if confirm %}{% set mm = confirm %}
+<div class="panel mail-confirm mail-send-now" id="confirm">
+  <h2><span class="mail-step-n" aria-hidden="true">4</span> Review &amp; send <small>e-mail #{{ mm.id }} · built and frozen: exactly these bytes go out</small></h2>
+  <table class="mail-headers"><tbody>
+    <tr><th>From</th><td class="mono">{{ mm.mailbox }}</td></tr>
+    <tr><th>To</th><td class="mono">{{ (mm.to_addrs or []) | join(', ') }}</td></tr>
+    {% if mm.cc_addrs %}<tr><th>Cc</th><td class="mono">{{ mm.cc_addrs | join(', ') }}</td></tr>{% endif %}
+    {% if bcc %}<tr><th>Bcc</th><td><span class="mono">{{ bcc | join(', ') }}</span> <span class="muted">— hidden from the other recipients</span></td></tr>{% endif %}
+    <tr><th>Subject</th><td class="mono">{{ mm.subject }}</td></tr>
+    <tr><th>Attachments</th><td>{% for a in visible_atts %}<div><span class="mono">{{ a.filename }}</span> <span class="muted">{{ '{:,}'.format(a.size) }} B</span></div>{% else %}{% if not n_restricted %}<span class="muted">none</span>{% endif %}{% endfor %}{% if n_restricted %}<div class="muted">{{ n_restricted }} restricted</div>{% endif %}</td></tr>
+    <tr><th>Size</th><td class="mono">{{ '{:,}'.format(mm.mime_size or 0) }} bytes ({{ '%.2f' | format((mm.mime_size or 0) / 1000000) }} MB of {{ '%.1f' | format(opts.max_bytes / 1000000) }} MB)</td></tr>
+  </tbody></table>
+  {% if pv.ok %}<details class="mail-confirm-text" id="confirm-text" open><summary>Text as it will be sent <span class="muted">(text/plain; the HTML part and the .docx are built from the same letter text)</span></summary>
+    <pre class="tl-text mail-text">{{ pv.text }}</pre></details>{% endif %}
+  <div class="muted mail-note"><a href="/cases/{{ case.id }}/mail/messages/{{ mm.id }}">Full preview</a> (text and HTML exactly as sent). The editor below is locked while this e-mail waits: to change the text, recipients, Bcc or attachments, press <b>Edit</b> — this prepared e-mail is cancelled (nothing is sent) and the editor opens with every field.</div>
+  <form method="post" action="/cases/{{ case.id }}/mail/messages/{{ mm.id }}/edit" class="inline" id="confirm-edit">{{ csrf_field() }}<input type="hidden" name="return_to" value="{{ return_to }}"><button class="btn small" type="submit">Edit (cancels this prepared e-mail)</button></form>
+  <div class="alert warning mail-note" id="mail-confirm-stale" hidden>You changed the e-mail below: it is not what this panel sends. Press <b>Edit</b> above (this prepared e-mail is cancelled) and send it again.</div>
+  {% if busy_send %}<div class="alert critical mail-note">Not available: {{ opts.busy_text or 'another e-mail of this letter is in flight or was sent' }}</div>
+  {% elif transport_problem %}<div class="alert warning mail-note">Sending is not available: {{ transport_problem }}</div>
+  {% else %}<div style="margin-top:10px">{% include "_mail_send_form.html" %}</div>{% endif %}
+</div>
+{% endif %}
+
+<form method="post" action="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}/email" class="mail-compose" id="mail-compose-form" enctype="multipart/form-data">
+  {{ csrf_field() }}
+  {# the form's default button, disabled: Enter in a single-line field (To, Cc, Bcc, subject) submits nothing #}
+  <button type="submit" disabled hidden aria-hidden="true" tabindex="-1" id="mail-no-implicit-submit"></button>
+  <input type="hidden" name="draft_hash" value="{{ opts.draft_hash }}">
+  <input type="hidden" name="return_to" value="{{ return_to }}">
+  {% set locked = confirm or opts.busy or opts.checklist %}
+  {% if stale_body is not none %}<details class="alert warning mail-note" id="mail-stale-letter" open><summary><b>The letter changed while you were editing.</b> Your text is kept in the editor below; the letter as it is now:</summary>
+    <pre class="tl-text mail-text">{{ stale_body }}</pre>
+    <div>Copy what you need, then <a href="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}/email">reload the editor with the current letter</a> and apply your changes there: saving this page again is refused, so the other edit is never overwritten.</div></details>{% endif %}
+  {% if opts.checklist %}<div class="alert critical" id="mail-checklist-open">{{ opts.checklist_text }} <a href="/cases/{{ case.id }}/mail/messages/{{ opts.checklist.id }}" id="mail-checklist-link">Open checklist #{{ opts.checklist.id }}</a>{% if not can_send %} (a case admin chooses){% endif %}</div>{% endif %}
+  {% set waiting = opts.waiting | rejectattr('id', 'equalto', confirm.id if confirm else 0) | list %}
+  {% if waiting and not locked %}<div class="alert info mail-note" id="mail-waiting">{% for r in waiting %}<div><a href="/cases/{{ case.id }}/mail/messages/{{ r.id }}">E-mail #{{ r.id }}</a> of this letter is prepared and waiting{% if r.created_by != access.user.id %} (prepared by another member){% endif %}.{% if can_send or r.created_by == access.user.id %} Save draft, Prepare or Send now here cancels it (nothing is sent from it).{% endif %}</div>{% endfor %}</div>{% endif %}
+  {% if locked %}<div class="alert info mail-note" id="mail-editor-locked">{% if confirm %}The editor is locked while e-mail #{{ confirm.id }} waits for your confirmation above: use <b>Edit</b> there to change it.{% elif opts.checklist and not opts.busy %}The editor is locked until the Outlook checklist above is retired or recorded as sent.{% else %}The editor is locked: another e-mail of this letter is being sent, was sent or has an unknown outcome (see above), so the letter stays what it carries.{% endif %}</div>{% endif %}
+  <fieldset class="mail-lock"{% if locked %} disabled{% endif %}>
+  <div class="auth-grid">
+  <div class="auth-main">
+    <div class="panel mail-step-panel{{ ' mail-err' if opts.errors.to or opts.errors.cc else '' }}" id="step-recipients">
+      <h2><span class="mail-step-n" aria-hidden="true">1</span> Recipients <small>from the directory; ✓ = verified</small></h2>
+      {% if opts.errors.to %}<div class="alert critical">{{ opts.errors.to }}</div>{% endif %}
+      {% if opts.errors.cc %}<div class="alert critical">{{ opts.errors.cc }}</div>{% endif %}
+      {% if opts.redirect %}{% set rd = opts.redirect %}<div class="alert warning mail-redirect">Their reply of {{ rd.at | dt }}
+        (<a href="/cases/{{ case.id }}/authorities/{{ authority.key }}#c{{ rd.reply_id }}">#{{ rd.reply_id }}</a>) says
+        {% if rd.legacy %}<span class="mono">{{ rd.legacy }}</span>{% else %}the address used{% endif %} is not the right channel and names
+        <span class="mono">{{ rd.to }}</span>.
+        {% if rd.prefilled %}It is typed in below{% if rd.legacy %} and <span class="mono">{{ rd.legacy }}</span> is not ticked{% endif %}: check it against their published channels before you confirm it.
+        {% elif rd.le_only %}It is not filled in: LE only — send the officer the pack (an LE cover letter to the case's LE authority).
+        {% else %}It is not filled in, because the reply did not come from their own domain or names another domain: verify it first.{% endif %}</div>{% endif %}
+      <table class="mail-recipients">
+        <thead><tr><th>To</th><th>Cc</th><th>Address</th><th>Where it comes from</th></tr></thead>
+        <tbody>
+        {% for r in opts.recipients %}
+        <tr>
+          <td><input type="checkbox" name="to" value="{{ r.address }}" {% if r.to_checked %}checked{% endif %}{% if r.le_only %} disabled{% endif %} aria-label="To {{ r.address }}"></td>
+          <td><input type="checkbox" name="cc" value="{{ r.address }}" {% if r.cc_checked %}checked{% endif %}{% if r.le_only %} disabled{% endif %} aria-label="Cc {{ r.address }}"></td>
+          <td class="mono">{{ r.address }}</td>
+          <td>{% if r.verified %}<span class="tag green">✓ verified</span>{% else %}<span class="tag amber">⚠ unverified</span>{% endif %} <span class="muted">{{ r.label }} · {{ r.source | replace('_', ' ') }}{% if r.scope == 'case' %} · this case{% endif %}</span>{% if r.le_only %} <span class="tag red">LE only: send the officer the pack</span>{% endif %}
+            {% set why = opts.guidance.why_for(r.address) if opts.guidance else None %}{% if why %}<div class="mail-why muted">{{ why }}</div>{% endif %}</td>
+        </tr>
+        {% else %}<tr><td colspan="4" class="muted">No e-mail channel on file for {{ authority.name }}. Type the address below (you will confirm it before sending), or add it to the directory on the authority page.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      <div class="row mail-other">
+        <div style="flex:1"><label for="mail-to-other">Other To addresses (comma-separated)</label><input name="to_other" class="mono" value="{{ opts.to_other }}" autocomplete="off" id="mail-to-other"></div>
+        <div style="flex:1"><label for="mail-cc-other">Other Cc addresses (comma-separated)</label><input name="cc_other" class="mono" value="{{ opts.cc_other }}" autocomplete="off" id="mail-cc-other"></div>
+        <div style="flex:1"><label for="mail-bcc-other">Bcc addresses <span class="muted">(hidden recipients)</span></label><input name="bcc_other" class="mono" value="{{ opts.bcc_other }}" autocomplete="off" id="mail-bcc-other"></div>
+      </div>
+      {% if opts.errors.bcc %}<div class="alert critical">{{ opts.errors.bcc }}</div>{% endif %}
+      {% if opts.cc_offers or opts.cc_note %}<div class="mail-cc-offers" id="mail-cc-offers">
+        {% if opts.cc_offers %}<input type="hidden" name="cc_offered" value="1">{% endif %}
+        {% for o in opts.cc_offers %}<label class="auth-check mail-cc-offer"><input type="checkbox" name="cc_add" value="{{ o.key }}" id="mail-cc-{{ o.key }}" {% if o.checked %}checked{% endif %}{% if o.blocked %} disabled{% endif %}> <span>{{ o.label }} (<span class="mono">{{ o.address }}</span>){% if o.key == 'sender' %} <span class="muted">— the sender profile's contact e-mail</span>{% endif %}{% if o.blocked %} <span class="muted">— not available: {{ o.blocked }}</span>{% endif %}</span></label>{% endfor %}
+        {% if opts.cc_note %}<div class="muted mail-note" id="mail-cc-sender-note">{{ opts.cc_note }}</div>{% endif %}
+      </div>{% endif %}
+      <div class="muted mail-note">Bare addresses only (no names). At most 10 To, 10 Cc, 10 Bcc, 15 in all; duplicates are dropped. Bcc recipients get the e-mail without the others seeing them (they are never a header of the message; the mailbox adds them when it sends). Typed and unverified addresses must be confirmed one by one before sending.</div>
+    </div>
+
+    <div class="panel mail-step-panel{{ ' mail-err' if opts.errors.subject else '' }}" style="margin-top:14px" id="step-letter">
+      <h2><span class="mail-step-n" aria-hidden="true">2</span> Letter <small>the subject, then the text</small></h2>
+      <label for="mail-subject">Subject</label>
+      {% if opts.errors.subject %}<div class="alert critical">{{ opts.errors.subject }}</div>{% endif %}
+      <div class="mail-subject">{% if not opts.manual %}<span class="mono mail-tag" title="tracking tag: replies are matched to this letter by it">{{ opts.tag }}</span>{% endif %}
+        <input name="subject" id="mail-subject" maxlength="220" required value="{{ opts.subject }}">{% if opts.manual %}<span class="mono mail-tag" title="tracking tag (added at the end): replies are matched to this letter by it">{{ opts.tag }}</span>{% endif %}</div>
+      {% if opts.guidance %}<div class="muted mail-note mail-subject-hint">Standard subject for {{ opts.guidance.kind_label | lower }}: <span class="mono" id="mail-subject-suggestion">{{ opts.guidance.subject_body }}</span>{% if opts.guidance.subject_body != opts.subject %} <button class="btn small" type="button" data-mail-subject-use="mail-subject-suggestion" data-target="mail-subject">Use it</button>{% endif %}{% if opts.manual %} — keep the tag at the end unchanged in Outlook so replies are matched.{% endif %}</div>{% endif %}
+      <div class="muted mail-note" id="mail-subject-letter-note">This is the e-mail's subject. The letter's own “Subject:” line (in the text below, and the attached .docx) is part of the letter: change it there too if it should match.</div>
+      {% if opts.in_reply_to %}<div class="muted mail-note">Threaded as a reply to the e-mail Aegis sent for letter #{{ opts.in_reply_to_corr }}.</div>{% endif %}
+    </div>
+
+    <div class="panel{{ ' mail-err' if opts.errors.body else '' }}" style="margin-top:14px" id="editor">
+      <h2>Letter text <small>the e-mail body (plain text and HTML) and the attached .docx are built from it</small></h2>
+      {% if opts.errors.body %}<div class="alert critical">{{ opts.errors.body }}</div>{% endif %}
+      <div class="mail-editor">
+        <div class="mail-editor-col">
+          <label for="mail-body">Letter text <span class="muted">(Markdown: **bold**, ### heading, - list)</span></label>
+          <textarea name="body_markdown" id="mail-body" class="mono mail-body" rows="24" maxlength="100000" spellcheck="true"{% if not can_edit_body or locked %} readonly{% endif %} data-preview-url="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}/email/preview" data-preview-target="mail-body-preview" data-count-target="mail-body-count">{{ opts.body }}</textarea>
+          <div class="muted mail-note"><span id="mail-body-count">{{ '{:,}'.format(opts.body | length) }}</span> characters. Saving keeps the previous text as a version of the letter. The internal "Draft generated by Aegis" footer is never sent.</div>
+        </div>
+        <div class="mail-editor-col">
+          <div class="mail-group-h">Preview <span class="muted" id="mail-body-preview-state" aria-live="polite"></span></div>
+          <div class="letter mail-body-preview" id="mail-body-preview">{{ body_preview }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel{{ ' mail-err' if opts.errors.attach or opts.errors.upload or opts.errors.attachment else '' }}" style="margin-top:14px" id="attachments">
+      <h2><span class="mail-step-n" aria-hidden="true">3</span> Attachments <small>limit {{ '%.1f' | format(opts.max_bytes / 1000000) }} MB for the whole message</small></h2>
+      {% if opts.errors.attach %}<div class="alert critical">{{ opts.errors.attach }}</div>{% endif %}
+      {% if opts.errors.upload or opts.errors.attachment %}<div class="alert critical">{{ opts.errors.upload or opts.errors.attachment }}</div>{% endif %}
+      {% if can_upload and not locked %}<div class="mail-upload">
+        <label for="mail-upload">Upload from computer <span class="muted">(up to {{ upload_max_files }} files, each at most {{ '%.1f' | format(upload_max_mb) }} MB)</span></label>
+        <div class="row"><input type="file" name="upload" id="mail-upload" multiple accept="{{ upload_accept }}" style="flex:1"> <button class="btn small" type="submit" name="action" value="upload">Upload and attach</button></div>
+        <div class="muted mail-note">Each file is filed as R3 evidence in Stop orders &amp; correspondence (sha256 recorded), linked to this letter and ticked below. It goes out under a neutral name, <span class="mono">{{ case.reference }}_evidence-&lt;id&gt;.&lt;ext&gt;</span> (shown in its row), never its own file name. Only {{ upload_types }} are uploaded, and each file's content must match its type; archives (.zip …), installers, programs, scripts, web pages, legacy Office (.doc, .xls, .ppt), RTF, macro and e-mail files are refused. Untick a file to leave it out of the e-mail (it stays filed, but is not listed as evidence of the sent letter).</div>
+      </div>{% endif %}
+      <table class="mail-atts">
+        <thead><tr><th></th><th>Item</th><th>Folder</th><th>Class.</th><th>TLP</th><th class="right">Size</th></tr></thead>
+        <tbody>
+        {% for a in opts.attachments %}
+        <tr class="{{ 'mail-blocked' if a.blocked_reason else '' }}">
+          <td><input type="checkbox" name="attach" value="{{ a.ref }}" {% if a.checked %}checked{% endif %} {% if a.blocked_reason %}disabled{% endif %} aria-label="attach {{ a.ref }}"></td>
+          <td>{% if a.kind == 'letter_docx' %}<b>{{ a.title }}</b> <span class="muted">(the letter; final copy, no filing header)</span>{% else %}{% if a.kind == 'authority_doc' %}<span class="tag gold">authority</span> {% endif %}{% if a.uploaded %}<span class="tag blue">uploaded</span> {% endif %}#{{ a.evidence_id }} {{ a.title }}{% if a.sent_name and not a.blocked_reason %} <div class="muted mail-note mail-sent-name">sent as <span class="mono">{{ a.sent_name }}</span></div>{% endif %}{% endif %}
+            {% if a.blocked_reason %}<div class="muted mail-note">Cannot be attached: {{ a.blocked_text }}{% if a.blocked_reason == 'inbound' and access.can('send_email') %} <button class="btn small" type="submit" form="mail-safe-{{ a.evidence_id }}" title="you checked this file: it may leave Aegis as an attachment">Mark safe to attach</button>{% endif %}</div>{% endif %}</td>
+          <td class="muted">{{ a.folder or '' }}</td>
+          <td>{% if a.classification %}<span class="tag">{{ a.classification }}</span>{% endif %}</td>
+          <td>{% if a.tlp %}<span class="tag {{ 'red' if a.blocked_reason == 'tlp' else '' }}">{{ a.tlp }}</span>{% endif %}</td>
+          <td class="right nowrap">{% if a.size is not none %}{{ '{:,}'.format(a.size) }} B{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <div class="muted mail-note">Attached files get neutral names ({{ case.reference }}_evidence-&lt;id&gt;.&lt;ext&gt;); evidence titles and original file names never leave Aegis. Larger files: the recipient's portal.</div>
+    </div>
+  </div>
+  <aside class="auth-side">
+    {% if opts.guidance %}{% set g = opts.guidance %}{% set listed = opts.recipients | map(attribute='address') | map('lower') | list %}
+    <div class="panel mail-guide" id="mail-howto">
+      <h2>How to email {{ authority.name }}</h2>
+      {% for w in g.warnings if w.code not in ('portal_only', 'info_only') %}<div class="alert {{ {'critical': 'critical', 'warning': 'warning'}.get(w.level, 'info') }} mail-guide-warn" data-code="{{ w.code }}">{{ w.text }}</div>{% endfor %}
+      <div class="mail-group-h">To</div>
+      {% if g.to %}<ol class="mail-guide-list">{% for s in g.to[:5] %}<li><span class="mono">{{ s.address }}</span>{% if s.recommended %} <span class="tag gold">suggested</span>{% endif %}{% if s.address | lower not in listed and not locked %} <button class="btn small" type="button" data-mail-add="mail-to-other" data-address="{{ s.address }}">Add to To</button> <button class="btn small" type="button" data-mail-add="mail-cc-other" data-address="{{ s.address }}">Add to Cc</button>{% endif %}<div class="muted mail-why">{{ s.why }}</div></li>{% endfor %}</ol>
+      {% else %}<div class="muted">No e-mail address on file.</div>{% endif %}
+      <div class="mail-group-h">Cc</div>
+      {% if g.cc %}<ul class="mail-guide-list">{% for s in g.cc[:5] %}<li><span class="mono">{{ s.address }}</span>{% if s.address | lower not in listed and not locked %} <button class="btn small" type="button" data-mail-add="mail-cc-other" data-address="{{ s.address }}">Add to Cc</button>{% endif %}<div class="muted mail-why">{{ s.why }}</div></li>{% endfor %}</ul>
+      {% else %}<div class="muted">Nobody needs a copy.</div>{% endif %}
+      {% if g.avoid %}<div class="muted mail-note">Not suggested: {% for s in g.avoid %}<span class="mono">{{ s.address }}</span> ({{ s.why }}){{ '; ' if not loop.last }}{% endfor %}.</div>{% endif %}
+      <div class="muted mail-note">{{ g.instruction }}{% if not locked %} “Add to To / Cc” types an address into the fields under Recipients; a typed address is confirmed one by one before sending.{% endif %}</div>
+    </div>
+    {% endif %}
+    <div class="panel mail-next mail-step-panel" id="mail-next">
+      <h2><span class="mail-step-n" aria-hidden="true">4</span> Review &amp; send</h2>
+      {% if opts.manual %}<p class="muted" style="font-size:var(--fs-sm)">Prepare builds the e-mail and opens the <b>Send it yourself</b> checklist: copy buttons for To, Cc, Bcc, subject and body, the attachments (one by one or as a .zip), an Outlook draft (.eml). Aegis sends nothing; after you send it from Outlook a case admin records it as sent.</p>
+      {% elif can_send %}<p class="muted" style="font-size:var(--fs-sm)"><b>Send now</b> saves your changes, builds the exact message and asks you to confirm the recipients and attachments on this page; then it goes out from <span class="mono">{{ opts.mailbox or 'the case mailbox' }}</span>, is filed as evidence, and the letter{% if corr.stop_order_id %} and its stop order{% endif %} are marked sent.</p>
+      {% else %}<p class="muted" style="font-size:var(--fs-sm)"><b>Prepare for review</b> saves your changes and builds the exact message (headers, text, HTML, attachments); a case admin confirms the recipients and attachments and presses <b>Send</b> (the case admins are notified).</p>{% endif %}
+      {% if opts.sender and opts.sender.needs_ack %}{% if can_send %}<div class="alert warning mail-note" id="mail-sender-ack-needed">The letter is not signed as the sender of record (see above): use the profile's signature, or tick the acknowledgement in the confirmation step to send it as it is.</div>{% else %}<div class="alert warning mail-note">The letter is not signed as the sender of record (see above): a case admin ticks the acknowledgement before sending it as it is.</div>{% endif %}{% endif %}
+      {% if opts.busy or opts.checklist %}<p class="muted" style="font-size:var(--fs-sm)">Not available: {% if opts.busy %}another e-mail of this letter is in flight or was sent{% else %}the letter has an open Outlook checklist{% endif %} (see above).</p>
+      {% else %}
+      <div class="mail-actions">
+        {% if can_send and not opts.manual and opts.mailbox and not transport_problem %}<button class="btn primary" type="submit" name="action" value="send_now" id="mail-send-now">Send now →</button>{% endif %}
+        <button class="btn{{ ' primary' if not can_send or opts.manual or not opts.mailbox or transport_problem else '' }}" type="submit" name="action" value="prepare" id="mail-prepare">{% if opts.manual %}Prepare e-mail →{% else %}Prepare for review →{% endif %}</button>
+        <button class="btn" type="submit" name="action" value="save" id="mail-save">Save draft</button>
+      </div>
+      {% endif %}
+      <div class="muted mail-note">{% if opts.saved_at %}Last saved {{ opts.saved_at[:16] | replace('T', ' ') }} UTC. {% endif %}{% if opts.manual %}The checklist stays valid for 14 days.{% else %}A prepared e-mail stays valid for 30 minutes.{% endif %}</div>
+    </div>
+    <div class="panel">
+      <h2>Letter</h2>
+      <div class="muted" style="font-size:var(--fs-sm)">{{ mask.text(corr.subject) }}</div>
+      <div class="muted mail-note">The text above is the letter itself: saving here updates the draft (<a href="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}">letter #{{ corr.id }}</a>){% if (corr.meta or {}).versions %}, {{ (corr.meta or {}).versions | length }} earlier version{{ 's' if (corr.meta or {}).versions | length != 1 }} kept{% endif %}.</div>
+    </div>
+  </aside>
+  </div>
+  </fieldset>
+</form>
+{% for a in opts.attachments if a.blocked_reason == 'inbound' and access.can('send_email') %}
+<form method="post" action="/cases/{{ case.id }}/evidence/{{ a.evidence_id }}/mail-safe" id="mail-safe-{{ a.evidence_id }}" hidden>{{ csrf_field() }}<input type="hidden" name="safe" value="1"><input type="hidden" name="back" value="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}/email"></form>
+{% endfor %}
+{% endblock %}
