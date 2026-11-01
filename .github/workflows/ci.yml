@@ -20,7 +20,7 @@ jobs:
   test:
     name: lint, tests, PII scan
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 40   # the full suite takes about 23 min on a GitHub-hosted runner
     env:
       PYTHONDONTWRITEBYTECODE: "1"
       PROVIDER_MODE: fixture
