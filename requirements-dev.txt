@@ -1,4 +1,4 @@
-# Development and CI dependencies (tests run offline on the masked demo fixture).
+# Development and CI dependencies (tests run offline on the fictional demo fixture).
 # For the pre-commit hooks also run: pip install pre-commit && pre-commit install --hook-type pre-commit --hook-type pre-push
 -r requirements.txt
 pytest>=8
