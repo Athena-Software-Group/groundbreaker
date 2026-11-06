@@ -54,6 +54,7 @@ from app.providers.base import ChainProvider, ProviderError
 from app.providers.registry import get_provider
 from app.tracing import heuristics
 from app.tracing.repository import (
+    REFUTED,
     get_or_create_address,
     ingest_transfer,
     link_bridge,
@@ -130,7 +131,7 @@ class Tracer:
             raws = []
         rows = [ingest_transfer(self.db, raw, self._source_for(provider)) for raw in raws]
         self.stats["transfers_ingested"] += len(rows)
-        return rows
+        return [t for t in rows if t.confidence > REFUTED]
 
     def _resolve_bridge(self, src: Transfer, bridged_to: tuple[Chain, str]) -> Transfer | None:
         dst_chain, dst_hash = bridged_to

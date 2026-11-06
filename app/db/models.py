@@ -393,7 +393,7 @@ class Transfer(Base):
     bridged_to_transfer_id: Mapped[int | None] = mapped_column(ForeignKey("transfers.id"))
 
     source: Mapped[DataSource] = mapped_column(Enum(DataSource), default=DataSource.ETHERSCAN)
-    confidence: Mapped[float] = mapped_column(default=1.0)  # 1.0 observed on-chain; <1 asserted/inferred
+    confidence: Mapped[float] = mapped_column(default=1.0)  # 1.0 observed on-chain; <1 asserted/inferred; 0 refuted
     method: Mapped[str | None] = mapped_column(String(64))  # e.g. "transfer", "swap", "bridge", "sweep"
     notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), server_default=func.now())

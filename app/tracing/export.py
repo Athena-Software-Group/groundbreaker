@@ -48,7 +48,7 @@ PROVENANCE: dict[str, str] = {
 }
 PROVENANCE_NOTES = (
     "asserted = yes: the link is asserted (hash pending or amount unknown) and must be verified before filing.",
-    "confidence: 1.0 = observed on-chain; below 1 = asserted or inferred.",
+    "confidence: 1.0 = observed on-chain; below 1 = asserted or inferred; 0 = refuted by the chain.",
     "USD: value at the static rate of the run; taint USD: the share of the loss attributed to the movement.",
     "All times are UTC.",
 )

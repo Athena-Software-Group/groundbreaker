@@ -27,6 +27,9 @@ a missing offset means UTC.
 | `addresses` | list | `{chain, address, address_type, label, label_source, entity, is_contract}` |
 | `transfers` | list | `{chain, tx_hash, sub_index, timestamp, from, to, asset, amount (null = unknown), token_contract, block_number, source, confidence, method, notes, bridged_to: {chain, tx_hash}}` |
 
+`confidence` is 1.0 for a transfer observed on-chain and below 1 for one asserted or inferred. Set it to 0 on a row
+the chain disproves: earlier trace versions keep showing the link, and no new trace walks it.
+
 ## Workspace sections
 
 Loaded by `app/fixture_sections.py` in this order: `team`, `le_contacts`, `evidence`,

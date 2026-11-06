@@ -10,6 +10,10 @@ from sqlalchemy.orm import Session
 from app.db.models import Address, AddressType, Chain, DataSource, Entity, Transfer
 from app.providers.base import AddressInfo, RawTransfer
 
+# Confidence of a transfer the chain disproved: the row stays, since earlier trace versions show it, but no new trace
+# walks it. The fixture retires an asserted link by setting this on its row.
+REFUTED = 0.0
+
 
 def normalise_address(chain: Chain, address: str) -> str:
     a = address.strip()
@@ -58,13 +62,16 @@ def get_or_create_entity(db: Session, name: str, **fields) -> Entity:
 
 
 def ingest_transfer(db: Session, raw: RawTransfer, default_source: DataSource) -> Transfer:
-    """Idempotent upsert of one value movement."""
+    """Idempotent upsert of one value movement. A row arriving as REFUTED retires the stored one, for good."""
     existing = db.scalar(
         select(Transfer).where(
             Transfer.chain == raw.chain, Transfer.tx_hash == raw.tx_hash, Transfer.sub_index == raw.sub_index
         )
     )
     if existing:
+        if raw.confidence == REFUTED and existing.confidence != REFUTED:
+            existing.confidence, existing.notes = REFUTED, raw.notes or existing.notes
+            db.flush()
         return existing
 
     frm = get_or_create_address(db, raw.chain, raw.from_address)
@@ -97,7 +104,7 @@ def link_bridge(db: Session, src: Transfer, dst_chain: Chain, dst_hash: str) -> 
 
 
 def outgoing_from_db(db: Session, address: Address, since: datetime | None) -> list[Transfer]:
-    q = select(Transfer).where(Transfer.from_address_id == address.id)
+    q = select(Transfer).where(Transfer.from_address_id == address.id, Transfer.confidence > REFUTED)
     if since:
         q = q.where(Transfer.timestamp >= since)
     return list(db.scalars(q.order_by(Transfer.timestamp, Transfer.sub_index)))

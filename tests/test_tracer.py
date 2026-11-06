@@ -1,3 +1,5 @@
+from dataclasses import replace
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from conftest import ungated
@@ -7,15 +9,19 @@ from app.db.models import (
     Address,
     AddressType,
     Chain,
+    DataSource,
     SeedRole,
     TraceEdge,
     TraceNode,
     TraceStatus,
     Transfer,
 )
+from app.providers.base import RawTransfer
 from app.providers.fixture import FixtureProvider
 from app.services import generate_stop_orders, latest_run, run_trace
+from app.tracing.engine import Tracer
 from app.tracing.freeze import freeze_candidates
+from app.tracing.repository import REFUTED, ingest_transfer, outgoing_from_db
 
 ORIGIN_TX = "0x70abbe14aa9080b572aa69881536e5c165097c0574c4791467e915b708bba814"
 VICTIM = "0x7ac32c88e5489b4c406ffc1d6b835f4eba7b455b"
@@ -261,3 +267,37 @@ def test_a_later_inflow_to_a_deposit_address_never_drops_an_earlier_sweep(db, mo
     assert deposit in reached and hot in reached  # the omnibus sweep is still followed
     sweep = db.scalar(select(Transfer).where(Transfer.tx_hash == transfers[3].tx_hash))
     assert db.scalar(select(TraceEdge).where(TraceEdge.run_id == run.id, TraceEdge.transfer_id == sweep.id))
+
+
+def _asserted(tag: str) -> RawTransfer:
+    return RawTransfer(chain=Chain.ETHEREUM, tx_hash=f"ASSERTED:{tag}", sub_index=0,
+                       timestamp=datetime(2026, 10, 13, 12, tzinfo=UTC), from_address=f"0x{'a' * 39}1",
+                       to_address=f"0x{'b' * 39}1", asset="ETH", amount=None, confidence=0.4)
+
+
+def test_a_refuted_transfer_is_retired_for_good_and_never_walked(db):
+    raw = _asserted("refuted-out")
+    row = ingest_transfer(db, raw, DataSource.PI_REPORT)
+    assert row in outgoing_from_db(db, row.from_address, None)
+    ingest_transfer(db, replace(raw, confidence=REFUTED, notes="no such transfer on-chain"), DataSource.PI_REPORT)
+    assert row.confidence == REFUTED and row.notes == "no such transfer on-chain"
+    assert row not in outgoing_from_db(db, row.from_address, None)
+    ingest_transfer(db, raw, DataSource.PI_REPORT)  # a later fixture that still asserts it does not bring it back
+    assert row.confidence == REFUTED
+    db.rollback()
+
+
+def test_a_refuted_transfer_is_not_counted_as_incoming(db, case, monkeypatch):
+    kept, refuted = _asserted("kept-in"), replace(_asserted("refuted-in"), confidence=REFUTED)
+
+    class Stub:
+        name = "fixture"
+
+        def incoming_transfers(self, address, since=None, limit=200):
+            return [kept, refuted]
+
+    tracer = Tracer(db, case)
+    monkeypatch.setattr(tracer, "_provider", lambda chain: Stub())
+    addr = ingest_transfer(db, kept, DataSource.PI_REPORT).to_address
+    assert [t.tx_hash for t in tracer._fetch_incoming(addr)] == [kept.tx_hash]
+    db.rollback()
