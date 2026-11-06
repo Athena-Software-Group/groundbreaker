@@ -39,7 +39,7 @@ from app.core.permissions import (
 from app.core.security import require_user
 from app.db.models import FreezeWatch
 from app.db.session import SessionLocal, get_db
-from app.freeze import service
+from app.freeze import native, service
 from app.freeze.issuers import CHAIN_LABELS, CHAINS, CONTRACTS
 from app.web.templating import templates
 
@@ -89,7 +89,7 @@ def freeze_page(request: Request, access: CaseAccess = Depends(require_case_role
     case = access.case
     ctx = {
         "case": case, "access": access, "st": _status_for(db, access), "plan": service.egress_plan(),
-        "watched": service.watched(db, case), "chains": [(c, CHAIN_LABELS.get(c, c)) for c in CHAINS],
+        "watched": service.watched(db, case), "native": native.view(db, case), "chains": [(c, CHAIN_LABELS.get(c, c)) for c in CHAINS],
         "tlps": service.TLP_CHOICES, "contracts": CONTRACTS, "can_check": access.can("poll_watch"),
         "can_watch": access.can("edit"), "can_manage": access.can("manage_case"),
         "show_notes": access.can("view_restricted"),

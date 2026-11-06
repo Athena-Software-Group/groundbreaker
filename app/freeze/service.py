@@ -137,7 +137,8 @@ def egress_plan(settings=None) -> list[dict]:
         rows.append({"chain": chain, "chain_label": CHAIN_LABELS[chain], "purpose": "blacklist and balance (eth_call)",
                      "host": host_of(url) if url else None, "configured": bool(url),
                      "sends": f"each checked wallet address inside eth_call ({tokens}: blacklist getter, balanceOf) "
-                              "and eth_blockNumber", "auth": None})
+                              "and eth_blockNumber; for wallets on the freeze watch also eth_getBalance and "
+                              "eth_getTransactionCount (app.freeze.native)", "auth": None})
         ex = issuers.explorer_for(chain, settings)
         if url and ex is not None:
             rows.append({"chain": chain, "chain_label": CHAIN_LABELS[chain],

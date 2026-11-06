@@ -68,6 +68,23 @@
 </div>
 
 <div class="grid cols-2 fz-block">
+{% if native %}
+<div class="panel" id="native">
+  <h2>ETH on watched wallets <small>no issuer can freeze ETH: read on every scheduler pass, with an alert when it moves</small></h2>
+  {% for n in native %}
+  <div class="row fz-line">
+    <span class="fz-addr">{{ n.short }}</span>
+    {% if n.label %}<span class="muted fz-small">{{ n.label }}</span>{% endif %}
+    <div class="spacer"></div>
+    {% if n.balance is not none %}<b>{{ '%.4f' | format(n.balance) }} {{ n.symbol }}</b><span class="muted fz-small">{{ n.nonce }} sent</span>{% endif %}
+    {% if n.moved_at %}<span class="tag red">moved {{ n.moved_at | dt }}</span>{% endif %}
+    {% if n.stale %}<span class="tag red">not read{% if n.checked_at %} since {{ n.checked_at | dt }}{% endif %}{% if n.error %}: {{ n.error }}{% endif %}</span>
+    {% else %}<span class="muted fz-small">read {{ n.checked_at | dt }}</span>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <div class="panel" id="watched">
   <h2>Watched wallets <small>{{ watched | length }} active · checked although not in the trace</small></h2>
   {% for w in watched %}

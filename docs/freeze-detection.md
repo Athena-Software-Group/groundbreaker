@@ -59,7 +59,7 @@ list.
 
 | Endpoint | Setting (default) | Receives |
 |---|---|---|
-| Ethereum JSON-RPC | `AEGIS_ETH_RPC_URL` (`https://ethereum-rpc.publicnode.com`) | each wallet inside `eth_call` (blacklist getter, `balanceOf`), `eth_blockNumber` |
+| Ethereum JSON-RPC | `AEGIS_ETH_RPC_URL` (`https://ethereum-rpc.publicnode.com`) | each wallet inside `eth_call` (blacklist getter, `balanceOf`), `eth_blockNumber`; freeze-watch wallets also `eth_getBalance`, `eth_getTransactionCount` |
 | Base / Arbitrum / Polygon / OP JSON-RPC | `AEGIS_BASE_RPC_URL`, `AEGIS_ARBITRUM_RPC_URL`, `AEGIS_POLYGON_RPC_URL`, `AEGIS_OPTIMISM_RPC_URL` (empty: not checked) | as above |
 | Explorer logs / txlist | Etherscan V2 when `ETHERSCAN_API_KEY` is set, else Blockscout (`AEGIS_FREEZE_EXPLORER=auto\|etherscan\|blockscout\|none`) | each wallet (account `txlist`); the issuer contract plus a block range (Circle: plus the wallet) in a logs query |
 | TronGrid | `AEGIS_TRONGRID_URL` (`https://api.trongrid.io`), optional `TRONGRID_API_KEY` header | each TRON wallet (constant calls, outgoing transactions), the USDT contract's `AddedBlackList` events |
@@ -182,6 +182,23 @@ until the issuer blacklists the wallet again. A blacklisted balance that drops t
   whose last run is older than `AEGIS_FREEZE_CHECK_MINUTES` (360). Each run is audited as `FREEZE_CHECK`
   with `trigger=scheduler`. `run_due` counts readings that failed over HTTP (`errors`, retried next run)
   apart from cases whose run raised (`failed_cases`); a failed case makes `--once` exit 1.
+
+### The native-coin watch
+
+No issuer can freeze ETH, so what helps is knowing the moment it moves: the next stop may be an exchange that can act.
+On every scheduler pass, `app.freeze.native` reads the ETH balance and transaction count of each Ethereum wallet on the
+freeze watch of a case with the checks on, over the same consented node. It keeps one row per wallet (`native_balances`).
+
+* **ETH left, or the wallet signed a transaction:** `wallet_movement`. A movement of 1 ETH or more is `critical`.
+* **A wallet's first transaction ever** is always `critical` and always passes the notification thresholds, because the
+  value at stake is the balance it held: a small test payment is the warning.
+* **Incoming funds** do not alert: dust arrives constantly.
+* **Smaller movements** follow the case's `wallet_movement` rule (by default $1,000 or 1% of the loss); the freeze page
+  shows every balance change either way.
+* **A failed reading** keeps the last good one. After 30 minutes without a good reading, the freeze page flags the wallet,
+  so a watch that stopped reading does not look like a quiet wallet.
+
+The watch runs only while the scheduler runs. Add a wallet to the freeze watch to include it.
 
 ## 6. Tests
 

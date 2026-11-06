@@ -26,6 +26,9 @@ Each pass runs
   of one case's run (`failed_cases`), sets `freeze_error` (exit code 1 with --once); readings that failed
   over HTTP (`errors`) are retried on the next run and do not.
 
+* the native watch (`native_pass`, app.freeze.native.run_all): every pass, the ETH balance and transaction count of the
+  Ethereum wallets on the freeze watch of a case with the checks on; wallet_movement when ETH leaves.
+
 A failing step is logged and the loop carries on (each step in its own try). No APScheduler
 needed: one process, one loop.
 """
@@ -162,6 +165,14 @@ def freeze_pass() -> dict:
         return run_due(db)
 
 
+def native_pass() -> dict:
+    """ETH balance reads of the freeze-watch wallets (app.freeze.native.run_all), every pass."""
+    from app.freeze.native import run_all
+
+    with SessionLocal() as db:
+        return run_all(db)
+
+
 def owner_pass() -> dict:
     """Automatic owner lookups of the open cases that are due (app.attribution.service.due_cases)."""
     from app.attribution.service import auto_lookups, due_cases
@@ -205,6 +216,11 @@ def run_once(provider_mode: str | None = None) -> dict:
         log.exception("freeze pass failed")
         result["freeze"] = None
         result["freeze_error"] = True
+    try:
+        result["native"] = native_pass()
+    except Exception:
+        log.exception("native watch failed")
+        result["native"] = None
     try:
         result["owners"] = owner_pass()
     except Exception:

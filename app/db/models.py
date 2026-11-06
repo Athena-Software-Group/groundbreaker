@@ -1182,6 +1182,26 @@ class FreezeWatch(Base):
     removed_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
 
 
+class NativeBalance(Base):
+    """The latest reading of a freeze-watch wallet's native coin (app.freeze.native): no issuer can freeze ETH, so the
+    alert when it moves is the lever. `checked_at` is the last good reading; a failed one sets `error` and keeps it."""
+
+    __tablename__ = "native_balances"
+    __table_args__ = (UniqueConstraint("watch_id", name="uq_native_balances_watch_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    case_id: Mapped[int] = mapped_column(ForeignKey("cases.id"), index=True)
+    watch_id: Mapped[int] = mapped_column(ForeignKey("freeze_watch.id"))
+    chain: Mapped[str] = mapped_column(String(16))
+    address: Mapped[str] = mapped_column(String(128))
+    wei: Mapped[str | None] = mapped_column(String(80))  # a string: SQLite would round a number this long
+    nonce: Mapped[int | None] = mapped_column(Integer)
+    checked_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    moved_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    error: Mapped[str | None] = mapped_column(String(64))
+    failed_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+
+
 class FreezeCheck(Base):
     """One reading of one issuer contract for one wallet: blacklisted or not, the token balance, the block
     it was read at, how (`method` rpc | explorer) and the sha256 of the raw response. A status change
