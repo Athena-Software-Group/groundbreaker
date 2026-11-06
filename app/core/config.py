@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     aegis_org_name: str = "Your Organisation"
     aegis_signatory_name: str = "Investigations Desk"
 
-    # Case assistant model access (app/ai/providers.py; README "Case assistant"). Default: the
+    # Case assistant model access (app/ai/providers.py; docs/guide.md "Case assistant"). Default: the
     # Hugging Face Inference Router (OpenAI-compatible) with the inference provider pinned in the
     # model id (":deepinfra"), so the data path is fixed. The token comes from HF_INFERENCE_TOKEN,
     # then HF_TOKEN, then LLM_API_KEY; HF_API_KEY is never read (it is reserved for the admin /

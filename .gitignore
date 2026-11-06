@@ -102,3 +102,8 @@ masking-map*.json
 *.mp4
 *.mov
 *.zip
+
+# README screenshots of the fictional demo case, named one by one: docs/img is not a place for images in general
+!docs/img/screenshot-fund-flow.png
+!docs/img/screenshot-overview.png
+!docs/img/screenshot-recovery-plan.png

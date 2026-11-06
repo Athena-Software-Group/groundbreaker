@@ -1,7 +1,7 @@
 # Microsoft 365 setup for the e-mail desk
 
 > **Connecting the investigations mailbox.** Aegis reads the shared mailbox's
-> Inbox and Sent Items (the status of every block requested across the authorities: README "Mailbox sync
+> Inbox and Sent Items (the status of every block requested across the authorities: docs/guide.md "Mailbox sync
 > and Block status", docs/block-status.md) and sends from it, app-only (client credentials), with
 > Mail.ReadWrite + Mail.Send limited to that one mailbox by an Application Access Policy (steps 2–7), history
 > read from the date you choose (`AEGIS_MAIL_INBOUND_SINCE`). "Draft — you send"

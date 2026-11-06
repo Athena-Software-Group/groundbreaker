@@ -75,7 +75,7 @@ app.middleware("http")(request_context_middleware)
 app.middleware("http")(security_headers_middleware)  # outermost: also covers CSRF rejections
 app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent / "web" / "static")), name="static")
 
-# One router per feature; each feature edits only its own router module (see README §5 for the layout
+# One router per feature; each feature edits only its own router module (see docs/guide.md §5 for the layout
 # and docs/fixture-schema.md for the fixture loaders).
 for r in (auth_router, api_router, web_router, trace_router, authorities_router, evidence_router, team_router,
           notifications_router, assistant_router, admin_ai_router, mail_router, mail_admin_router, freeze_router,

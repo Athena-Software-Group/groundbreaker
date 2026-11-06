@@ -91,7 +91,7 @@ real case, masked under these rules:
    (amount known, hash pending), not as observed transfers.
 7. Add every real string you masked to the case's denylist so the scanner catches regressions.
 
-The demo case `DEMO-2026-001` (README §6) is fictional. Its invented values use the same conventions:
+The demo case `DEMO-2026-001` (docs/guide.md §6) is fictional. Its invented values use the same conventions:
 reserved domains, all-zero phone numbers and `DEMO-` references.
 
 ## 5. Pre-commit scan
@@ -239,7 +239,7 @@ recorded hash is never rewritten.
 
 ### 6.3 What leaves the platform when you send an e-mail
 
-E-mail from Aegis (README "E-mail from Aegis"; docs/m365-setup.md) sends case material outside the
+E-mail from Aegis (docs/guide.md "E-mail from Aegis"; docs/m365-setup.md) sends case material outside the
 platform on purpose, so it is gated: only case admins press Send, after confirming every unverified
 recipient and every evidence attachment, and only through the web form.
 

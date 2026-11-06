@@ -97,13 +97,14 @@ def test_repo_gitignore_reincludes_only_sample_letters(tmp_path):
     blocked = [
         "brand/.env", "app/web/static/x.pem", "app/web/static/aegis.db", "docs/samples/denylist.txt",
         "docs/samples/denylist-extra.txt", "docs/samples/x.pdf", "brand/screenshot.png", "docs/samples/real.docx",
-        "docs/samples/stop-orders/notes.docx", "data/fixtures/private_case.json", "app/x.sqlite3",
+        "docs/samples/stop-orders/notes.docx", "data/fixtures/private_case.json", "app/x.sqlite3", "docs/img/evidence.png",
     ]
     assert [f for f in blocked if not pii_scan.is_ignored(f, False, patterns)] == []
     for d in ("docs/samples/evidence", "docs/samples/deliverables", "brand/vault", "app/exports"):
         assert pii_scan.is_ignored(d, True, patterns), d
     shipped = ["docs/samples/stop-orders/01-circle-blacklist.docx", "data/fixtures/demo_case.json",
-               "brand/groundbreaker-mark-dark.svg", "app/web/static/graph.js", ".env.example"]
+               "brand/groundbreaker-mark-dark.svg", "app/web/static/graph.js", ".env.example",
+               "docs/img/screenshot-fund-flow.png"]
     assert [f for f in shipped if pii_scan.is_ignored(f, False, patterns)] == []
 
 
