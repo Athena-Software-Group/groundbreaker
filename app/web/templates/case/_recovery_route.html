@@ -1,0 +1,30 @@
+{# "How you get your money back", on top of the To do tab — owner: app/domain/recovery_route.py. Context: todo_route
+   ({loss, frozen, parked, wallets, elsewhere, steps: [{title, why, who, done, next}]}), None for external members.
+   The steps are To do tasks (source "route"): they are ticked in the list below. #}
+{% set r = todo_route %}
+{% if r %}
+<div class="panel route-panel" id="recovery-route">
+  <h2>How you get your money back</h2>
+  {% if r.steps %}
+  <p class="route-lead">Frozen money does not come back by itself. An authority has to seize it, and a court has to return it to you. Nobody can do that by asking the issuer, and a freeze can be lifted, so these steps come first.</p>
+  {% else %}
+  <p class="route-lead">Nothing is frozen yet, so the first job is a freeze: see the <a href="/cases/{{ case.id }}/recovery-plan">Recovery plan</a>. Money that nobody has frozen can move at any moment.</p>
+  {% endif %}
+  <div class="route-buckets">
+    <div class="route-bucket route-frozen"><b>{{ r.frozen | usd }}</b><span>Frozen. This is what the steps below can bring back.</span></div>
+    {% if r.wallets %}<div class="route-bucket route-parked"><b>{{ r.parked | usd }}</b><span>Still in {{ r.wallets }} watched wallet{{ 's' if r.wallets != 1 }}. Nobody can freeze it there, so the chance comes if it reaches an exchange. You get an alert if it moves.</span></div>{% endif %}
+    <div class="route-bucket"><b>{{ r.elsewhere | usd }}</b><span>Moved on, spent or pooled. Hard to recover without an exchange holding it or a prosecution.</span></div>
+  </div>
+  {% if r.steps %}
+  <ol class="route-steps">
+    {% for s in r.steps %}
+    <li class="{{ 'route-done' if s.done }}{{ ' route-next' if s.next }}">
+      <b>{{ s.title }}</b>{% if s.done %} <span class="tag green">done</span>{% elif s.next %} <span class="tag gold">next</span>{% endif %} <span class="muted route-who">{{ s.who }}</span>
+      <div class="route-why">{{ s.why }}</div>
+    </li>
+    {% endfor %}
+  </ol>
+  <p class="muted route-note">Tick each step off in the list below when it is done. This is the usual route, not legal advice: your lawyer decides what to file and where.</p>
+  {% endif %}
+</div>
+{% endif %}

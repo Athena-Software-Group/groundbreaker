@@ -12,19 +12,35 @@
   <a class="btn small {{ 'primary' if show == 'all' else '' }}" href="/admin/mail/unassigned?show=all">All without a case (incl. ignored, rejected)</a>
 </div>
 
+{% if assigned is not none %}<div class="alert {{ 'warning' if failed and failed != '0' else 'info' }}" role="status">{{ assigned }} e-mail(s) filed{% if failed and failed != '0' %}, {{ failed }} not filed: each needs an authority{% endif %}.</div>{% endif %}
+
+{% set bulk = show == 'open' and rows and chosen %}
+{% if show == 'open' and rows %}
+<form method="get" action="/admin/mail/unassigned" class="row mail-filter" id="bulk-case">
+  <label for="bulk-case-id">File on case</label>
+  <select id="bulk-case-id" name="case_id">{% for cid, ref in cases %}<option value="{{ cid }}" {{ 'selected' if chosen and chosen.id == cid }}>{{ ref }}</option>{% endfor %}</select>
+  <button class="btn small" type="submit">Show authorities</button>
+</form>
+<p class="muted">Tick the e-mails to file and choose where each goes. An authority's timeline counts what is filed there as its reply, so file a forward of one of your own letters under your PI firm, not under the provider it was sent to.</p>
+{% endif %}
+
 <div class="panel" id="mail-unassigned">
 {% if rows %}
-<div class="table-scroll"><table class="mail-list"><thead><tr><th>#</th><th>Received</th><th>From</th><th>Subject</th><th>Status</th><th>Attachments</th><th></th></tr></thead><tbody>
+{% if bulk %}<form method="post" action="/admin/mail/unassigned/assign-all" id="bulk-assign">{{ csrf_field() }}<input type="hidden" name="case_id" value="{{ chosen.id }}">{% endif %}
+<div class="table-scroll"><table class="mail-list"><thead><tr>{% if bulk %}<th></th>{% endif %}<th>#</th><th>Received</th><th>From</th><th>Subject</th><th>Status</th><th>Attachments</th>{% if bulk %}<th>File under</th>{% endif %}<th></th></tr></thead><tbody>
 {% for mm in rows %}<tr>
+  {% if bulk %}<td><input type="checkbox" name="mid" value="{{ mm.id }}" aria-label="File e-mail {{ mm.id }}" checked></td>{% endif %}
   <td class="mono">{{ mm.id }}</td>
   <td>{{ mm.received_at | dt }}</td>
   <td class="mono">{{ mm.from_addr or '—' }}</td>
   <td class="mail-subject">{{ mm.subject or '(no subject)' }}{% if (mm.meta or {}).get('auto_reply') %} <span class="tag">auto-reply</span>{% endif %}{% if (mm.meta or {}).get('bounce') %} <span class="tag amber">bounce</span>{% endif %}{% if (mm.meta or {}).get('metadata_only') %} <span class="tag" title="from an authority's domain, cites no case material: the text is read from the mailbox only when opened">metadata only</span>{% endif %}</td>
   <td><span class="tag {{ {'unassigned': 'amber', 'rejected': 'red', 'ignored': ''}.get(mm.status.value, '') }}">{{ mm.status.value }}</span>{% if mm.error_reason %} <span class="muted">{{ mm.error_reason }}</span>{% endif %}</td>
   <td>{{ (mm.attachments or []) | length }}</td>
+  {% if bulk %}<td><select name="authority_{{ mm.id }}" aria-label="Authority for e-mail {{ mm.id }}"><option value="">Choose…</option>{% for a in authorities %}<option value="{{ a.key }}" {{ 'selected' if guess.get(mm.id) == a.key }}>{{ a.name }}</option>{% endfor %}</select></td>{% endif %}
   <td>{% if mm.status.value == 'unassigned' %}<a class="btn small" href="/admin/mail/unassigned/{{ mm.id }}">Open</a>{% endif %}</td>
 </tr>{% endfor %}
 </tbody></table></div>
+{% if bulk %}<button class="btn primary" type="submit" style="margin-top:10px">File the ticked e-mails on {{ chosen.reference }}</button></form>{% endif %}
 {% else %}<p class="muted">Nothing here.</p>{% endif %}
 </div>
 {% endblock %}

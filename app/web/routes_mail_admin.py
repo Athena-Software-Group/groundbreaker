@@ -53,7 +53,7 @@ from app.core.security import require_system_admin, require_user
 from app.db.models import AuditEvent, Case, User
 from app.db.session import get_db
 from app.domain.mail_compose import SEND_POLICY
-from app.mail import ingest
+from app.mail import ingest, matching
 from app.mail.config import describe, mail_settings
 from app.mail.transport import TransportError, check_local_dir, get_transport
 from app.web.templating import templates
@@ -449,14 +449,35 @@ def admin_mail_mailbox_review(mid: int, action: str, letter: str = Form(""), me:
 
 # --------------------------------------------------------------------------- unassigned queue
 @router.get("/admin/mail/unassigned", response_class=HTMLResponse)
-def admin_mail_unassigned(request: Request, show: str = "open", me: User = Depends(require_system_admin),
-                          db: Session = Depends(get_db)):
+def admin_mail_unassigned(request: Request, show: str = "open", case_id: int | None = None,
+                          me: User = Depends(require_system_admin), db: Session = Depends(get_db)):
     M = _M()
     q = select(M.MailMessage).where(M.MailMessage.direction == M.MailDirection.IN, M.MailMessage.case_id.is_(None))
     if show != "all":
         q = q.where(M.MailMessage.status == M.MailStatus.UNASSIGNED)
     rows = db.scalars(q.order_by(M.MailMessage.id.desc()).limit(200)).all()
-    return _page(request, "admin_mail_unassigned.html", {"rows": rows, "show": "all" if show == "all" else "open"})
+    return _page(request, "admin_mail_unassigned.html", {
+        "rows": rows, "show": "all" if show == "all" else "open", **_bulk_context(db, rows, case_id),
+        "assigned": request.query_params.get("assigned"), "failed": request.query_params.get("failed")})
+
+
+def _bulk_context(db: Session, rows: list, case_id: int | None) -> dict:
+    """The queue's "file these on a case" form. Defaults to the newest real case. An authority is suggested only when the
+    sender is on its own domain: an authority's timeline counts what is filed there as its reply, so a forward of one
+    of our own letters must never land on a provider by a guess."""
+    from app.domain import correspondence as desk
+
+    cases = db.scalars(select(Case).order_by(Case.id.desc())).all()
+    chosen = db.get(Case, case_id) if case_id else next((c for c in cases if not c.is_demo), None)
+    authorities, guess = [], {}
+    if chosen is not None:
+        authorities = desk.case_authorities(db, chosen, include_prospects=False)
+        for mm in rows:
+            domain = (mm.from_addr or "").rpartition("@")[2].lower()
+            guess[mm.id] = next((a.key for a in authorities if domain and matching.domain_ok(
+                domain, matching.authority_domains(db, chosen, a, None, mailbox=mm.mailbox))), "")
+    return {"cases": [(c.id, c.reference) for c in cases], "chosen": chosen, "guess": guess,
+            "authorities": [{"key": a.key, "name": a.name, "type": a.type_label} for a in authorities]}
 
 
 def _unassigned_or_404(db: Session, mid: int):
@@ -536,6 +557,33 @@ def admin_mail_load(mid: int, request: Request, me: User = Depends(require_syste
         db.rollback()
         return _message_page(request, db, _unassigned_or_404(db, mid), error=str(e), status_code=502)
     return RedirectResponse(f"/admin/mail/unassigned/{mid}", status_code=303)  # load_metadata_only audits
+
+
+@router.post("/admin/mail/unassigned/assign-all", dependencies=_csrf)
+async def admin_mail_assign_all(request: Request, me: User = Depends(require_system_admin),
+                                db: Session = Depends(get_db)):
+    """File the ticked e-mails on one case, each under the authority chosen on its row. One failure stops nothing."""
+    form = await request.form()
+    case = db.get(Case, int(form.get("case_id") or 0))
+    if case is None:
+        raise HTTPException(400, "choose a case")
+    assigned = failed = 0
+    for raw in form.getlist("mid"):
+        mid, key = int(raw), str(form.get(f"authority_{raw}") or "")
+        mm = ingest.get_inbound(db, mid)
+        if mm is None or mm.case_id is not None or not key:
+            failed += 1
+            continue
+        try:
+            corr = ingest.assign(db, mm, case, authority_key=key, actor=me)
+        except ingest.IngestError:
+            db.rollback()
+            failed += 1
+            continue
+        audit(db, me, "MAIL_ASSIGNED", case, ("mail_messages", mm.id), mail_message_id=mm.id, correspondence_id=corr.id,
+              in_reply_to_id=corr.in_reply_to_id, eml_evidence_id=mm.eml_evidence_id)
+        assigned += 1
+    return RedirectResponse(f"/admin/mail/unassigned?case_id={case.id}&assigned={assigned}&failed={failed}", status_code=303)
 
 
 @router.post("/admin/mail/unassigned/{mid}/assign", dependencies=_csrf)

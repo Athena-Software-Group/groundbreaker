@@ -21,6 +21,7 @@
 {%- endmacro %}
 
 {% if todo_flash %}<div class="alert info" role="status">{{ todo_flash }}</div>{% endif %}
+{% include "case/_recovery_route.html" %}
 <div class="panel todo-panel" id="todo">
   <div class="row todo-head">
     <h2>To do <small>{{ todo_open }} open · <span class="{{ 'todo-late' if todo_p1 }}">{{ todo_p1 }} P1</span>{% if todo_overdue %} · <span class="todo-late">{{ todo_overdue }} overdue</span>{% endif %}{% if todo_mine %} · {{ todo_mine }} mine{% endif %}</small></h2>

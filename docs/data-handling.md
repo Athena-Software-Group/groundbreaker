@@ -145,6 +145,8 @@ the perpetrators.
   etherscan.io), the checks stop until a case admin confirms the new hosts (audited). Watched-wallet labels and
   source notes stay on the case's freeze page: never in notifications, the assistant (whatever the TLP) or
   the audit log; audit rows carry counts and hosts only.
+* **Translating an e-mail** (the **Translate to English** button) sends its full text to the configured AI provider, so it
+  needs the case's "AI reads mailbox replies" consent. The translation is stored beside the filed text, which stays the record.
 * Explorer links in the UI reveal an address to the explorer when clicked. Treat that like a live lookup.
 * Provider API keys never appear in URLs that get logged. Redact them in error messages.
 

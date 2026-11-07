@@ -51,6 +51,25 @@
 
 <div class="auth-grid">
   <div class="auth-main">
+    {% if translation %}
+    <div class="panel" id="translation">
+      <h3>English translation <small>{{ translation.by }} · the original below stays the record</small></h3>
+      <pre class="tl-text">{{ mask.text(translation.text) }}</pre>
+    </div>
+    {% elif can_translate %}
+    <div class="panel" id="translation">
+      {% if translate_error %}<p class="alert warning" role="status">{{ translate_error }}</p>{% endif %}
+      {% if translate_ready %}
+      <form method="post" action="/cases/{{ case.id }}/authorities/correspondence/{{ corr.id }}/translate" class="inline">{{ csrf_field() }}
+        <button class="btn small" type="submit">Translate to English</button>
+        {% if translate_language %}<span class="muted">this e-mail looks {{ translate_language }}</span>{% endif %}
+      </form>
+      {% else %}
+      <p class="muted">{% if translate_language %}This e-mail looks {{ translate_language }}. {% endif %}{{ translate_blocked }}
+        Translating sends its full text to the AI provider: <a href="/cases/{{ case.id }}/blocks#ai-setting">AI reads mailbox replies</a>.</p>
+      {% endif %}
+    </div>
+    {% endif %}
     {% if not show_body %}
     <div class="panel muted">Content restricted ({{ corr.classification.value }}): the investigator role is needed to read it.</div>
     {% elif (corr.meta or {}).get('format') == 'text' %}

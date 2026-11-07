@@ -488,6 +488,15 @@ replies come back into the case. Code: `app/domain/directory.py`, `sender.py`, `
    case admins' **Mail to review** or, unmatched, to the system admins' unassigned queue at
    `/admin/mail`. Nothing in an inbound e-mail ever changes a status, drafts or sends anything.
 
+#### Filing and translating mail
+
+**Mail → unassigned mail** lists e-mail no letter claimed. Choose the case, set where each e-mail goes and file the ticked ones
+in one step. An authority is suggested only when the sender is on its own domain. An authority's timeline counts what is
+filed there as its reply, so file a forward of one of your own letters under your PI firm, not under the provider it went to.
+
+An inbound e-mail's page has **Translate to English**, which needs the case's "AI reads mailbox replies" consent. The
+translation sits above the original, which stays the record.
+
 #### Mailbox sync and Block status (graph transport)
 
 Aegis reads the mailbox's **Inbox and Sent Items** and reports, per case, the status of every block it

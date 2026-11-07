@@ -51,7 +51,10 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app import services
+from app.ai import providers as ai_providers
+from app.blocks import classify_ai
 from app.blocks import freeze_board as fb
+from app.blocks import translate as tr
 from app.core.audit import CREATE, EXPORT, LETTER_SENT, UPDATE, audit
 from app.core.csrf import require_csrf
 from app.core.permissions import (
@@ -355,7 +358,34 @@ def correspondence_page(request: Request, corr_id: int, access: CaseAccess = Dep
         "evidence": desk.linked_evidence(access.case, corr, shared_only=access.is_external, access=access),
         "kind_labels": desk.KIND_LABELS, "order_state": desk.order_state,
         "default_due_days": desk.DEFAULT_RESPONSE_DAYS,
+        **_translate_context(request, access, corr),
     })
+
+
+def _translate_context(request: Request, access: CaseAccess, corr: Correspondence) -> dict:
+    """The letter page's translation panel: only inbound e-mail, only for those who may read it."""
+    shown = corr.direction == CorrespondenceDirection.IN and desk.can_view_body(access, corr)
+    if not shown:
+        return {"translation": None, "can_translate": False}
+    ok, reason = classify_ai.may_call(access.case, ai_providers.get_provider())
+    failed = (request.query_params.get("translate") or "")[:40]
+    return {"translation": tr.translation(corr), "can_translate": access.can("draft_letter"), "translate_ready": ok,
+            "translate_blocked": None if ok else classify_ai.REASON_TEXT.get(reason, reason),
+            "translate_language": tr.language_of(corr.body_markdown),
+            "translate_error": classify_ai.REASON_TEXT.get(failed, "The translation failed: try again.") if failed else None}
+
+
+@router.post("/cases/{case_id}/authorities/correspondence/{corr_id}/translate", dependencies=_csrf)
+def translate_correspondence(corr_id: int, access: CaseAccess = Depends(require_case_role(INVESTIGATOR)),
+                             db: Session = Depends(get_db)):
+    """Translate an inbound e-mail into English, beside the original (app.blocks.translate)."""
+    corr = get_case_object(db, Correspondence, corr_id, access)
+    if corr.direction != CorrespondenceDirection.IN or not desk.can_view_body(access, corr):
+        raise HTTPException(404, "correspondence not found")
+    _, reason = tr.translate(db, access.case, corr, actor=access)
+    query = f"?translate={reason}" if reason else ""
+    return RedirectResponse(f"/cases/{access.case.id}/authorities/correspondence/{corr.id}{query}#translation",
+                            status_code=303)
 
 
 @router.post("/cases/{case_id}/authorities/correspondence/{corr_id}", dependencies=_csrf)

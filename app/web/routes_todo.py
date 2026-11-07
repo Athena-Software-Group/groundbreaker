@@ -33,7 +33,7 @@ from app.core.csrf import require_csrf
 from app.core.permissions import INVESTIGATOR, READ_ONLY, CaseAccess, require_case_role
 from app.core.security import require_user
 from app.db.session import get_db
-from app.domain import todo
+from app.domain import recovery_route, todo
 from app.web import tabs
 from app.web.templating import templates
 
@@ -122,6 +122,7 @@ def todo_tab(request: Request, db: Session, access: CaseAccess) -> dict:
         "todo_assignees": todo.assignees(db, access.case) if access.can(todo.ACT_PERM) else [],
         "todo_priorities": todo.PRIORITY_LABELS, "todo_snooze_days": todo.SNOOZE_DAYS, "todo_relative": todo.relative,
         "todo_flash": DONE_TEXT.get(request.query_params.get("done") or ""), "now": now,
+        "todo_route": None if access.is_external else recovery_route.view(db, access.case, tasks),
     }
 
 

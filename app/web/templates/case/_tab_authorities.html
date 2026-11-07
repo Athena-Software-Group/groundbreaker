@@ -75,6 +75,7 @@
 {%- endmacro %}
 
 {% if not access.is_external and can('view_restricted') %}
+{% if me.is_system_admin and mail_unassigned_count() %}<div class="alert warning" role="status"><a href="/admin/mail/unassigned?case_id={{ case.id }}">{{ mail_unassigned_count() }} e-mail(s) in the mailbox are not on a case yet: file them</a></div>{% endif %}
 {% if mail_sync_flash %}<div class="alert {{ 'warning' if mail_sync_flash[1] else 'info' }}" role="status" style="margin-bottom:10px">{{ mail_sync_flash[0] }}{% if mail_review_count %} <a href="/cases/{{ case.id }}/mail/review">Review now</a>{% endif %}</div>{% endif %}
 <div class="row mail-tabline" style="margin-bottom:10px;gap:10px;flex-wrap:wrap;align-items:center">
   <span class="muted" style="font-size:var(--fs-sm)">{% if sender_profile %}Sender profile: <b>{{ sender_profile.org_name }}</b> on behalf of <b>{{ sender_profile.on_behalf_of }}</b>{% else %}No sender profile: letters are signed with the PI-firm block{% endif %} · <a href="/cases/{{ case.id }}/sender-profile">{{ 'edit' if can('manage_sender_profile') else 'view' }}</a> · <a href="/directory">directory</a></span>

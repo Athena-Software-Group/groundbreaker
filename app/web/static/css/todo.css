@@ -50,3 +50,20 @@
 .todo-card-table th, .todo-card-table td { padding-top: 6px; padding-bottom: 6px; }
 .todo-card-table .todo-what { min-width: 16em; }
 .todo-card-more { margin: 8px 0 0; }
+
+/* "How you get your money back" (case/_recovery_route.html) */
+.route-panel { border-left: 4px solid var(--accent); }
+.route-lead { max-width: 76ch; margin: 4px 0 12px; }
+.route-buckets { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.route-bucket { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; }
+.route-bucket b { display: block; font-size: 1.35em; }
+.route-bucket span { display: block; margin-top: 2px; font-size: var(--fs-sm); }
+.route-frozen b { color: var(--ok); }
+.route-parked b { color: var(--accent); }
+.route-steps { margin: 0 0 8px 20px; padding: 0; }
+.route-steps li { padding: 6px 0; }
+.route-next b { color: var(--accent); }
+.route-done { opacity: .65; }
+.route-who { margin-left: 6px; font-size: var(--fs-xs); }
+.route-why { max-width: 76ch; font-size: var(--fs-sm); }
+.route-note { font-size: var(--fs-xs); }

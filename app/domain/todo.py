@@ -104,7 +104,8 @@ OPS = ("done", "reopen", "snooze", "dismiss", "edit")
 
 BOARD, PLAN, BLOCKS, MAILBOX, EVIDENCE, SETUP, MANUAL = ("board", "plan", "blocks", "mailbox", "evidence", "setup",
                                                           "manual")
-SOURCES = {BOARD: "Freeze & stop-order board", PLAN: "Recovery plan", BLOCKS: "Block status", MAILBOX: "Mailbox",
+ROUTE = "route"
+SOURCES = {ROUTE: "Getting the money back", BOARD: "Freeze & stop-order board", PLAN: "Recovery plan", BLOCKS: "Block status", MAILBOX: "Mailbox",
            EVIDENCE: "Evidence", SETUP: "Case setup", MANUAL: "Manual"}
 MANUAL_PREFIX = "manual:"
 KEY_RE = re.compile(r"[a-z]{3,10}:[A-Za-z0-9:._@+-]{1,240}")
@@ -352,6 +353,23 @@ def _plan(c: _Ctx) -> None:
             fingerprint=_fp(m.kind, m.step, own.get("label"), own.get("perm"), (m.cites or {}).get("state"))))
         task.derived_priority = derive_priority(due=task.due, value=m.value, urgent=m.urgency >= URGENT, now=c.now)
         c.next_moves.append((m, task))
+
+
+# --------------------------------------------------------------------------- derived: the route to the money
+def _route(c: _Ctx) -> None:
+    """The steps from a frozen balance to money returned (app.domain.recovery_route): a freeze alone returns nothing."""
+    from app.domain import recovery_route as rr
+
+    plan = getattr(c.board, "plan", None)
+    frozen = float((getattr(plan, "totals", None) or {}).get("secured_usd") or 0)
+    if frozen <= 0:
+        return
+    links = {"evidence": Action("Open the Recovery plan", href=f"/cases/{c.cid}/recovery-plan"),
+             "issuer": Action("Open Authorities", href=f"/cases/{c.cid}?tab=authorities")}
+    for i, step in enumerate(rr.steps(rr.holder(c.db, c.case))):
+        task = c.add(Task(key=_key(ROUTE, step.key), source=ROUTE, title=step.title, why=step.why, value=frozen,
+                          action=links.get(step.key), fingerprint=_fp(step.key)))
+        task.derived_priority = P1 if i < 2 else P2
 
 
 # --------------------------------------------------------------------------- derived: Block status rows and clocks
@@ -636,7 +654,7 @@ def _setup(c: _Ctx) -> None:
                                      perm="manage_case"), fingerprint=_fp("off")))
 
 
-SOURCE_STEPS = ((BOARD, _board), (PLAN, _plan), (BLOCKS, _blocks), (MAILBOX, _mailbox), (EVIDENCE, _evidence),
+SOURCE_STEPS = ((BOARD, _board), (PLAN, _plan), (ROUTE, _route), (BLOCKS, _blocks), (MAILBOX, _mailbox), (EVIDENCE, _evidence),
                 (SETUP, _setup))
 
 
@@ -653,7 +671,7 @@ def derive(db: Session, case, access, *, now: datetime | None = None, rows: list
     c = _Ctx(db=db, case=case, access=access, now=now or _now(), mask=desk.contact_mask(access), rows=rows,
              board=board)
     for name, step in SOURCE_STEPS:
-        if name in (PLAN, BLOCKS) and BOARD in c.failed:
+        if name in (PLAN, ROUTE, BLOCKS) and BOARD in c.failed:
             c.failed.append(name)  # both read the board's own pass
             continue
         try:
