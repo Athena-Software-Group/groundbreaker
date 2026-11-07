@@ -369,7 +369,8 @@ def test_manual_filing_checks_the_sender_domain_of_the_chosen_authority(db, case
                  if a.key != authority.key and a.entity is not None and not a.is_le)
 
     def row(from_addr):
-        raw = eml(from_=from_addr, subject="unrelated subject")
+        # neutral text: the demo case is shared, and a reply that reads as an outcome would change later tests' board
+        raw = eml(from_=from_addr, subject="unrelated subject", body="Noted, thank you.")
         import hashlib
 
         mm = MailMessage(direction=MailDirection.IN, status=MailStatus.UNASSIGNED, transport="file",
