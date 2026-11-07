@@ -270,6 +270,22 @@ def outbound_markdown(body: str | None) -> str:
     return text.rstrip() + "\n"
 
 
+def footer_line() -> str:
+    """The line every outgoing e-mail ends with (AEGIS_MAIL_FOOTER), or empty."""
+    return getattr(_settings(), "footer", "") or ""
+
+
+def email_markdown(md: str | None, footer: str | None = None) -> str:
+    """The letter as the e-mail carries it: `outbound_markdown`, then the footer line (`footer_line()` unless given)
+    in italics after the signature, unless the letter already says it. The letter itself (its versions, its .docx)
+    never gets the line: only the e-mail does."""
+    text = outbound_markdown(md)
+    line = footer_line() if footer is None else footer
+    if not line or _flat(line) in _flat(markdown_to_text(text)):
+        return text
+    return f"{text}\n*{so.md_escape(line)}*\n"
+
+
 _LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 
 
@@ -1197,8 +1213,9 @@ def split_unsent_uploads(corr: Correspondence, mm: MailMessage) -> tuple[list[in
 
 def body_html(md: str | None) -> str:
     """The letter's HTML as the e-mail's text/html part renders it (without the page wrapper): the
-    editor's live preview. Raw HTML is escaped, links only http / https / mailto, no images."""
-    return _md.render(outbound_markdown(md))
+    editor's live preview, with the footer line (`email_markdown`). Raw HTML is escaped, links only http / https /
+    mailto, no images."""
+    return _md.render(email_markdown(md))
 
 
 def _profile_doc_ids(db: Session, case) -> frozenset[int]:
@@ -1633,9 +1650,10 @@ def prepare(db: Session, access, corr: Correspondence, authority, form: dict) ->
     # manual: no Message-ID in the draft (the sending server sets it); the row keeps an empty one
     message_id = "" if manual else new_message_id(access.case, corr, settings.mail_domain)
     in_reply_to, reply_corr = opts.in_reply_to, opts.in_reply_to_corr
+    email_md = email_markdown(corr.body_markdown, getattr(settings, "footer", "") or "")
     raw, _ = build_mime(
         from_name=settings.from_name, mail_from=mail_from, to=to, cc=cc, subject=subject,
-        text_body=markdown_to_text(corr.body_markdown), html_body=markdown_to_html(corr.body_markdown, subject),
+        text_body=markdown_to_text(email_md), html_body=markdown_to_html(email_md, subject),
         attachments=files, message_id=message_id, in_reply_to=in_reply_to, date=now, unsent=manual, bcc=bcc)
     limit = max_bytes
     if len(raw) > limit:
@@ -2261,7 +2279,9 @@ def preview(db: Session, mm: MailMessage, corr: Correspondence | None) -> Previe
     sha = hashlib.sha256(raw).hexdigest()
     ok = sha == mm.mime_sha256
     return Preview(headers=headers, text=text,
-                   html_markdown=outbound_markdown(corr.body_markdown if corr is not None else ""),
+                   # the footer only when the prepared bytes carry it (a preview prepared before it was set has none)
+                   html_markdown=email_markdown(corr.body_markdown if corr is not None else "",
+                                                line if (line := footer_line()) and _flat(line) in _flat(text) else ""),
                    attachments=atts, size=len(raw), sha256=sha, ok=ok,
                    problem=None if ok else "the stored bytes no longer match the prepared hash", html=html,
                    unsent=str(msg.get("X-Unsent") or "").strip() == "1")

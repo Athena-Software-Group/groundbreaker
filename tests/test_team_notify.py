@@ -647,3 +647,18 @@ def test_case_admins_cannot_mint_or_probe_accounts(db, case, client_for):
     assert db.scalar(select(User).where(User.email.like("unknown.%@tests.example"))) is None
     page = c.get(answers[0][1]).text
     assert "If an active account exists" in page and "data-team-otp" not in page
+
+
+def test_notification_emails_end_with_the_mail_footer(monkeypatch):
+    monkeypatch.setattr(notify.smtplib, "SMTP", FakeSMTP)
+    cfg = types.SimpleNamespace(smtp_from="aegis-alerts@example.com", smtp_ssl=False, smtp_host="smtp.example.com",
+                          smtp_port=587, smtp_starttls=False, smtp_username="", smtp_password="")
+    monkeypatch.setenv("AEGIS_MAIL_FOOTER", "Sent from Aegis, the case desk")
+    notify.send_email(cfg, ["a@example.com"], "Alert", "Funds moved.")
+    notify.send_email(cfg, ["a@example.com"], "Alert", "Funds moved.\n\nSent from Aegis, the case desk")
+    first, second = (m.get_content() for m, _ in FakeSMTP.sent[-2:])
+    assert first.rstrip().endswith("Sent from Aegis, the case desk") and first.startswith("Funds moved.")
+    assert second.count("Sent from Aegis") == 1
+    monkeypatch.setenv("AEGIS_MAIL_FOOTER", "")
+    notify.send_email(cfg, ["a@example.com"], "Alert", "Funds moved.")
+    assert "Sent from Aegis" not in FakeSMTP.sent[-1][0].get_content()

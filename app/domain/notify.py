@@ -435,6 +435,11 @@ def _now_iso() -> str:
 
 
 def send_email(cfg: NotifySettings, to: list[str], subject: str, text: str) -> None:
+    from app.mail.config import mail_settings
+
+    footer = mail_settings().footer  # AEGIS_MAIL_FOOTER: every e-mail Aegis sends ends with it
+    if footer and footer not in text:
+        text = f"{text.rstrip()}\n\n{footer}\n"
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = cfg.smtp_from

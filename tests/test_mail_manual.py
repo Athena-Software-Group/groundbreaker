@@ -979,3 +979,46 @@ def _retire_left_over_checklists(db):
     for m in db.query(_MM).filter(_MM.transport == "manual", _MM.status.in_((_MS.PREPARED, _MS.EXPIRED))).all():
         m.status = _MS.CANCELLED
     db.commit()
+
+
+FOOTER = "Sent from Aegis, the demo desk's *recovery* tool"
+
+
+def test_footer_line_is_added_once_and_escaped():
+    body = "Dear team,\n\nPlease freeze.\n\nYours faithfully,\n\nInvestigations Desk\n"
+    md = compose.email_markdown(body, FOOTER)
+    assert md.startswith(body.rstrip()) and md.rstrip().endswith("*") and md.count("Sent from Aegis") == 1
+    assert compose.markdown_to_text(md).rstrip().endswith(FOOTER)  # plain text: the line as written
+    html = compose.markdown_to_html(md)
+    assert "<em>Sent from Aegis, the demo desk's *recovery* tool</em>" in html.replace("&#x27;", "'")
+    assert compose.email_markdown(md, FOOTER) == md  # a letter that already says it is left alone
+    assert compose.email_markdown(body, "") == compose.outbound_markdown(body)  # no footer configured: unchanged
+
+
+def test_footer_reaches_the_email_but_not_the_letter(db, case, run, client, client_for, mail, monkeypatch):
+    corr = _draft(db, case, run)
+    inv = client_for("investigator", case=case)
+    plain = _prepared(db, _compose(inv, case, corr))  # prepared before the footer was configured
+    assert "Sent from Aegis" not in compose.preview(db, plain, corr).html_markdown
+    plain_text = BytesParser(policy=policy.default).parsebytes(_raw(plain)).get_body(("plain",)).get_content()
+    assert "Sent from Aegis" not in plain_text
+
+    monkeypatch.setattr(mail.settings, "footer", FOOTER, raising=False)
+    page = inv.get(f"/cases/{case.id}/authorities/correspondence/{corr.id}/email").text
+    assert "Sent from Aegis" in page  # the editor's preview shows what goes out
+    db.expire_all()
+    mm = _prepared(db, _compose(inv, case, db.get(Correspondence, corr.id)))
+    msg = BytesParser(policy=policy.default).parsebytes(_raw(mm))
+    text, html = msg.get_body(("plain",)).get_content(), msg.get_body(("html",)).get_content()
+    assert text.rstrip().endswith(FOOTER) and text.count("Sent from Aegis") == 1
+    assert "<em>Sent from Aegis" in html
+    assert "Sent from Aegis" in compose.preview(db, mm, corr).html_markdown
+    db.expire_all()
+    assert "Sent from Aegis" not in db.get(Correspondence, corr.id).body_markdown  # the letter itself: unchanged
+
+
+def test_mail_settings_footer_is_one_line(monkeypatch):
+    monkeypatch.setenv("AEGIS_MAIL_FOOTER", "  Sent from Aegis,\n  the case desk  ")
+    assert MailSettings().footer == "Sent from Aegis, the case desk"
+    monkeypatch.delenv("AEGIS_MAIL_FOOTER")
+    assert MailSettings(_env_file=None).footer == ""

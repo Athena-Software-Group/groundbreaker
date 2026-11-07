@@ -40,6 +40,7 @@ class MailSettings(BaseSettings):
     aegis_mail_transport: Literal["manual", "none", "file", "graph"] = "manual"
     aegis_mail_from: str = ""
     aegis_mail_from_name: str = ""  # empty = the organisation name (AEGIS_ORG_NAME)
+    aegis_mail_footer: str = ""  # one line every outgoing e-mail ends with, after the signature; empty = none
     aegis_mail_outbox_dir: str = ""
     aegis_mail_inbox_dir: str = ""
     aegis_mail_inbound: bool = False
@@ -89,6 +90,11 @@ class MailSettings(BaseSettings):
     @property
     def from_name(self) -> str:
         return (self.aegis_mail_from_name or "").strip() or get_settings().aegis_org_name.strip() or "Your Organisation"
+
+    @property
+    def footer(self) -> str:
+        """AEGIS_MAIL_FOOTER on one line (whitespace collapsed), or empty."""
+        return " ".join((self.aegis_mail_footer or "").split())
 
     @property
     def dev_allowed_domains(self) -> set[str]:

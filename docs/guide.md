@@ -619,6 +619,7 @@ tab shows the result ("Mailbox checked: 1 reply filed on this case, 0 waiting fo
 |---|---|---|
 | `AEGIS_MAIL_TRANSPORT` | `manual` | `manual` ("Draft — you send": Aegis drafts, you send from Outlook; no connection) · `none` (no sending) · `file` (local demo: `.eml` files) · `graph` (Microsoft 365: the investigations mailbox, read and send) |
 | `AEGIS_MAIL_FROM`, `AEGIS_MAIL_FROM_NAME` | empty, the organisation name (`AEGIS_ORG_NAME`) | The shared case mailbox and the From display name (manual mode: the draft's From and the suggested Cc; optional) |
+| `AEGIS_MAIL_FOOTER` | empty | One line every e-mail ends with, in italics after the signature: letters (sent or drafted for you to send) and notification e-mails. The letter itself and its .docx copy stay without it; a letter that already contains the line does not get it twice |
 | `AEGIS_MAIL_OUTBOX_DIR`, `AEGIS_MAIL_INBOX_DIR` | empty | File transport folders (absolute, outside the repository and the vault) |
 | `AEGIS_MAIL_INBOUND`, `AEGIS_MAIL_INBOUND_SINCE` | off, empty | Read the mailbox (graph: Inbox and Sent Items); the backfill start, ISO time (e.g. `2026-01-01T00:00:00Z`; default: the first sync) |
 | `AEGIS_MAIL_SYNC_MINUTES` | 15 | How often the scheduler reads both folders |
