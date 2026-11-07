@@ -202,7 +202,7 @@ def test_stop_orders_creates_drafts_only(client_for, db, scase):
     assert "Acts on LE process only" in listing.markdown and "Mark sent" in listing.markdown
     assert "Send a stop order now to" not in listing.markdown
     assert {"label": f"Draft {len(recommended)} notices to LE-only issuers",
-            "command": "/stop-orders draft all"} in listing.actions
+            "command": "/stop-orders draft all"} in listing.actions, listing.markdown
     sent_before = len(db.scalars(select(AuditEvent).where(AuditEvent.action == "LETTER_SENT")).all())
     before = {c.id for c in scase.correspondence}
     r = _chat(inv, scase, "/stop-orders draft all")
