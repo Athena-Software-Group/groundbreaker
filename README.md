@@ -38,8 +38,8 @@ next. GroundBreaker keeps both in one place.
 | **Trace** | Forward tracing from the origin transaction across EVM chains, TRON and Bitcoin, through swaps and bridges. Every run is kept as a version you can compare. Graph, timeline and movement exports. |
 | **Find the freeze points** | Marks exchanges, casinos, swap services and issuers the funds reached. Reads Tether and Circle blacklist status and frozen balances on-chain, and alerts when ETH leaves a watched wallet. Identifies wallet owners with a confidence level. |
 | **Act** | A board of who to ask and what is overdue, with one open request per provider. Provider playbooks give the right channel and what each one requires. Letters are generated from the trace, then sent by hand or through Microsoft 365. |
-| **Track** | Replies are matched to requests and classified, and a person confirms every freeze or hold. E-mail can be translated into English beside the original. Block status shows what each authority has answered. |
-| **Plan** | A Recovery plan ranks the moves that trap the most money fastest, with projected loss and how certain it is. A To do list collects the work across the case and closes items itself as the work gets done. |
+| **Track** | Replies are matched to requests and classified, and a person confirms every freeze or hold. Mail that matched no case is filed on one screen. E-mail can be translated into English beside the original. Block status shows what each authority has answered. |
+| **Plan** | A Recovery plan ranks the moves that trap the most money fastest, with projected loss and how certain it is. The To do list opens with the route from frozen funds to money returned (evidence to the police, law enforcement to the issuer, a seizure order, the return), then collects the rest of the work and closes items itself as the work gets done. |
 | **Keep it defensible** | Evidence vault with SHA-256 chain of custody, per-case roles with time-limited external access, and a hash-chained audit log. |
 | **Pythia, the AI assistant** | Fund-flow analysis, stop-order drafting, follow-ups, wallet briefings, law-enforcement updates and client status summaries. Per case it runs redacted, full or off. It only prepares drafts: sending is always a person's step. |
 
@@ -106,7 +106,8 @@ what leaves your machine. In short:
    repository and point `AEGIS_FIXTURE_PATH` at it. The rules, `.gitignore` and `scripts/pii_scan.py` exist
    to stop victim data reaching git.
 2. **Set your sender of record** with `AEGIS_ORG_NAME` and `AEGIS_SIGNATORY_NAME`. Letters go out in your
-   organisation's name, on behalf of the client.
+   organisation's name, on behalf of the client. `AEGIS_MAIL_FOOTER` adds one line, such as your desk's name,
+   after the signature of every e-mail.
 3. **Decide what may go live, case by case.** See below.
 4. **Run the scheduler** with `python -m scripts.run_scheduler`. It handles overdue checks, on-chain freeze
    checks and mailbox sync. Nothing updates in the background without it.
