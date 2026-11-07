@@ -161,7 +161,7 @@ def test_only_system_admins_can_file_the_queue(db, case, client_for, mailenv, ma
 
 
 def test_a_forward_from_a_private_address_gets_no_suggested_authority(db, case, client_for, mailenv, mail_routes):  # noqa: F811
-    mm = inbound_row(db, None, "unassigned", raw=eml(from_="Owner <someone@gmail.com>", subject="Fwd: Hostinger request"))
+    mm = inbound_row(db, None, "unassigned", raw=eml(from_="Owner <owner@mail.example>", subject="Fwd: Hostinger request"))
     page = client_for(None, system_admin=True).get(f"/admin/mail/unassigned?case_id={case.id}")
     assert page.status_code == 200 and f'name="authority_{mm.id}"' in page.text
     row = page.text.split(f'name="authority_{mm.id}"')[1].split("</select>")[0]
